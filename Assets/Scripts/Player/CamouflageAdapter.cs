@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Managers;
@@ -39,7 +40,15 @@ namespace HideAndInk.Player
         // 색상 복원 관련
         private bool _isRestoringColor; // 색상 복원 중 여부
         private float _restoreTimer;    // 복원 경과 시간
-        private const float RESTORE_DURATION = 1.5f; // 복원 시간 (초)
+        private const float RESTORE_DURATION = 10.0f; // 복원 시간 (초)
+
+        // 스프라이트 관련 (Resources.Load 자동 로드)
+        private Dictionary<MoveDirection, Sprite> _spriteCache = new();
+        private Dictionary<MoveDirection, Sprite> _shadowCache = new();
+        private MoveDirection _lastDirection = MoveDirection.Down;
+        
+        // Resources 경로 상수
+        private const string SPRITE_PATH = "Sprite/";
 
         private void Awake()
         {
@@ -101,6 +110,9 @@ namespace HideAndInk.Player
             {
                 _playerMovement?.SetMovementLocked(false);
                 _playerMovement?.SetIgnoreWallCollision(false);
+
+                // 이동 중 스프라이트 방향 업데이트 (의태 중 아닐 때만)
+                UpdateSpriteDirection();
             }
 
             // Perfect에서 전환直後에는 잠시 이동 무시
@@ -123,18 +135,29 @@ namespace HideAndInk.Player
             // 상태 시스템 업데이트
             _stateMachine.Update(Time.deltaTime, isMoving);
 
-            // 상태가 None으로変わった → 취소됨 → 색상 천천히 복원 시작
+            // 상태가 None으로变化的 → 취소됨 → 색상 천천히 복원 시작 + Material 복원
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
                 Debug.Log("[CamouflageAdapter] State returned to None, starting gradual color restore");
                 _isRestoringColor = true;
                 _restoreTimer = 0f;
+                
+                // Material을 Default로 복원
+                _materialCloner?.RestoreDefaultMaterial();
             }
 
             // 상태 변화 로그
             if (prevState != _stateMachine.CurrentState)
             {
                 Debug.Log($"[CamouflageAdapter] State changed: {prevState} -> {_stateMachine.CurrentState}");
+
+                // None → 의태 상태로 전환 시 Octopus Material 적용
+                if (prevState == CamouflageState.None && _stateMachine.CurrentState != CamouflageState.None)
+                {
+                    Debug.Log($"[CamouflageAdapter] State changed from None! Current state: {_stateMachine.CurrentState}. Applying Octopus Material...");
+                    Debug.Log($"[CamouflageAdapter] _materialCloner is null: {_materialCloner == null}");
+                    _materialCloner?.ApplyOctopusMaterial();
+                }
 
                 // Partial 또는 Perfect에 도달하면 플래그 해제
                 if (_stateMachine.CurrentState == CamouflageState.Partial || 
@@ -165,6 +188,7 @@ namespace HideAndInk.Player
             // C Down 감지
             if (Input.GetKeyDown(camouflageKey))
             {
+                Debug.Log("[CamouflageAdapter] C keyDown detected");
                 TryHandleKeyDown();
             }
             
@@ -180,6 +204,8 @@ namespace HideAndInk.Player
         /// </summary>
         private void TryHandleKeyDown()
         {
+            Debug.Log($"[CamouflageAdapter] TryHandleKeyDown. Current state: {_stateMachine.CurrentState}");
+
             // Perfect 상태에서 C Down → 즉시 취소 (의태 해제)
             // 색상은 Update에서 천천히 복원됨
             if (_stateMachine.CurrentState == CamouflageState.Perfect)
@@ -194,6 +220,7 @@ namespace HideAndInk.Player
             // None 상태에서만 Attached 시작
             if (_stateMachine.CurrentState != CamouflageState.None)
             {
+                Debug.Log("[CamouflageAdapter] State is not None, skipping attach");
                 return;
             }
 
@@ -205,7 +232,7 @@ namespace HideAndInk.Player
         /// </summary>
         private void TryStartAttach()
         {
-            Debug.Log("[CamouflageAdapter] C key pressed, searching for target");
+            Debug.Log("[CamouflageAdapter] TryStartAttach called");
 
             // 색상 복원 중이면 취소 (새로운 의태 시작)
             if (_isRestoringColor)
@@ -223,6 +250,13 @@ namespace HideAndInk.Player
                 Debug.Log($"[CamouflageAdapter] Found target: {nearest.name}");
                 _originalPosition = transform.position;
                 _stateMachine.StartAttach(nearest);
+                
+                // 의태 시작 시 Octopus Material 적용
+                Debug.Log("[CamouflageAdapter] Applying Octopus Material on attach start");
+                _materialCloner?.ApplyOctopusMaterial();
+                
+                // 의태 시작 시 스프라이트를 기본 Player로 변경
+                ChangeToDefaultSprite();
             }
             else
             {
@@ -302,6 +336,132 @@ namespace HideAndInk.Player
                     // 원본 색상으로 복원 (복원 중이 아닐 때만 - 즉시 복원)
                     // _isRestoringColor가 true면 위에서 처리됨
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 이동 방향에 따른 스프라이트 업데이트
+        /// </summary>
+        private void UpdateSpriteDirection()
+        {
+            if (_playerMovement == null) return;
+
+            MoveDirection currentDirection = _playerMovement.Direction;
+
+            // 방향이 바뀌었을 때만 스프라이트 교체
+            if (currentDirection == _lastDirection) return;
+            _lastDirection = currentDirection;
+
+            // SpriteRenderer 찾기
+            Transform visual = transform.Find("Visual");
+            SpriteRenderer spriteRenderer = null;
+            if (visual != null)
+            {
+                spriteRenderer = visual.GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (spriteRenderer == null)
+            {
+                // 자식이 없으면 자기 자신에서 찾기
+                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (spriteRenderer == null) return;
+
+            // Resources에서 스프라이트 로드
+            Sprite targetSprite = GetSprite(currentDirection);
+            Sprite targetShadowSprite = GetShadow(currentDirection);
+
+            if (targetSprite != null)
+            {
+                spriteRenderer.sprite = targetSprite;
+
+                // ShaderGraph Material의 텍스처 교체
+                Material mat = spriteRenderer.material;
+                if (mat != null)
+                {
+                    Texture2D mainTex = targetSprite.texture;
+                    Texture2D colorPartTex = targetShadowSprite != null ? targetShadowSprite.texture : mainTex;
+                    
+                    mat.SetTexture("_MainTex", mainTex);
+                    mat.SetTexture("_ColorPart", colorPartTex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 이동 방향에 따른 스프라이트 가져오기 (캐시)
+        /// </summary>
+        private Sprite GetSprite(MoveDirection direction)
+        {
+            if (_spriteCache.TryGetValue(direction, out Sprite cached))
+                return cached;
+
+            string path = direction switch
+            {
+                MoveDirection.Down => $"{SPRITE_PATH}Player",
+                MoveDirection.Left => $"{SPRITE_PATH}PlayerMoveLeft",
+                MoveDirection.Right => $"{SPRITE_PATH}PlayerMoveRight",
+                MoveDirection.Up => $"{SPRITE_PATH}PlayerMoveUp",
+                _ => $"{SPRITE_PATH}Player"
+            };
+
+            Sprite sprite = Resources.Load<Sprite>(path);
+            _spriteCache[direction] = sprite;
+            return sprite;
+        }
+
+        /// <summary>
+        /// 이동 방향에 따른 그림자 스프라이트 가져오기 (캐시)
+        /// </summary>
+        private Sprite GetShadow(MoveDirection direction)
+        {
+            if (_shadowCache.TryGetValue(direction, out Sprite cached))
+                return cached;
+
+            string path = direction switch
+            {
+                MoveDirection.Down => $"{SPRITE_PATH}PlayerShadow",
+                MoveDirection.Left => $"{SPRITE_PATH}PlayerMoveLeftShadow",
+                MoveDirection.Right => $"{SPRITE_PATH}PlayerMoveRightShadow",
+                MoveDirection.Up => $"{SPRITE_PATH}PlayerMoveUpShadow",
+                _ => $"{SPRITE_PATH}PlayerShadow"
+            };
+
+            Sprite sprite = Resources.Load<Sprite>(path);
+            _shadowCache[direction] = sprite;
+            return sprite;
+        }
+
+        /// <summary>
+        /// 스프라이트를 기본 Player로 변경 (의태 시 사용)
+        /// </summary>
+        private void ChangeToDefaultSprite()
+        {
+            Transform visual = transform.Find("Visual");
+            SpriteRenderer spriteRenderer = null;
+            if (visual != null)
+            {
+                spriteRenderer = visual.GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (spriteRenderer == null)
+            {
+                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (spriteRenderer == null) return;
+
+            // Sprite/Player 스프라이트 로드
+            Sprite defaultSprite = Resources.Load<Sprite>("Sprite/Player");
+            if (defaultSprite != null)
+            {
+                spriteRenderer.sprite = defaultSprite;
+                Debug.Log("[CamouflageAdapter] Changed sprite to default Player");
+            }
+            else
+            {
+                Debug.LogWarning("[CamouflageAdapter] Default Player sprite not found at Sprite/Player");
             }
         }
 

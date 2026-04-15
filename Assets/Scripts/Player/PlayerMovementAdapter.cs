@@ -145,6 +145,11 @@ namespace HideAndInk.Player
         public bool IsMoving => _playerMovement?.IsMoving ?? false;
 
         /// <summary>
+        /// 현재 이동 방향
+        /// </summary>
+        public MoveDirection Direction => _playerMovement?.Direction ?? MoveDirection.Down;
+
+        /// <summary>
         /// 현재 속도 확인
         /// </summary>
         public Vector2 CurrentVelocity => _playerMovement?.Velocity ?? Vector2.zero;

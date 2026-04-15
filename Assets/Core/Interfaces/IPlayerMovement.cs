@@ -3,6 +3,17 @@ using UnityEngine;
 namespace HideAndInk.Core.Interfaces
 {
     /// <summary>
+    /// 플레이어 이동 방향
+    /// </summary>
+    public enum MoveDirection
+    {
+        Down,   // 기본/하
+        Right,  // 우
+        Up,     // 상
+        Left    // 좌
+    }
+
+    /// <summary>
     /// 플레이어 이동 시스템 인터페이스
     /// </summary>
     public interface IPlayerMovement
@@ -11,6 +22,11 @@ namespace HideAndInk.Core.Interfaces
         /// 현재 속도 벡터
         /// </summary>
         Vector2 Velocity { get; }
+
+        /// <summary>
+        /// 현재 이동 방향
+        /// </summary>
+        MoveDirection Direction { get; }
 
         /// <summary>
         /// 이동 입력 처리

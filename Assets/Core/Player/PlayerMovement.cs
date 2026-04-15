@@ -18,11 +18,17 @@ namespace HideAndInk.Core.Player
         private Vector2 _velocity;
         private Vector2 _inputDirection;
         private bool _isMoving;
+        private MoveDirection _direction;
 
         /// <summary>
         /// 현재 속도 벡터
         /// </summary>
         public Vector2 Velocity => _velocity;
+
+        /// <summary>
+        /// 현재 이동 방향
+        /// </summary>
+        public MoveDirection Direction => _direction;
 
         /// <summary>
         /// 이동 중인지 여부
@@ -50,6 +56,7 @@ namespace HideAndInk.Core.Player
             _velocity = Vector2.zero;
             _inputDirection = Vector2.zero;
             _isMoving = false;
+            _direction = MoveDirection.Down;
         }
 
         /// <summary>
@@ -63,7 +70,29 @@ namespace HideAndInk.Core.Player
             if (direction != Vector2.zero)
             {
                 _isMoving = true;
+                UpdateDirection(direction);
             }
+        }
+
+        /// <summary>
+        /// 방향 업데이트 (입력 기반으로)
+        /// </summary>
+        private void UpdateDirection(Vector2 direction)
+        {
+            float absX = Mathf.Abs(direction.x);
+            float absY = Mathf.Abs(direction.y);
+
+            if (absX > absY)
+            {
+                // 좌우 방향
+                _direction = direction.x > 0 ? MoveDirection.Right : MoveDirection.Left;
+            }
+            else if (absY > absX)
+            {
+                // 상하 방향
+                _direction = direction.y > 0 ? MoveDirection.Up : MoveDirection.Down;
+            }
+            // absX == absY (대각선) 때는 기존 방향 유지
         }
 
         /// <summary>
@@ -85,6 +114,7 @@ namespace HideAndInk.Core.Player
             if (_inputDirection == Vector2.zero)
             {
                 ApplyFriction(deltaTime);
+                _isMoving = _velocity.sqrMagnitude > 0.01f;
                 return;
             }
 
