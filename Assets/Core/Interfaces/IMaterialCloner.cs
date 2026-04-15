@@ -28,6 +28,12 @@ namespace HideAndInk.Core.Interfaces
         void RestoreOriginalColor();
 
         /// <summary>
+        /// 원본 색상으로 천천히 복원 (보간)
+        /// </summary>
+        /// <param name="progress">보간 진행도 (0~1)</param>
+        void BlendToOriginal(float progress);
+
+        /// <summary>
         /// 원본 색상 설정
         /// </summary>
         /// <param name="originalColor">원본 색상</param>

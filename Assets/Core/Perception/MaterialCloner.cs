@@ -5,17 +5,18 @@ namespace HideAndInk.Core.Perception
 {
     /// <summary>
     /// 메테리얼 복사 시스템 구현체
-    /// PropertyBlock을 사용하여 공유 메테리얼의 색상만 변경
+    /// SpriteRenderer와 일반 Renderer 둘 다 지원
     /// </summary>
     public sealed class MaterialCloner : IMaterialCloner
     {
-        private readonly Renderer _playerRenderer;
+        private Renderer _renderer;
+        private SpriteRenderer _spriteRenderer;
         private Color _originalColor;
         private Color _currentColor;
         private MaterialPropertyBlock _propertyBlock;
         private bool _isBlending;
 
-        // Shader 속성 이름 (Unity 기본 Standard Shader)
+        // Shader 속성 이름 (Standard Shader)
         private const string COLOR_PROPERTY = "_Color";
 
         /// <summary>
@@ -24,25 +25,36 @@ namespace HideAndInk.Core.Perception
         /// <param name="playerRenderer">플레이어의 Renderer 컴포넌트</param>
         public MaterialCloner(Renderer playerRenderer)
         {
-            _playerRenderer = playerRenderer;
+            _renderer = playerRenderer;
+            _spriteRenderer = playerRenderer as SpriteRenderer;
             _propertyBlock = new MaterialPropertyBlock();
             _isBlending = false;
 
             // 원본 색상 저장
-            if (_playerRenderer != null)
+            if (_spriteRenderer != null)
             {
-                _playerRenderer.GetPropertyBlock(_propertyBlock);
+                // SpriteRenderer는 color 프로퍼티로 접근
+                _originalColor = _spriteRenderer.color;
+            }
+            else if (_renderer != null)
+            {
+                // 일반 Renderer는 PropertyBlock으로 접근
+                _renderer.GetPropertyBlock(_propertyBlock);
                 if (_propertyBlock.HasProperty(COLOR_PROPERTY))
                 {
                     _originalColor = _propertyBlock.GetColor(COLOR_PROPERTY);
                 }
                 else
                 {
-                    // 기본값 (흰색)
                     _originalColor = Color.white;
                 }
-                _currentColor = _originalColor;
             }
+            else
+            {
+                _originalColor = Color.white;
+            }
+            
+            _currentColor = _originalColor;
         }
 
         /// <summary>
@@ -55,6 +67,14 @@ namespace HideAndInk.Core.Perception
             Renderer targetRenderer = target.GetComponent<Renderer>();
             if (targetRenderer == null) return Color.white;
 
+            // SpriteRenderer 체크
+            SpriteRenderer targetSprite = targetRenderer as SpriteRenderer;
+            if (targetSprite != null)
+            {
+                return targetSprite.color;
+            }
+
+            // 일반 Renderer
             MaterialPropertyBlock targetBlock = new MaterialPropertyBlock();
             targetRenderer.GetPropertyBlock(targetBlock);
 
@@ -64,7 +84,8 @@ namespace HideAndInk.Core.Perception
             }
 
             // 메테리얼에서 직접 색상 가져오기
-            if (targetRenderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
+            if (targetRenderer.sharedMaterial != null && 
+                targetRenderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
             {
                 return targetRenderer.sharedMaterial.GetColor(COLOR_PROPERTY);
             }
@@ -77,7 +98,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void BlendToTarget(GameObject target, float progress)
         {
-            if (target == null || _playerRenderer == null) return;
+            if (target == null) return;
 
             Color targetColor = GetTargetColor(target);
             _currentColor = Color.Lerp(_originalColor, targetColor, progress);
@@ -94,6 +115,17 @@ namespace HideAndInk.Core.Perception
             _currentColor = _originalColor;
             ApplyColor(_originalColor);
             _isBlending = false;
+        }
+
+        /// <summary>
+        /// 원본 색상으로 천천히 복원 (보간)
+        /// </summary>
+        /// <param name="progress">보간 진행도 (0~1)</param>
+        public void BlendToOriginal(float progress)
+        {
+            _currentColor = Color.Lerp(_currentColor, _originalColor, progress);
+            ApplyColor(_currentColor);
+            _isBlending = false; // 원래 색으로 복원 중이므로 blen
         }
 
         /// <summary>
@@ -114,11 +146,18 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void ApplyColor(Color color)
         {
-            if (_playerRenderer == null) return;
-
-            _playerRenderer.GetPropertyBlock(_propertyBlock);
-            _propertyBlock.SetColor(COLOR_PROPERTY, color);
-            _playerRenderer.SetPropertyBlock(_propertyBlock);
+            if (_spriteRenderer != null)
+            {
+                // SpriteRenderer는 color 프로퍼티로 직접 설정
+                _spriteRenderer.color = color;
+            }
+            else if (_renderer != null)
+            {
+                // 일반 Renderer는 PropertyBlock 사용
+                _renderer.GetPropertyBlock(_propertyBlock);
+                _propertyBlock.SetColor(COLOR_PROPERTY, color);
+                _renderer.SetPropertyBlock(_propertyBlock);
+            }
         }
 
         /// <summary>

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Managers;
@@ -8,7 +7,7 @@ namespace HideAndInk.Player
 {
     /// <summary>
     /// 의태 시스템 Unity 어댑터
-    /// InputSystem 연동 및 실제 의태 효과 적용
+    /// 토글 방식: C 누르고 있으면 진행, 떼면 Perfect 아니면 취소
     /// </summary>
     [RequireComponent(typeof(PlayerMovementAdapter))]
     public sealed class CamouflageAdapter : MonoBehaviour
@@ -18,12 +17,13 @@ namespace HideAndInk.Player
         [SerializeField] private LayerMask camouflageLayer = -1; // Everything
 
         [Header("의태 시간 설정")]
+        [SerializeField] private float attachDelay = 0.3f;  // Attached 상태 유지 시간
         [SerializeField] private float lockTime = 0.4f;
         [SerializeField] private float blendTime = 1.0f;
         [SerializeField] private float perfectTime = 2.0f;
 
-        [Header("의태 키")]
-        [SerializeField] private InputActionReference camouflageAction;
+        [Header("의태 키 설정")]
+        [SerializeField] private KeyCode camouflageKey = KeyCode.C;
 
         private ICamouflageDetector _detector;
         private ICamouflageStateMachine _stateMachine;
@@ -32,13 +32,30 @@ namespace HideAndInk.Player
         private Renderer _playerRenderer;
 
         private Vector3 _originalPosition;
-        private bool _isCamouflageInputPressed;
-        private GameObject _currentTarget;
+        private bool _isKeyPressed;
+        private bool _justTransitionedFromPerfect; // Perfect에서 새로운 타겟으로 전환直後
+        private float _transitionTimer; // 전환 후 경과 시간
+
+        // 색상 복원 관련
+        private bool _isRestoringColor; // 색상 복원 중 여부
+        private float _restoreTimer;    // 복원 경과 시간
+        private const float RESTORE_DURATION = 1.5f; // 복원 시간 (초)
 
         private void Awake()
         {
             _playerMovement = GetComponent<PlayerMovementAdapter>();
-            _playerRenderer = GetComponent<Renderer>();
+
+            // 자식 "Visual" 오브젝트에서 Renderer 찾기 (GetComponentInChildren으로 변경)
+            Transform visual = transform.Find("Visual");
+            if (visual != null)
+            {
+                _playerRenderer = visual.GetComponentInChildren<Renderer>();
+            }
+            else
+            {
+                // 자식이 없으면 자기 자신의 Renderer 사용
+                _playerRenderer = GetComponentInChildren<Renderer>();
+            }
 
             // DI 컨테이너에서 해결하거나 직접 생성
             if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageDetector>())
@@ -57,7 +74,7 @@ namespace HideAndInk.Player
             }
             else
             {
-                _stateMachine = new CamouflageStateMachine(lockTime, blendTime, perfectTime);
+                _stateMachine = new CamouflageStateMachine(attachDelay, lockTime, blendTime, perfectTime);
             }
 
             if (_playerRenderer != null)
@@ -66,37 +83,72 @@ namespace HideAndInk.Player
             }
         }
 
-        private void OnEnable()
-        {
-            if (camouflageAction != null)
-            {
-                camouflageAction.action.performed += OnCamouflagePerformed;
-                camouflageAction.action.canceled += OnCamouflageCanceled;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (camouflageAction != null)
-            {
-                camouflageAction.action.performed -= OnCamouflagePerformed;
-                camouflageAction.action.canceled -= OnCamouflageCanceled;
-            }
-        }
-
         private void Update()
         {
-            // Lock 시간中は移動入力を無視
-            if (_stateMachine.CurrentState == CamouflageState.Locked && !_stateMachine.IsLockComplete)
+            // 키 입력 처리
+            HandleKeyInput();
+
+            // 이동 상태 확인
+            bool isMoving = _playerMovement != null && _playerMovement.IsMoving;
+
+            // 의태 상태 (Attached 이후)에서는 이동 잠금 + 벽 충돌 무시
+            if (_stateMachine.CurrentState != CamouflageState.None)
             {
-                return;
+                _playerMovement?.SetMovementLocked(true);
+                _playerMovement?.SetIgnoreWallCollision(true);
+            }
+            else
+            {
+                _playerMovement?.SetMovementLocked(false);
+                _playerMovement?.SetIgnoreWallCollision(false);
             }
 
-            // 移動状态確認
-            bool isMoving = _playerMovement != null && _playerMovement.IsMoving;
+            // Perfect에서 전환直後에는 잠시 이동 무시
+            // (Partial/Perfect 도달하거나 0.5초 경과하면 해제)
+            if (_justTransitionedFromPerfect)
+            {
+                isMoving = false;
+                _transitionTimer += Time.deltaTime;
+                if (_transitionTimer >= 0.5f)
+                {
+                    Debug.Log("[CamouflageAdapter] Transition timeout, allowing movement cancel");
+                    _justTransitionedFromPerfect = false;
+                    _transitionTimer = 0f;
+                }
+            }
+
+            var prevState = _stateMachine.CurrentState;
+            bool wasNotNone = prevState != CamouflageState.None;
 
             // 상태 시스템 업데이트
             _stateMachine.Update(Time.deltaTime, isMoving);
+
+            // 상태가 None으로変わった → 취소됨 → 색상 천천히 복원 시작
+            if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
+            {
+                Debug.Log("[CamouflageAdapter] State returned to None, starting gradual color restore");
+                _isRestoringColor = true;
+                _restoreTimer = 0f;
+            }
+
+            // 상태 변화 로그
+            if (prevState != _stateMachine.CurrentState)
+            {
+                Debug.Log($"[CamouflageAdapter] State changed: {prevState} -> {_stateMachine.CurrentState}");
+
+                // Partial 또는 Perfect에 도달하면 플래그 해제
+                if (_stateMachine.CurrentState == CamouflageState.Partial || 
+                    _stateMachine.CurrentState == CamouflageState.Perfect)
+                {
+                    _justTransitionedFromPerfect = false;
+                }
+            }
+
+            // Attached 완료 전에는 추가 처리 안 함
+            if (_stateMachine.CurrentState == CamouflageState.Attached && !_stateMachine.IsAttachedComplete)
+            {
+                return;
+            }
 
             // 색상 보간 업데이트
             UpdateBlend();
@@ -106,10 +158,128 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
+        /// 키 입력 처리 (C 키를 누르고 있는 동안 계속 진행)
+        /// </summary>
+        private void HandleKeyInput()
+        {
+            // C Down 감지
+            if (Input.GetKeyDown(camouflageKey))
+            {
+                TryHandleKeyDown();
+            }
+            
+            // C Up 감지
+            if (Input.GetKeyUp(camouflageKey))
+            {
+                OnKeyReleased();
+            }
+        }
+
+        /// <summary>
+        /// C Down 처리
+        /// </summary>
+        private void TryHandleKeyDown()
+        {
+            // Perfect 상태에서 C Down → 즉시 취소 (의태 해제)
+            // 색상은 Update에서 천천히 복원됨
+            if (_stateMachine.CurrentState == CamouflageState.Perfect)
+            {
+                Debug.Log("[CamouflageAdapter] Perfect state, C Down → cancelling camouflage");
+                _stateMachine.CancelCamouflage(true);
+                _justTransitionedFromPerfect = false;
+                _transitionTimer = 0f;
+                return;
+            }
+
+            // None 상태에서만 Attached 시작
+            if (_stateMachine.CurrentState != CamouflageState.None)
+            {
+                return;
+            }
+
+            TryStartAttach();
+        }
+
+        /// <summary>
+        /// Attached 상태로 전환 시도 (C Down)
+        /// </summary>
+        private void TryStartAttach()
+        {
+            Debug.Log("[CamouflageAdapter] C key pressed, searching for target");
+
+            // 색상 복원 중이면 취소 (새로운 의태 시작)
+            if (_isRestoringColor)
+            {
+                Debug.Log("[CamouflageAdapter] Cancelling color restore for new camouflage");
+                _isRestoringColor = false;
+                _restoreTimer = 0f;
+            }
+
+            // 반경 내 가장 가까운 오브젝트 탐지
+            GameObject nearest = _detector.FindNearestCandidate(transform.position);
+
+            if (nearest != null)
+            {
+                Debug.Log($"[CamouflageAdapter] Found target: {nearest.name}");
+                _originalPosition = transform.position;
+                _stateMachine.StartAttach(nearest);
+            }
+            else
+            {
+                Debug.LogWarning("[CamouflageAdapter] No target found nearby!");
+            }
+        }
+
+        /// <summary>
+        /// 키가 떼어졌을 때 처리 (C Up)
+        /// </summary>
+        private void OnKeyReleased()
+        {
+            Debug.Log($"[CamouflageAdapter] C key released. State: {_stateMachine.CurrentState}");
+
+            if (_stateMachine.CurrentState == CamouflageState.None)
+            {
+                return;
+            }
+
+            // Perfect 도달 전이면 취소
+            // 색상은 Update에서 천천히 복원됨
+            if (!_stateMachine.IsPerfectReached)
+            {
+                Debug.Log("[CamouflageAdapter] Not perfect yet, cancelling...");
+                _stateMachine.CancelCamouflage(true);
+            }
+            else
+            {
+                // Perfect 도달했으면 유지 (아무것도 안 함)
+                Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage...");
+            }
+        }
+
+        /// <summary>
         /// 색상 보간 업데이트
         /// </summary>
         private void UpdateBlend()
         {
+            // 색상 복원 중이면 천천히 복원
+            if (_isRestoringColor)
+            {
+                _restoreTimer += Time.deltaTime;
+                float progress = Mathf.Clamp01(_restoreTimer / RESTORE_DURATION);
+                
+                // 현재 색상에서 원본 색상으로 보간
+                _materialCloner?.BlendToOriginal(progress);
+                
+                // 복원 완료
+                if (progress >= 1f)
+                {
+                    _isRestoringColor = false;
+                    _restoreTimer = 0f;
+                    Debug.Log("[CamouflageAdapter] Color restore complete");
+                }
+                return;
+            }
+
             if (_stateMachine.TargetObject == null) return;
 
             switch (_stateMachine.CurrentState)
@@ -129,8 +299,8 @@ namespace HideAndInk.Player
                     break;
 
                 case CamouflageState.None:
-                    // 원본 색상으로 복원
-                    _materialCloner?.RestoreOriginalColor();
+                    // 원본 색상으로 복원 (복원 중이 아닐 때만 - 즉시 복원)
+                    // _isRestoringColor가 true면 위에서 처리됨
                     break;
             }
         }
@@ -140,67 +310,33 @@ namespace HideAndInk.Player
         /// </summary>
         private void UpdatePosition()
         {
+            if (_stateMachine.TargetObject == null) return;
+
+            Vector3 targetPos = _stateMachine.TargetObject.transform.position;
+            
+            // 끼임 방지를 위해 Z 위치를 살짝 앞으로 (카메라 방향)
+            // 오브젝트와 같은 Z에 있으면 충돌해서 끼이므로 0.1f 앞에 배치
+            const float FRONT_OFFSET = 0.1f;
+
             switch (_stateMachine.CurrentState)
             {
-                case CamouflageState.Locked:
-                    // Lock 중에는 원본 위치 저장
-                    if (_originalPosition == Vector3.zero)
-                    {
-                        _originalPosition = transform.position;
-                    }
+                case CamouflageState.Attached:
+                    // Attached 상태: X, Y는 유지, Z만 타겟보다 살짝 앞으로 보정
+                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z - FRONT_OFFSET);
                     break;
 
+                case CamouflageState.Locked:
                 case CamouflageState.Approaching:
                 case CamouflageState.Partial:
                 case CamouflageState.Perfect:
-                    // 오브젝트 위치로 스냅
-                    if (_stateMachine.TargetObject != null)
-                    {
-                        transform.position = _stateMachine.TargetObject.transform.position;
-                    }
+                    // Attached 완료 후: X, Y는 유지, Z만 타겟보다 살짝 앞으로 보정
+                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z - FRONT_OFFSET);
                     break;
 
                 case CamouflageState.None:
-                    // 원본 위치 복원 (필요시)
-                    _originalPosition = Vector3.zero;
+                    // None으로 돌아왔을 때 원래 위치 복원 (선택적)
+                    // 지금은 복원 안 함
                     break;
-            }
-        }
-
-        /// <summary>
-        /// 의태 키 입력 처리
-        /// </summary>
-        private void OnCamouflagePerformed(InputAction.CallbackContext context)
-        {
-            if (_isCamouflageInputPressed) return;
-            _isCamouflageInputPressed = true;
-
-            // 이미 의태 중이면 무시
-            if (_stateMachine.CurrentState != CamouflageState.None) return;
-
-            // 반경 내 가장 가까운 오브젝트 탐지
-            GameObject nearest = _detector.FindNearestCandidate(transform.position);
-
-            if (nearest != null)
-            {
-                _currentTarget = nearest;
-                _originalPosition = transform.position;
-                _stateMachine.StartCamouflage(nearest);
-            }
-        }
-
-        /// <summary>
-        /// 의태 키 해제 처리
-        /// </summary>
-        private void OnCamouflageCanceled(InputAction.CallbackContext context)
-        {
-            _isCamouflageInputPressed = false;
-
-            // Perfect 상태가 아니면 의태 해제
-            if (_stateMachine.CurrentState != CamouflageState.Perfect)
-            {
-                _stateMachine.CancelCamouflage();
-                _materialCloner?.RestoreOriginalColor();
             }
         }
 
