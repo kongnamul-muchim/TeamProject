@@ -53,5 +53,16 @@ namespace HideAndInk.Core.Interfaces
         /// Octopus Material 사용 중인지 확인
         /// </summary>
         bool IsUsingOctopusMaterial { get; }
+
+        /// <summary>
+        /// OriginalRate 설정 (의태 강도 조절)
+        /// </summary>
+        /// <param name="rate">0.0 ~ 1.0</param>
+        void SetOriginalRate(float rate);
+
+        /// <summary>
+        /// 현재 Material의 색상 가져오기
+        /// </summary>
+        Color GetCurrentMaterialColor();
     }
 }

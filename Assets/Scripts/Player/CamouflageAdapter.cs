@@ -37,10 +37,10 @@ namespace HideAndInk.Player
         private bool _justTransitionedFromPerfect; // Perfect에서 새로운 타겟으로 전환直後
         private float _transitionTimer; // 전환 후 경과 시간
 
-        // 색상 복원 관련
-        private bool _isRestoringColor; // 색상 복원 중 여부
-        private float _restoreTimer;    // 복원 경과 시간
-        private const float RESTORE_DURATION = 10.0f; // 복원 시간 (초)
+        // OriginalRate 복원 관련
+        private bool _isRestoringRate; // OriginalRate 복원 중 여부
+        private float _rateRestoreProgress; // 복원 진행도
+        private const float RATE_RESTORE_DURATION = 1.4f; // 감소 시간과 동일 (lockTime + blendTime)
 
         // 스프라이트 관련 (Resources.Load 자동 로드)
         private Dictionary<MoveDirection, Sprite> _spriteCache = new();
@@ -49,6 +49,10 @@ namespace HideAndInk.Player
         
         // Resources 경로 상수
         private const string SPRITE_PATH = "Sprite/";
+
+        // 의태 시작 후 이동 무시 시간 ( Attached → Locked 전환 시간보다 약간 길게)
+        private const float IGNORE_MOVEMENT_AFTER_ATTACH = 0.35f;
+        private float _ignoreMovementTimer;
 
         private void Awake()
         {
@@ -97,9 +101,6 @@ namespace HideAndInk.Player
             // 키 입력 처리
             HandleKeyInput();
 
-            // 이동 상태 확인
-            bool isMoving = _playerMovement != null && _playerMovement.IsMoving;
-
             // 의태 상태 (Attached 이후)에서는 이동 잠금 + 벽 충돌 무시
             if (_stateMachine.CurrentState != CamouflageState.None)
             {
@@ -114,6 +115,15 @@ namespace HideAndInk.Player
                 // 이동 중 스프라이트 방향 업데이트 (의태 중 아닐 때만)
                 UpdateSpriteDirection();
             }
+
+            // 의태 시작 후 잠시 이동 무시 ( Attached → Locked 전환 시간 )
+            if (_ignoreMovementTimer > 0f)
+            {
+                _ignoreMovementTimer -= Time.deltaTime;
+            }
+
+            // 이동 상태 확인 (의태 시작 후 잠시 무시)
+            bool isMoving = _ignoreMovementTimer <= 0f && _playerMovement != null && _playerMovement.IsMoving;
 
             // Perfect에서 전환直後에는 잠시 이동 무시
             // (Partial/Perfect 도달하거나 0.5초 경과하면 해제)
@@ -135,15 +145,14 @@ namespace HideAndInk.Player
             // 상태 시스템 업데이트
             _stateMachine.Update(Time.deltaTime, isMoving);
 
-            // 상태가 None으로变化的 → 취소됨 → 색상 천천히 복원 시작 + Material 복원
+            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
-                Debug.Log("[CamouflageAdapter] State returned to None, starting gradual color restore");
-                _isRestoringColor = true;
-                _restoreTimer = 0f;
-                
-                // Material을 Default로 복원
-                _materialCloner?.RestoreDefaultMaterial();
+                Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
+                _isRestoringRate = true;
+                _rateRestoreProgress = 0f;
+                Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
+                // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
             }
 
             // 상태 변화 로그
@@ -234,12 +243,12 @@ namespace HideAndInk.Player
         {
             Debug.Log("[CamouflageAdapter] TryStartAttach called");
 
-            // 색상 복원 중이면 취소 (새로운 의태 시작)
-            if (_isRestoringColor)
+            // OriginalRate 복원 중이면 취소 (새로운 의태 시작)
+            if (_isRestoringRate)
             {
-                Debug.Log("[CamouflageAdapter] Cancelling color restore for new camouflage");
-                _isRestoringColor = false;
-                _restoreTimer = 0f;
+                Debug.Log("[CamouflageAdapter] Cancelling rate restore for new camouflage");
+                _isRestoringRate = false;
+                _rateRestoreProgress = 0f;
             }
 
             // 반경 내 가장 가까운 오브젝트 탐지
@@ -251,9 +260,18 @@ namespace HideAndInk.Player
                 _originalPosition = transform.position;
                 _stateMachine.StartAttach(nearest);
                 
+                // 의태 시작 시 이동 무시 타이머 설정
+                _ignoreMovementTimer = IGNORE_MOVEMENT_AFTER_ATTACH;
+                
                 // 의태 시작 시 Octopus Material 적용
                 Debug.Log("[CamouflageAdapter] Applying Octopus Material on attach start");
                 _materialCloner?.ApplyOctopusMaterial();
+                
+                // 의태 시작 시 SpriteRenderer.color를 타겟 색으로 즉시 변경
+                _materialCloner?.BlendToTarget(nearest, 1f);
+                
+                // 의태 시작 시 OriginalRate를 1로 설정
+                _materialCloner?.SetOriginalRate(1f);
                 
                 // 의태 시작 시 스프라이트를 기본 Player로 변경
                 ChangeToDefaultSprite();
@@ -291,25 +309,26 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 색상 보간 업데이트
+        /// 색상 및 OriginalRate 업데이트
         /// </summary>
         private void UpdateBlend()
         {
-            // 색상 복원 중이면 천천히 복원
-            if (_isRestoringColor)
+            // OriginalRate 복원 중이면 천천히 복원
+            if (_isRestoringRate)
             {
-                _restoreTimer += Time.deltaTime;
-                float progress = Mathf.Clamp01(_restoreTimer / RESTORE_DURATION);
+                _rateRestoreProgress += Time.deltaTime;
+                float progress = Mathf.Clamp01(_rateRestoreProgress / RATE_RESTORE_DURATION);
                 
-                // 현재 색상에서 원본 색상으로 보간
-                _materialCloner?.BlendToOriginal(progress);
+                // 0 → 1로 복원 (같은 속도로)
+                float rate = Mathf.Lerp(0f, 1f, progress);
+                _materialCloner?.SetOriginalRate(rate);
                 
                 // 복원 완료
                 if (progress >= 1f)
                 {
-                    _isRestoringColor = false;
-                    _restoreTimer = 0f;
-                    Debug.Log("[CamouflageAdapter] Color restore complete");
+                    _isRestoringRate = false;
+                    _rateRestoreProgress = 0f;
+                    Debug.Log("[CamouflageAdapter] OriginalRate restore complete");
                 }
                 return;
             }
@@ -318,23 +337,35 @@ namespace HideAndInk.Player
 
             switch (_stateMachine.CurrentState)
             {
+                case CamouflageState.Attached:
+                    // SpriteRenderer.color를 타겟 색으로 즉시 변경, OriginalRate = 1
+                    _materialCloner?.BlendToTarget(_stateMachine.TargetObject, 1f);
+                    _materialCloner?.SetOriginalRate(1f);
+                    break;
+
+                case CamouflageState.Locked:
+                    // SpriteRenderer.color는 유지, OriginalRate = 1
+                    _materialCloner?.SetOriginalRate(1f);
+                    break;
+
                 case CamouflageState.Partial:
+                    // SpriteRenderer.color는 유지 (이미 타겟 색)
+                    // OriginalRate: 1 → 0 감소 (blendProgress에 비례)
                     if (_stateMachine is CamouflageStateMachine stateMachineImpl)
                     {
-                        _materialCloner?.BlendToTarget(
-                            _stateMachine.TargetObject,
-                            stateMachineImpl.BlendProgress);
+                        float rate = Mathf.Lerp(1f, 0f, stateMachineImpl.BlendProgress);
+                        _materialCloner?.SetOriginalRate(rate);
                     }
                     break;
 
                 case CamouflageState.Perfect:
-                    // Perfect에서는 완전히 타겟 색상
-                    _materialCloner?.BlendToTarget(_stateMachine.TargetObject, 1f);
+                    // SpriteRenderer.color는 유지, OriginalRate = 0
+                    _materialCloner?.SetOriginalRate(0f);
                     break;
 
                 case CamouflageState.None:
-                    // 원본 색상으로 복원 (복원 중이 아닐 때만 - 즉시 복원)
-                    // _isRestoringColor가 true면 위에서 처리됨
+                    // 해제 시 SpriteRenderer.color는 변경하지 않음
+                    // OriginalRate는 _isRestoringRate에서 처리
                     break;
             }
         }

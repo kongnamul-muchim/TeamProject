@@ -235,5 +235,56 @@ namespace HideAndInk.Core.Perception
         /// Octopus Material 사용 중인지 확인
         /// </summary>
         public bool IsUsingOctopusMaterial => _isUsingOctopusMaterial;
+
+        /// <summary>
+        /// OriginalRate 설정 (의태 강도 조절)
+        /// </summary>
+        /// <param name="rate">0.0 ~ 1.0</param>
+        public void SetOriginalRate(float rate)
+        {
+            if (_renderer != null)
+            {
+                _renderer.GetPropertyBlock(_propertyBlock);
+                _propertyBlock.SetFloat("_OriginalRate", rate);
+                _renderer.SetPropertyBlock(_propertyBlock);
+            }
+        }
+
+        /// <summary>
+        /// 현재 Material의 색상 가져오기 (shader 프로퍼티에서)
+        /// </summary>
+        public Color GetCurrentMaterialColor()
+        {
+            if (_renderer != null)
+            {
+                // PropertyBlock에서 _Color 가져오기
+                _renderer.GetPropertyBlock(_propertyBlock);
+                if (_propertyBlock.HasProperty(COLOR_PROPERTY))
+                {
+                    Color c = _propertyBlock.GetColor(COLOR_PROPERTY);
+                    Debug.Log($"[MaterialCloner] GetCurrentMaterialColor from PropertyBlock: {c}");
+                    return c;
+                }
+                
+                // 또는 material에서 직접 가져오기
+                if (_renderer.sharedMaterial != null && 
+                    _renderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
+                {
+                    Color c = _renderer.sharedMaterial.GetColor(COLOR_PROPERTY);
+                    Debug.Log($"[MaterialCloner] GetCurrentMaterialColor from sharedMaterial: {c}");
+                    return c;
+                }
+                
+                // SpriteRenderer면 color 프로퍼티 사용
+                if (_spriteRenderer != null)
+                {
+                    Color c = _spriteRenderer.color;
+                    Debug.Log($"[MaterialCloner] GetCurrentMaterialColor from SpriteRenderer.color: {c}");
+                    return c;
+                }
+            }
+            Debug.Log("[MaterialCloner] GetCurrentMaterialColor returning white (no renderer)");
+            return Color.white;
+        }
     }
 }
