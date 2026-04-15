@@ -19,6 +19,11 @@ namespace HideAndInk.Core.Perception
         // Shader 속성 이름 (Standard Shader)
         private const string COLOR_PROPERTY = "_Color";
 
+        // Material 관리
+        private Material _defaultMaterial;
+        private Material _octopusMaterial;
+        private bool _isUsingOctopusMaterial;
+
         /// <summary>
         /// 생성자
         /// </summary>
@@ -29,6 +34,7 @@ namespace HideAndInk.Core.Perception
             _spriteRenderer = playerRenderer as SpriteRenderer;
             _propertyBlock = new MaterialPropertyBlock();
             _isBlending = false;
+            _isUsingOctopusMaterial = false;
 
             // 원본 색상 저장
             if (_spriteRenderer != null)
@@ -55,6 +61,20 @@ namespace HideAndInk.Core.Perception
             }
             
             _currentColor = _originalColor;
+
+            // 기본 Material 저장
+            if (_spriteRenderer != null)
+            {
+                _defaultMaterial = _spriteRenderer.material;
+            }
+            else if (_renderer != null)
+            {
+                _defaultMaterial = _renderer.material;
+            }
+
+            // Octopus Material 로드 (Resources에서)
+            _octopusMaterial = Resources.Load<Material>("Materials/Octopus");
+            Debug.Log($"[MaterialCloner] Awake: _defaultMaterial={_defaultMaterial?.name ?? "null"}, _octopusMaterial={_octopusMaterial?.name ?? "null"}, path=Materials/Octopus");
         }
 
         /// <summary>
@@ -169,5 +189,51 @@ namespace HideAndInk.Core.Perception
         /// 원본 색상 확인
         /// </summary>
         public Color OriginalColor => _originalColor;
+
+        /// <summary>
+        /// Octopus Material로 전환 (의태 시 사용)
+        /// </summary>
+        public void ApplyOctopusMaterial()
+        {
+            Debug.Log($"[MaterialCloner] ApplyOctopusMaterial called. _octopusMaterial is null: {_octopusMaterial == null}, _spriteRenderer is null: {_spriteRenderer == null}, _renderer is null: {_renderer == null}");
+            if (_octopusMaterial == null) return;
+
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.material = _octopusMaterial;
+                _isUsingOctopusMaterial = true;
+                Debug.Log("[MaterialCloner] Applied to SpriteRenderer");
+            }
+            else if (_renderer != null)
+            {
+                _renderer.material = _octopusMaterial;
+                _isUsingOctopusMaterial = true;
+                Debug.Log("[MaterialCloner] Applied to Renderer");
+            }
+        }
+
+        /// <summary>
+        /// Default Material로 복원 (의태 해제 시 사용)
+        /// </summary>
+        public void RestoreDefaultMaterial()
+        {
+            if (_defaultMaterial == null) return;
+
+            if (_spriteRenderer != null)
+            {
+                _spriteRenderer.material = _defaultMaterial;
+                _isUsingOctopusMaterial = false;
+            }
+            else if (_renderer != null)
+            {
+                _renderer.material = _defaultMaterial;
+                _isUsingOctopusMaterial = false;
+            }
+        }
+
+        /// <summary>
+        /// Octopus Material 사용 중인지 확인
+        /// </summary>
+        public bool IsUsingOctopusMaterial => _isUsingOctopusMaterial;
     }
 }

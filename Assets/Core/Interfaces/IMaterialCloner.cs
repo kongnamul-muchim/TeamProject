@@ -38,5 +38,20 @@ namespace HideAndInk.Core.Interfaces
         /// </summary>
         /// <param name="originalColor">원본 색상</param>
         void SetOriginalColor(Color originalColor);
+
+        /// <summary>
+        /// Octopus Material로 전환 (의태 시 사용)
+        /// </summary>
+        void ApplyOctopusMaterial();
+
+        /// <summary>
+        /// Default Material로 복원 (의태 해제 시 사용)
+        /// </summary>
+        void RestoreDefaultMaterial();
+
+        /// <summary>
+        /// Octopus Material 사용 중인지 확인
+        /// </summary>
+        bool IsUsingOctopusMaterial { get; }
     }
 }

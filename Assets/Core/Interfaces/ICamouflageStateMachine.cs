@@ -13,6 +13,11 @@ namespace HideAndInk.Core.Interfaces
         None,
         
         /// <summary>
+        /// 오브젝트에 달라붙은 상태 (위치 스냅, 0.2~0.3초 움직임 잠김)
+        /// </summary>
+        Attached,
+        
+        /// <summary>
         /// Lock 시간 (키 입력 후 움직임 불가)
         /// </summary>
         Locked,
@@ -49,15 +54,21 @@ namespace HideAndInk.Core.Interfaces
         GameObject TargetObject { get; }
 
         /// <summary>
-        /// 의태 시작
+        /// 의태 시작 (Attached 상태로)
         /// </summary>
         /// <param name="target">타겟 오브젝트</param>
-        void StartCamouflage(GameObject target);
+        void StartAttach(GameObject target);
+
+        /// <summary>
+        /// 키가 떼어진 시점 기록 (Perfect 도달 여부 확인용)
+        /// </summary>
+        void RecordKeyRelease();
 
         /// <summary>
         /// 의태 해제
         /// </summary>
-        void CancelCamouflage();
+        /// <param name="force">강제 취소 (이동으로 인한 취소가 아닌 경우)</param>
+        void CancelCamouflage(bool force = false);
 
         /// <summary>
         /// 업데이트 (매 프레임 호출)
@@ -67,8 +78,18 @@ namespace HideAndInk.Core.Interfaces
         void Update(float deltaTime, bool isMoving);
 
         /// <summary>
+        /// Attached 상태 완료 여부 (0.2~0.3초 경과)
+        /// </summary>
+        bool IsAttachedComplete { get; }
+
+        /// <summary>
         /// Lock 시간 완료 여부
         /// </summary>
         bool IsLockComplete { get; }
+
+        /// <summary>
+        /// Perfect 도달 여부
+        /// </summary>
+        bool IsPerfectReached { get; }
     }
 }

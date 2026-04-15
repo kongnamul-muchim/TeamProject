@@ -41,6 +41,9 @@ namespace HideAndInk.Core.Managers
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
+            // LogModule 초기화 (자동으로 LogModule GameObject 생성)
+            _ = LogModule.Instance;
+
             InitializeContainer();
         }
 
