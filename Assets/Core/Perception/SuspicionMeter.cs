@@ -5,9 +5,9 @@ using HideAndInk.Core.Interfaces;
 namespace HideAndInk.Core.Perception
 {
     /// <summary>
-    /// 의심도 시스템 구현체
+    /// 의심도 시스템 구현체 (MonoBehaviour)
     /// </summary>
-    public sealed class SuspicionMeter : ISuspicionMeter
+    public sealed class SuspicionMeter : MonoBehaviour, ISuspicionMeter
     {
         // 임계값
         private const float CAUTION_THRESHOLD = 30f;
@@ -48,18 +48,23 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public SuspicionLevel CurrentLevel => _currentLevel;
 
-        /// <summary>
-        /// 생성자
-        /// </summary>
-        /// <param name="initialValue">초기값 (기본: 0)</param>
-        public SuspicionMeter(float initialValue = 0f)
+        private void Awake()
         {
-            _currentValue = Mathf.Clamp(initialValue, 0f, 100f);
+            _currentValue = 0f;
             _increaseSpeed = DEFAULT_INCREASE_SPEED;
             _decreaseSpeed = DEFAULT_DECREASE_SPEED;
             _isCamouflaging = false;
             _isPerfectCamouflage = false;
-            _currentLevel = CalculateLevel(_currentValue);
+            _currentLevel = SuspicionLevel.Safe;
+        }
+
+        private void Update()
+        {
+            // 자연 하락 (감지된 것이 없을 때)
+            if (_currentValue > 0f)
+            {
+                ReduceSuspicion(1f);
+            }
         }
 
         /// <summary>
@@ -68,7 +73,6 @@ namespace HideAndInk.Core.Perception
         /// <param name="amount">상승량 (초당)</param>
         public void AddSuspicion(float amount)
         {
-            float previousValue = _currentValue;
             _currentValue += amount * _increaseSpeed * Time.deltaTime;
             _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
 
@@ -96,7 +100,6 @@ namespace HideAndInk.Core.Perception
                 decreaseAmount += PERFECT_CAMOUFLAGE_REDUCE_PER_SEC * Time.deltaTime;
             }
 
-            float previousValue = _currentValue;
             _currentValue -= decreaseAmount;
             _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
 
@@ -124,7 +127,6 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void SetSuspicion(float value)
         {
-            float previousValue = _currentValue;
             _currentValue = Mathf.Clamp(value, 0f, 100f);
 
             CheckLevelChange();
@@ -203,18 +205,6 @@ namespace HideAndInk.Core.Perception
             if (_currentValue <= 0f && OnClear != null)
             {
                 OnClear.Invoke();
-            }
-        }
-
-        /// <summary>
-        /// 매 프레임 업데이트 (Time.deltaTime 자동 적용)
-        /// </summary>
-        public void Update()
-        {
-            if (_currentValue > 0f)
-            {
-                // 감지된 것이 없으면 자연 하락
-                ReduceSuspicion(1f);
             }
         }
 
