@@ -697,7 +697,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 710864461}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 257e610e934b2b24bb5387e25a6ea0b7, type: 3}
+  m_Script: {fileID: 11500000, guid: 04bc7a286eaa73b48af60e23aaf6b89f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.VisionBasedSuspicionManager
   visionSensor: {fileID: 710864463}
@@ -705,7 +705,7 @@ MonoBehaviour:
   patrolDetectionMultiplier: 1.5
   observeDetectionMultiplier: 1
   guardDetectionMultiplier: 1.2
-  suspicionMeter: {fileID: 1540738562}
+  suspicionMeter: {fileID: 0}
 --- !u!114 &710864463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -715,7 +715,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 710864461}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e8eb342738d91a45878a4a0915477f7, type: 3}
+  m_Script: {fileID: 11500000, guid: 362d77417884b884189a3905982dd353, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.ConeVisionSensor
   viewRadius: 5
@@ -861,10 +861,9 @@ GameObject:
   - component: {fileID: 1540738561}
   - component: {fileID: 1540738560}
   - component: {fileID: 1540738558}
-  - component: {fileID: 1540738563}
-  - component: {fileID: 1540738562}
   - component: {fileID: 1540738565}
   - component: {fileID: 1540738564}
+  - component: {fileID: 1540738566}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -936,31 +935,6 @@ Transform:
   - {fileID: 116563470}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1540738562
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1540738556}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 19d12a0d65333374b98d77ef04d676f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.SuspicionMeter
---- !u!114 &1540738563
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1540738556}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e6f03b58eb80e6045bf8bcfdeb396a10, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.CamouflageToSuspicionLink
-  suspicionMeter: {fileID: 0}
 --- !u!114 &1540738564
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1004,6 +978,28 @@ MonoBehaviour:
   wallLayer:
     serializedVersion: 2
     m_Bits: 0
+--- !u!114 &1540738566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1540738556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2523b4a9dbe75f24786c676062497d93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Player.CamouflageAdapter
+  detectionRadius: 1
+  camouflageLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  attachDelay: 0.3
+  lockTime: 0.4
+  blendTime: 1
+  perfectTime: 2
+  camouflageKey: 99
+  spriteDirector: {fileID: 0}
 --- !u!1 &1554940562
 GameObject:
   m_ObjectHideFlags: 0
@@ -1189,10 +1185,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1556155324}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d5cc2957b3b573408e841de9a803364, type: 3}
+  m_Script: {fileID: 11500000, guid: 5b4a25f7475659f4b859bd3863afb2e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.SuspicionMeterUI
-  suspicionMeter: {fileID: 1540738562}
+  suspicionMeter: {fileID: 0}
   suspicionFillImage: {fileID: 0}
   suspicionText: {fileID: 198706486}
   suspicionLevelText: {fileID: 685279228}
@@ -1352,7 +1348,6 @@ GameObject:
   - component: {fileID: 1655296468}
   - component: {fileID: 1655296467}
   - component: {fileID: 1655296466}
-  - component: {fileID: 1655296465}
   m_Layer: 0
   m_Name: Ground
   m_TagString: Untagged
@@ -1360,28 +1355,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!64 &1655296465
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1655296464}
-  m_Material: {fileID: 13400000, guid: 6352045fc6a632b479fdffb816f4fd9e, type: 2}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!23 &1655296466
 MeshRenderer:
   m_ObjectHideFlags: 0
