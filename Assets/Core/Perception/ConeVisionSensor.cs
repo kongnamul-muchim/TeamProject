@@ -158,11 +158,18 @@ namespace HideAndInk.Core.Perception
             Vector3 directionToTarget = (targetPosition - Origin).normalized;
             float distanceToTarget = Vector3.Distance(Origin, targetPosition);
 
+            // 시작점을 약간前から 시작 (자기 Collider Hit 방지)
+            Vector3 rayStart = Origin + directionToTarget * 0.1f;
+            float rayDistance = distanceToTarget - 0.1f;
+
             // Raycast로 장애물 감지
-            if (Physics.Raycast(Origin, directionToTarget, out RaycastHit hit, distanceToTarget, obstacleLayer))
+            if (Physics.Raycast(rayStart, directionToTarget, out RaycastHit hit, rayDistance, obstacleLayer))
             {
-                // 히트 지점이 목표보다 가까우면 장애물 있음
-                return hit.distance < distanceToTarget - 0.1f;
+                // 히트한 게 자기 자신이 아니고, 목표보다 가깝다면 장애물 있음
+                if (hit.collider.gameObject != gameObject && hit.distance < distanceToTarget - 0.1f)
+                {
+                    return true;
+                }
             }
 
             return false;
