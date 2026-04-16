@@ -32,12 +32,6 @@ namespace HideAndInk.Core.Perception
 
         private void Update()
         {
-            // 쿨다운 타이머 감소
-            if (_detectionCooldownTimer > 0f)
-            {
-                _detectionCooldownTimer -= Time.deltaTime;
-            }
-
             // 시야 내 감지된 대상 확인
             var visibleTargets = visionSensor.GetAllVisibleTargets();
 
@@ -55,22 +49,6 @@ namespace HideAndInk.Core.Perception
             {
                 _currentlyDetectedTargets.Add(target);
             }
-        }
-
-        /// <summary>
-        /// 감지 강도 계산 (패턴별)
-        /// </summary>
-        private float CalculateDetectionIntensity()
-        {
-            float patternMultiplier = visionSensor.PatternType switch
-            {
-                VisionPatternType.Patrol => patrolDetectionMultiplier,
-                VisionPatternType.Observe => observeDetectionMultiplier,
-                VisionPatternType.Guard => guardDetectionMultiplier,
-                _ => 1f
-            };
-
-            return baseDetectionIntensity * patternMultiplier;
         }
 
         /// <summary>
