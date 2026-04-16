@@ -1,5 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Player;
 
 namespace HideAndInk.Core.Perception
 {
