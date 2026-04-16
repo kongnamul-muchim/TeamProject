@@ -48,7 +48,7 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의심도 계량기 설정 (외부에서 호출)
         /// </summary>
-        public void SetSuspicionMeter(ISuspicionMeter meter)
+        public void SetSuspicionMeter(SuspicionMeter meter)
         {
             suspicionMeter = meter;
         }
