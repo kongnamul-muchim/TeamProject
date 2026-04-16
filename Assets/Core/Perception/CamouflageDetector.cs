@@ -11,7 +11,6 @@ namespace HideAndInk.Core.Perception
     public sealed class CamouflageDetector : ICamouflageDetector
     {
         private const string CAMOUFLAGEABLE_TAG = "Camouflageable";
-
         private readonly float _detectionRadius;
         private LayerMask _layerMask;
 
