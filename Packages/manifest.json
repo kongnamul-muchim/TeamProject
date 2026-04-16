@@ -1,8 +1,13 @@
 {
   "dependencies": {
     "com.unity.2d.sprite": "1.0.0",
+<<<<<<< HEAD
     "com.unity.ugui": "1.0.0",
+=======
+>>>>>>> b763aad940e8b32c5618a44a0dfbc6d8ccd735ae
     "com.unity.multiplayer.center": "1.0.1",
+    "com.unity.shadergraph": "17.3.0",
+    "com.unity.ugui": "1.0.0",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
