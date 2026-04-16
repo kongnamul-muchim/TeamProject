@@ -1,5 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Perception;
 
 namespace HideAndInk.Core.Managers
 {
@@ -30,6 +31,12 @@ namespace HideAndInk.Core.Managers
         private IDIContainer _rootContainer;
         public static IDIContainer Container => Instance._rootContainer;
 
+        // 게임 상태 머신 (Singleton으로 유지)
+        private IGameStateMachine _gameStateMachine;
+
+        [Header("연동할 스크립트")]
+        [SerializeField] private SuspicionToGameStateLink suspicionToGameStateLink;
+
         private void Awake()
         {
             if (_instance != null && _instance != this)
@@ -45,6 +52,7 @@ namespace HideAndInk.Core.Managers
             _ = LogModule.Instance;
 
             InitializeContainer();
+            SubscribeToEvents();
         }
 
         /// <summary>
@@ -62,10 +70,52 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void RegisterCoreServices()
         {
+            // 게임 상태 머신 (Singleton)
+            _gameStateMachine = new GameStateMachine(GameState.Playing);
+            _rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLifetime.Singleton);
+
+            Debug.Log("[GameManager] Core services registered.");
+        }
+
+        /// <summary>
+        /// 외부 이벤트 구독 (이벤트 기반 통신)
+        /// </summary>
+        private void SubscribeToEvents()
+        {
+            if (suspicionToGameStateLink != null)
+            {
+                suspicionToGameStateLink.OnPlayerDetected += OnPlayerDetected;
+            }
+        }
+
+        /// <summary>
+        /// 플레이어 발각 시 호출 (이벤트 핸들러)
+        /// </summary>
+        private void OnPlayerDetected()
+        {
+            if (_gameStateMachine != null && _gameStateMachine.CanTransitionTo(GameState.Detected))
+            {
+                _gameStateMachine.TransitionTo(GameState.Detected);
+                Debug.Log("[GameManager] Player detected - transitioned to Detected state.");
+            }
+        }
+
+        /// <summary>
+        /// 게임 상태 머신 가져오기
+        /// </summary>
+        public IGameStateMachine GetGameStateMachine()
+        {
+            return _gameStateMachine;
         }
 
         private void OnDestroy()
         {
+            // 이벤트 구독 해제
+            if (suspicionToGameStateLink != null)
+            {
+                suspicionToGameStateLink.OnPlayerDetected -= OnPlayerDetected;
+            }
+
             _rootContainer?.Dispose();
         }
     }
