@@ -68,7 +68,7 @@ namespace HideAndInk.Core.Managers
         {
             // 게임 상태 머신 (Singleton)
             _gameStateMachine = new GameStateMachine(GameState.Playing);
-            _rootContainer.RegisterSingleton<IGameStateMachine>(_gameStateMachine);
+            _rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLifetime.Singleton);
 
             Debug.Log("[GameManager] Core services registered.");
         }
