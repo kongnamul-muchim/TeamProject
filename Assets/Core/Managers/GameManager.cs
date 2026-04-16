@@ -1,5 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Perception;
 
 namespace HideAndInk.Core.Managers
 {
@@ -29,6 +30,9 @@ namespace HideAndInk.Core.Managers
 
         private IDIContainer _rootContainer;
         public static IDIContainer Container => Instance._rootContainer;
+
+        // 게임 상태 머신 (Singleton으로 유지)
+        private IGameStateMachine _gameStateMachine;
 
         private void Awake()
         {
@@ -62,6 +66,19 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void RegisterCoreServices()
         {
+            // 게임 상태 머신 (Singleton)
+            _gameStateMachine = new GameStateMachine(GameState.Playing);
+            _rootContainer.RegisterSingleton<IGameStateMachine>(_gameStateMachine);
+
+            Debug.Log("[GameManager] Core services registered.");
+        }
+
+        /// <summary>
+        /// 게임 상태 머신 가져오기
+        /// </summary>
+        public IGameStateMachine GetGameStateMachine()
+        {
+            return _gameStateMachine;
         }
 
         private void OnDestroy()
