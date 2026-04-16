@@ -48,6 +48,16 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public SuspicionLevel CurrentLevel => _currentLevel;
 
+        /// <summary>
+        /// 의태 중 여부
+        /// </summary>
+        public bool IsCamouflaging => _isCamouflaging;
+
+        /// <summary>
+        /// 완벽 의태 여부
+        /// </summary>
+        public bool IsPerfectCamouflage => _isPerfectCamouflage;
+
         private void Awake()
         {
             _currentValue = 0f;
