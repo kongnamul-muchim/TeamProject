@@ -12,7 +12,7 @@ namespace HideAndInk.Core.Perception
     public sealed class CamouflageToSuspicionLink : MonoBehaviour
     {
         [Header("연동할 의심도 계량기")]
-        [SerializeField] private ISuspicionMeter suspicionMeter;
+        [SerializeField] private SuspicionMeter suspicionMeter;
 
         private CamouflageAdapter _camouflageAdapter;
         private bool _wasCamouflaging;

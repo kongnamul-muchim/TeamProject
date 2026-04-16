@@ -1,5 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Core.Perception
 {
@@ -10,13 +11,15 @@ namespace HideAndInk.Core.Perception
     public sealed class SuspicionToGameStateLink : MonoBehaviour
     {
         [Header("연동할 의심도 계량기")]
-        [SerializeField] private ISuspicionMeter suspicionMeter;
+        [SerializeField] private SuspicionMeter suspicionMeter;
 
-        [Header("연동할 게임 상태 머신")]
-        [SerializeField] private IGameStateMachine gameStateMachine;
+        private IGameStateMachine _gameStateMachine;
 
         private void Awake()
         {
+            // GameManager에서 GameStateMachine 가져오기
+            _gameStateMachine = GameManager.Instance.GetGameStateMachine();
+
             if (suspicionMeter != null)
             {
                 suspicionMeter.OnDetected += OnSuspicionMax;
@@ -38,16 +41,16 @@ namespace HideAndInk.Core.Perception
         {
             Debug.Log("[SuspicionGameLink] Suspicion reached MAX! Player detected!");
 
-            if (gameStateMachine != null && gameStateMachine.CanTransitionTo(Core.Interfaces.GameState.Detected))
+            if (_gameStateMachine != null && _gameStateMachine.CanTransitionTo(GameState.Detected))
             {
-                gameStateMachine.TransitionTo(Core.Interfaces.GameState.Detected);
+                _gameStateMachine.TransitionTo(GameState.Detected);
             }
         }
 
         /// <summary>
         /// 의심도 계량기 설정
         /// </summary>
-        public void SetSuspicionMeter(ISuspicionMeter meter)
+        public void SetSuspicionMeter(SuspicionMeter meter)
         {
             // 이전 이벤트 해제
             if (suspicionMeter != null)
@@ -62,14 +65,6 @@ namespace HideAndInk.Core.Perception
             {
                 suspicionMeter.OnDetected += OnSuspicionMax;
             }
-        }
-
-        /// <summary>
-        /// 게임 상태 머신 설정
-        /// </summary>
-        public void SetGameStateMachine(IGameStateMachine machine)
-        {
-            gameStateMachine = machine;
         }
     }
 }

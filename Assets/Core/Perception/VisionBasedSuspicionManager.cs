@@ -19,8 +19,8 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float observeDetectionMultiplier = 1.0f;  // 관찰형 감지 배율
         [SerializeField] private float guardDetectionMultiplier = 1.2f;  // 경계형 감지 배율
 
-        [Header("연동할 의심도 계량기")]
-        [SerializeField] private ISuspicionMeter suspicionMeter;
+        [Header("연동할 의심도 계량기 (Player의 SuspicionMeter)")]
+        [SerializeField] private SuspicionMeter suspicionMeter;
 
         [Header("감지 딜레이 (과도한 감지 방지)")]
         [SerializeField] private float detectionCooldown = 0.5f;
@@ -110,7 +110,7 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의심도 계량기 설정 (외부에서 호출)
         /// </summary>
-        public void SetSuspicionMeter(ISuspicionMeter meter)
+        public void SetSuspicionMeter(SuspicionMeter meter)
         {
             suspicionMeter = meter;
         }
