@@ -97,7 +97,7 @@ namespace HideAndInk.Core.Perception
         {
             // Tag로 구분하거나, 인터페이스/컴포넌트로 구분
             // 예: "Camouflageable" 태그를 가진 오브젝트만 의태 가능
-            bool isCamouflageable = obj.CompareTag("Camouflageable");
+            bool isCamouflageable = obj.CompareTag(CAMOUFLAGEABLE_TAG);
             Debug.Log($"[Detector] Checking {obj.name}: Camouflageable={isCamouflageable}, Tag={obj.tag}");
             return isCamouflageable;
         }

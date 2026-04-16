@@ -438,6 +438,11 @@ namespace HideAndInk.Player
             };
 
             Sprite sprite = Resources.Load<Sprite>(path);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"[CamouflageAdapter] Sprite not found at path: {path}");
+                return null;
+            }
             _spriteCache[direction] = sprite;
             return sprite;
         }
@@ -460,6 +465,11 @@ namespace HideAndInk.Player
             };
 
             Sprite sprite = Resources.Load<Sprite>(path);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"[CamouflageAdapter] Shadow sprite not found at path: {path}");
+                return null;
+            }
             _shadowCache[direction] = sprite;
             return sprite;
         }
