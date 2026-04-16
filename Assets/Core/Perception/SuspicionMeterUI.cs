@@ -14,8 +14,8 @@ namespace HideAndInk.Core.Perception
 
         [Header("UI 참조")]
         [SerializeField] private Image suspicionFillImage;  // 의심도 게이지 바
-        [SerializeField] private Text suspicionText;        // 텍스트 (0% ~ 100%)
-        [SerializeField] private Text suspicionLevelText;   // 레벨 텍스트 (Safe, Caution, Danger, Critical, Detected)
+        [SerializeField] private UnityEngine.UI.Text suspicionText;        // 텍스트 (0% ~ 100%)
+        [SerializeField] private UnityEngine.UI.Text suspicionLevelText;   // 레벨 텍스트 (Safe, Caution, Danger, Critical, Detected)
 
         [Header("색상 설정")]
         [SerializeField] private Color safeColor = Color.green;
