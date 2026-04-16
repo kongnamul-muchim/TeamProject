@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Managers;
@@ -7,24 +6,28 @@ using HideAndInk.Core.Managers;
 namespace HideAndInk.Player
 {
     /// <summary>
-    /// 의태 시스템 Unity 어댑터
+    /// 의태 시스템 Unity 어댑터 (코디네이터)
     /// 토글 방식: C 누르고 있으면 진행, 떼면 Perfect 아니면 취소
+    /// 실제 작업은 전용 컴포넌트에 위임
     /// </summary>
     [RequireComponent(typeof(PlayerMovementAdapter))]
     public sealed class CamouflageAdapter : MonoBehaviour
     {
         [Header("의태 탐지 설정")]
         [SerializeField] private float detectionRadius = 1.0f;
-        [SerializeField] private LayerMask camouflageLayer = -1; // Everything
+        [SerializeField] private LayerMask camouflageLayer = -1;
 
         [Header("의태 시간 설정")]
-        [SerializeField] private float attachDelay = 0.3f;  // Attached 상태 유지 시간
+        [SerializeField] private float attachDelay = 0.3f;
         [SerializeField] private float lockTime = 0.4f;
         [SerializeField] private float blendTime = 1.0f;
         [SerializeField] private float perfectTime = 2.0f;
 
         [Header("의태 키 설정")]
         [SerializeField] private KeyCode camouflageKey = KeyCode.C;
+
+        [Header("의존성")]
+        [SerializeField] private SpriteDirector spriteDirector;
 
         private ICamouflageDetector _detector;
         private ICamouflageStateMachine _stateMachine;
@@ -33,24 +36,13 @@ namespace HideAndInk.Player
         private Renderer _playerRenderer;
 
         private Vector3 _originalPosition;
-        private bool _isKeyPressed;
-        private bool _justTransitionedFromPerfect; // Perfect에서 새로운 타겟으로 전환直後
-        private float _transitionTimer; // 전환 후 경과 시간
+        private bool _justTransitionedFromPerfect;
+        private float _transitionTimer;
 
-        // OriginalRate 복원 관련
-        private bool _isRestoringRate; // OriginalRate 복원 중 여부
-        private float _rateRestoreProgress; // 복원 진행도
-        private const float RATE_RESTORE_DURATION = 1.4f; // 감소 시간과 동일 (lockTime + blendTime)
+        private bool _isRestoringRate;
+        private float _rateRestoreProgress;
+        private const float RATE_RESTORE_DURATION = 1.4f;
 
-        // 스프라이트 관련 (Resources.Load 자동 로드)
-        private Dictionary<MoveDirection, Sprite> _spriteCache = new();
-        private Dictionary<MoveDirection, Sprite> _shadowCache = new();
-        private MoveDirection _lastDirection = MoveDirection.Down;
-        
-        // Resources 경로 상수
-        private const string SPRITE_PATH = "Sprite/";
-
-        // 의태 시작 후 이동 무시 시간 ( Attached → Locked 전환 시간보다 약간 길게)
         private const float IGNORE_MOVEMENT_AFTER_ATTACH = 0.35f;
         private float _ignoreMovementTimer;
 
@@ -58,7 +50,6 @@ namespace HideAndInk.Player
         {
             _playerMovement = GetComponent<PlayerMovementAdapter>();
 
-            // 자식 "Visual" 오브젝트에서 Renderer 찾기 (GetComponentInChildren으로 변경)
             Transform visual = transform.Find("Visual");
             if (visual != null)
             {
@@ -66,11 +57,9 @@ namespace HideAndInk.Player
             }
             else
             {
-                // 자식이 없으면 자기 자신의 Renderer 사용
                 _playerRenderer = GetComponentInChildren<Renderer>();
             }
 
-            // DI 컨테이너에서 해결하거나 직접 생성
             if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageDetector>())
             {
                 _detector = GameManager.Container.Resolve<ICamouflageDetector>();
@@ -94,6 +83,16 @@ namespace HideAndInk.Player
             {
                 _materialCloner = new MaterialCloner(_playerRenderer);
             }
+
+            if (spriteDirector != null)
+            {
+                SpriteRenderer sr = _playerRenderer as SpriteRenderer;
+                if (sr == null && visual != null)
+                {
+                    sr = visual.GetComponentInChildren<SpriteRenderer>();
+                }
+                spriteDirector.SetSpriteRenderer(sr);
+            }
         }
 
         private void Update()
@@ -112,7 +111,6 @@ namespace HideAndInk.Player
                 _playerMovement?.SetMovementLocked(false);
                 _playerMovement?.SetIgnoreWallCollision(false);
 
-                // 이동 중 스프라이트 방향 업데이트 (의태 중 아닐 때만)
                 UpdateSpriteDirection();
             }
 
@@ -273,8 +271,7 @@ namespace HideAndInk.Player
                 // 의태 시작 시 OriginalRate를 1로 설정
                 _materialCloner?.SetOriginalRate(1f);
                 
-                // 의태 시작 시 스프라이트를 기본 Player로 변경
-                ChangeToDefaultSprite();
+                spriteDirector?.ChangeToDefaultSprite();
             }
             else
             {
@@ -371,139 +368,12 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 이동 방향에 따른 스프라이트 업데이트
+        /// 이동 방향에 따른 스프라이트 업데이트 (SpriteDirector에 위임)
         /// </summary>
         private void UpdateSpriteDirection()
         {
-            if (_playerMovement == null) return;
-
-            MoveDirection currentDirection = _playerMovement.Direction;
-
-            // 방향이 바뀌었을 때만 스프라이트 교체
-            if (currentDirection == _lastDirection) return;
-            _lastDirection = currentDirection;
-
-            // SpriteRenderer 찾기
-            Transform visual = transform.Find("Visual");
-            SpriteRenderer spriteRenderer = null;
-            if (visual != null)
-            {
-                spriteRenderer = visual.GetComponentInChildren<SpriteRenderer>();
-            }
-
-            if (spriteRenderer == null)
-            {
-                // 자식이 없으면 자기 자신에서 찾기
-                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            }
-
-            if (spriteRenderer == null) return;
-
-            // Resources에서 스프라이트 로드
-            Sprite targetSprite = GetSprite(currentDirection);
-            Sprite targetShadowSprite = GetShadow(currentDirection);
-
-            if (targetSprite != null)
-            {
-                spriteRenderer.sprite = targetSprite;
-
-                // ShaderGraph Material의 텍스처 교체
-                Material mat = spriteRenderer.material;
-                if (mat != null)
-                {
-                    Texture2D mainTex = targetSprite.texture;
-                    Texture2D colorPartTex = targetShadowSprite != null ? targetShadowSprite.texture : mainTex;
-                    
-                    mat.SetTexture("_MainTex", mainTex);
-                    mat.SetTexture("_ColorPart", colorPartTex);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 이동 방향에 따른 스프라이트 가져오기 (캐시)
-        /// </summary>
-        private Sprite GetSprite(MoveDirection direction)
-        {
-            if (_spriteCache.TryGetValue(direction, out Sprite cached))
-                return cached;
-
-            string path = direction switch
-            {
-                MoveDirection.Down => $"{SPRITE_PATH}Player",
-                MoveDirection.Left => $"{SPRITE_PATH}PlayerMoveLeft",
-                MoveDirection.Right => $"{SPRITE_PATH}PlayerMoveRight",
-                MoveDirection.Up => $"{SPRITE_PATH}PlayerMoveUp",
-                _ => $"{SPRITE_PATH}Player"
-            };
-
-            Sprite sprite = Resources.Load<Sprite>(path);
-            if (sprite == null)
-            {
-                Debug.LogWarning($"[CamouflageAdapter] Sprite not found at path: {path}");
-                return null;
-            }
-            _spriteCache[direction] = sprite;
-            return sprite;
-        }
-
-        /// <summary>
-        /// 이동 방향에 따른 그림자 스프라이트 가져오기 (캐시)
-        /// </summary>
-        private Sprite GetShadow(MoveDirection direction)
-        {
-            if (_shadowCache.TryGetValue(direction, out Sprite cached))
-                return cached;
-
-            string path = direction switch
-            {
-                MoveDirection.Down => $"{SPRITE_PATH}PlayerShadow",
-                MoveDirection.Left => $"{SPRITE_PATH}PlayerMoveLeftShadow",
-                MoveDirection.Right => $"{SPRITE_PATH}PlayerMoveRightShadow",
-                MoveDirection.Up => $"{SPRITE_PATH}PlayerMoveUpShadow",
-                _ => $"{SPRITE_PATH}PlayerShadow"
-            };
-
-            Sprite sprite = Resources.Load<Sprite>(path);
-            if (sprite == null)
-            {
-                Debug.LogWarning($"[CamouflageAdapter] Shadow sprite not found at path: {path}");
-                return null;
-            }
-            _shadowCache[direction] = sprite;
-            return sprite;
-        }
-
-        /// <summary>
-        /// 스프라이트를 기본 Player로 변경 (의태 시 사용)
-        /// </summary>
-        private void ChangeToDefaultSprite()
-        {
-            Transform visual = transform.Find("Visual");
-            SpriteRenderer spriteRenderer = null;
-            if (visual != null)
-            {
-                spriteRenderer = visual.GetComponentInChildren<SpriteRenderer>();
-            }
-
-            if (spriteRenderer == null)
-            {
-                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            }
-
-            if (spriteRenderer == null) return;
-
-            // Sprite/Player 스프라이트 로드
-            Sprite defaultSprite = Resources.Load<Sprite>("Sprite/Player");
-            if (defaultSprite != null)
-            {
-                spriteRenderer.sprite = defaultSprite;
-                Debug.Log("[CamouflageAdapter] Changed sprite to default Player");
-            }
-            else
-            {
-                Debug.LogWarning("[CamouflageAdapter] Default Player sprite not found at Sprite/Player");
-            }
+            if (_playerMovement == null || spriteDirector == null) return;
+            spriteDirector.UpdateDirection(_playerMovement.Direction);
         }
 
         /// <summary>

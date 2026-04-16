@@ -2,14 +2,13 @@ using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using HideAndInk.Core.Player;
-using System;
-using System.IO;
 
 namespace HideAndInk.Player
 {
     /// <summary>
     /// 플레이어 이동 시스템 Unity 어댑터
     /// Unity 기본 Input 시스템 + Rigidbody 사용
+    /// SRP 준수: 이동 로직 + 입력 처리만 담당, 로깅은 MovementLogger에 위임
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public sealed class PlayerMovementAdapter : MonoBehaviour
@@ -24,26 +23,25 @@ namespace HideAndInk.Player
         [SerializeField] private string horizontalAxis = "Horizontal";
         [SerializeField] private string verticalAxis = "Vertical";
 
+        [Header("로거 (DI)")]
+        [SerializeField] private MovementLogger movementLogger;
+
         private IPlayerMovement _playerMovement;
-        private bool _ignoreWallCollision; // 의태 중 벽 충돌 무시
+        private bool _ignoreWallCollision;
         private Rigidbody _rigidbody;
         private Vector2 _moveInput;
-        private bool _isMovementLocked; // 의태 중 이동 잠금
-
-        // 이동 로그 관련
-        private StreamWriter _moveLogWriter;
-        private bool _isMoveLogInitialized;
+        private bool _isMovementLocked;
 
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
-            
+
             // Rigidbody 설정
             _rigidbody.useGravity = true;
             _rigidbody.isKinematic = false;
             _rigidbody.freezeRotation = true;
             _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-            
+
             // DI 컨테이너에서 해결하거나 직접 생성
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IPlayerMovement>())
             {
@@ -61,45 +59,8 @@ namespace HideAndInk.Player
 
         private void Start()
         {
-            InitializeMoveLog();
-        }
-
-        /// <summary>
-        /// 이동 로그 파일 초기화
-        /// </summary>
-        private void InitializeMoveLog()
-        {
-            if (_isMoveLogInitialized) return;
-
-            string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-            string projectPath = Application.dataPath.Replace("/Assets", "");
-            string logFolder = Path.Combine(projectPath, "Logs", dateString);
-
-            if (!Directory.Exists(logFolder))
-            {
-                Directory.CreateDirectory(logFolder);
-            }
-
-            string filePath = Path.Combine(logFolder, "MOVE.md");
-            _moveLogWriter = new StreamWriter(filePath, false);
-            _moveLogWriter.WriteLine("# MOVE Log\n");
-            _moveLogWriter.WriteLine("---");
-            _moveLogWriter.AutoFlush = true;
-
-            _isMoveLogInitialized = true;
-            Debug.Log($"[PlayerMovementAdapter] Move log initialized: {filePath}");
-        }
-
-        /// <summary>
-        /// 이동 좌표 로그 기록
-        /// </summary>
-        private void LogMove(string message)
-        {
-            if (_moveLogWriter == null) return;
-
-            string timeString = DateTime.Now.ToString("HH:mm:ss.fff");
-            string logEntry = $"## {timeString}\n{message}";
-            _moveLogWriter.WriteLine(logEntry);
+            // 로거 초기화 (MovementLogger가 파일 I/O 담당)
+            movementLogger?.Initialize();
         }
 
         private void Update()
@@ -131,12 +92,12 @@ namespace HideAndInk.Player
             // FixedUpdate에서 velocity로 이동 적용 (물리 엔진과 동기화)
             Vector2 velocity = _playerMovement.Velocity;
             Vector3 moveDirection = new Vector3(velocity.x, 0f, velocity.y);
-            
+
             _rigidbody.linearVelocity = moveDirection;
 
-            // 이동 좌표 로그 기록
+            // 이동 좌표 로그 기록 (MovementLogger에 위임)
             Vector3 pos = transform.position;
-            LogMove($"Pos: ({pos.x:F3}, {pos.y:F3}, {pos.z:F3}) | Velocity: ({velocity.x:F3}, {velocity.y:F3}) | Input: ({_moveInput.x:F3}, {_moveInput.y:F3})");
+            movementLogger?.Log($"Pos: ({pos.x:F3}, {pos.y:F3}, {pos.z:F3}) | Velocity: ({velocity.x:F3}, {velocity.y:F3}) | Input: ({_moveInput.x:F3}, {_moveInput.y:F3})");
         }
 
         /// <summary>
@@ -182,20 +143,8 @@ namespace HideAndInk.Player
 
         private void OnDestroy()
         {
-            if (_moveLogWriter != null)
-            {
-                _moveLogWriter.Close();
-                _moveLogWriter.Dispose();
-            }
-        }
-
-        private void OnApplicationQuit()
-        {
-            if (_moveLogWriter != null)
-            {
-                _moveLogWriter.Close();
-                _moveLogWriter.Dispose();
-            }
+            // MovementLogger 리소스 해제는 MovementLogger 자체에서 관리
+            (movementLogger as System.IDisposable)?.Dispose();
         }
     }
 }
