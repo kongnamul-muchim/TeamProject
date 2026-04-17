@@ -321,9 +321,8 @@ namespace HideAndInk.Player
             }
             else
             {
-                // Perfect 도달했으면 유지하되, Outline은 복원 (의태 효과는 유지)
-                Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage but restoring outline...");
-                RestoreOutline();
+                // Perfect 도달했으면 유지 (Outline도 유지, 복원 안 함)
+                Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage...");
             }
         }
 
