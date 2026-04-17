@@ -11,6 +11,17 @@ namespace HideAndInk.Core.Interfaces
         Detected = 4
     }
 
+    /// <summary>
+    /// 적 AI의 경계 상태
+    /// </summary>
+    public enum EnemyAlertState
+    {
+        Idle = 0,       // 평소 (의심도 0)
+        Suspicious = 1, // 의심 중 (의심도 있음, 추적 안 함)
+        Tracking = 2,   // 추적 중 (마지막 위치 향해 이동)
+        Alert = 3       // 발각 (플레이어를 발견!)
+    }
+
     public interface ISuspicionMeter
     {
         float CurrentValue { get; }

@@ -1,7 +1,7 @@
 # Camouflage 시스템 수정 내용
 
 ## 수정 일시
-- 2026-04-17
+- 2026-04-17 (수정 재적용: 2026-04-17)
 
 ## 수정 파일
 - `Assets/Scripts/Player/CamouflageAdapter.cs`

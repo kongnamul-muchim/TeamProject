@@ -2,6 +2,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace HideAndInk.Player
 {
@@ -11,12 +14,14 @@ namespace HideAndInk.Player
     /// </summary>
     public sealed class SpriteDirector : MonoBehaviour, ISpriteDirector
     {
-        [SerializeField] private string spritePath = "Sprite/";
+        [SerializeField] private string spritePath = "Art/1_Characters/Player/Spr_Player_Idle_";
+        [SerializeField] private string maskPath = "Art/1_Characters/Player/Mask_Player_Idle_";
 
         private SpriteRenderer _spriteRenderer;
         private Dictionary<MoveDirection, Sprite> _spriteCache = new();
         private Dictionary<MoveDirection, Sprite> _shadowCache = new();
         private MoveDirection _lastDirection = MoveDirection.Down;
+        private bool _isFlippedX = false;
 
         /// <summary>
         ///Resources 경로 설정
@@ -73,7 +78,7 @@ namespace HideAndInk.Player
         {
             if (_spriteRenderer == null) return;
 
-            Sprite defaultSprite = Resources.Load<Sprite>($"{spritePath}Player");
+            Sprite defaultSprite = LoadSprite($"{spritePath}Player");
             if (defaultSprite != null)
             {
                 _spriteRenderer.sprite = defaultSprite;
@@ -95,14 +100,14 @@ namespace HideAndInk.Player
 
             string path = direction switch
             {
-                MoveDirection.Down => $"{spritePath}Player",
-                MoveDirection.Left => $"{spritePath}PlayerMoveLeft",
-                MoveDirection.Right => $"{spritePath}PlayerMoveRight",
-                MoveDirection.Up => $"{spritePath}PlayerMoveUp",
-                _ => $"{spritePath}Player"
+                MoveDirection.Down => $"{spritePath}Front",
+                MoveDirection.Left => $"{spritePath}Left",
+                MoveDirection.Right => $"{spritePath}Right",
+                MoveDirection.Up => $"{spritePath}Back",
+                _ => $"{spritePath}Front"
             };
 
-            Sprite sprite = Resources.Load<Sprite>(path);
+            Sprite sprite = LoadSprite(path);
             if (sprite == null)
             {
                 Debug.LogWarning($"[SpriteDirector] Sprite not found at path: {path}");
@@ -122,14 +127,14 @@ namespace HideAndInk.Player
 
             string path = direction switch
             {
-                MoveDirection.Down => $"{spritePath}PlayerShadow",
-                MoveDirection.Left => $"{spritePath}PlayerMoveLeftShadow",
-                MoveDirection.Right => $"{spritePath}PlayerMoveRightShadow",
-                MoveDirection.Up => $"{spritePath}PlayerMoveUpShadow",
-                _ => $"{spritePath}PlayerShadow"
+                MoveDirection.Down => $"{maskPath}Front",
+                MoveDirection.Left => $"{maskPath}Left",
+                MoveDirection.Right => $"{maskPath}Right",
+                MoveDirection.Up => $"{maskPath}Back",
+                _ => $"{maskPath}Front"
             };
 
-            Sprite sprite = Resources.Load<Sprite>(path);
+            Sprite sprite = LoadSprite(path);
             if (sprite == null)
             {
                 Debug.LogWarning($"[SpriteDirector] Shadow sprite not found at path: {path}");
@@ -137,6 +142,15 @@ namespace HideAndInk.Player
             }
             _shadowCache[direction] = sprite;
             return sprite;
+        }
+
+        private Sprite LoadSprite(string path)
+        {
+#if UNITY_EDITOR
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path + ".png");
+#else
+            return Resources.Load<Sprite>(path);
+#endif
         }
     }
 }

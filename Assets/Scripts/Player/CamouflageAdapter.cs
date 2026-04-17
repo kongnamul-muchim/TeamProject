@@ -99,11 +99,9 @@ namespace HideAndInk.Player
 
             if (spriteDirector != null)
             {
-                SpriteRenderer sr = _playerRenderer as SpriteRenderer;
-                if (sr == null && visual != null)
-                {
-                    sr = visual.GetComponentInChildren<SpriteRenderer>();
-                }
+                SpriteRenderer sr = visual != null
+                    ? visual.GetComponentInChildren<SpriteRenderer>()
+                    : GetComponentInChildren<SpriteRenderer>();
                 spriteDirector.SetSpriteRenderer(sr);
             }
         }
@@ -180,7 +178,7 @@ namespace HideAndInk.Player
                 }
 
                 // Partial 또는 Perfect에 도달하면 플래그 해제
-                if (_stateMachine.CurrentState == CamouflageState.Partial || 
+                if (_stateMachine.CurrentState == CamouflageState.Partial ||
                     _stateMachine.CurrentState == CamouflageState.Perfect)
                 {
                     _justTransitionedFromPerfect = false;
@@ -214,7 +212,7 @@ namespace HideAndInk.Player
                 Debug.Log("[CamouflageAdapter] C keyDown detected");
                 TryHandleKeyDown();
             }
-            
+
             // C Up 감지
             if (Input.GetKeyUp(camouflageKey))
             {
@@ -284,13 +282,13 @@ namespace HideAndInk.Player
                 // 의태 시작 시 Octopus Material 적용
                 Debug.Log("[CamouflageAdapter] Applying Octopus Material on attach start");
                 _materialCloner?.ApplyOctopusMaterial();
-                
+
                 // 의태 시작 시 SpriteRenderer.color를 타겟 색으로 즉시 변경
                 _materialCloner?.BlendToTarget(nearest, 1f);
-                
+
                 // 의태 시작 시 OriginalRate를 1로 설정
                 _materialCloner?.SetOriginalRate(1f);
-                
+
                 spriteDirector?.ChangeToDefaultSprite();
             }
             else
@@ -336,11 +334,11 @@ namespace HideAndInk.Player
             {
                 _rateRestoreProgress += Time.deltaTime;
                 float progress = Mathf.Clamp01(_rateRestoreProgress / RATE_RESTORE_DURATION);
-                
+
                 // 0 → 1로 복원 (같은 속도로)
                 float rate = Mathf.Lerp(0f, 1f, progress);
                 _materialCloner?.SetOriginalRate(rate);
-                
+
                 // 복원 완료
                 if (progress >= 1f)
                 {
