@@ -2,6 +2,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Events;
 
 namespace HideAndInk.Core.Managers
 {
@@ -57,6 +58,16 @@ namespace HideAndInk.Core.Managers
             _currentState = newState;
 
             Debug.Log($"[GameStateMachine] State transition: {previousState} → {_currentState}");
+
+            // [이벤트] 게임 상태 전환에 따른 전역 이벤트 발생
+            if (newState == GameState.Detected)
+            {
+                GameEvents.InvokePlayerDetected();
+            }
+            else if (newState == GameState.Dead)
+            {
+                GameEvents.InvokePlayerDeath();
+            }
 
             OnStateChanged?.Invoke(_currentState);
         }
