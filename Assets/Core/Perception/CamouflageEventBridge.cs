@@ -5,7 +5,7 @@ namespace HideAndInk.Core.Perception
 {
     /// <summary>
     /// 의태 이벤트를 효과 시스템에 연결하는 브릿지 (반장 역할)
-    /// Member C의 파티클/셰이더 시스템과 연동
+    /// Member C의 파티클/사운드 시스템과 연동
     /// </summary>
     public class CamouflageEventBridge : MonoBehaviour
     {
@@ -13,8 +13,8 @@ namespace HideAndInk.Core.Perception
         [Tooltip("의태 시작/종료 시 파티클 효과를 재생하는 컴포넌트")]
         [SerializeField] private MonoBehaviour inkParticleEffect;
         
-        [Tooltip("의태 상태에 따라 셰이더 효과를 제어하는 컴포넌트")]
-        [SerializeField] private MonoBehaviour camouflageShaderEffect;
+        [Tooltip("의태 상태에 따라 사운드를 재생하는 컴포넌트")]
+        [SerializeField] private MonoBehaviour soundEffect;
         
         private void OnEnable()
         {
@@ -42,13 +42,13 @@ namespace HideAndInk.Core.Perception
             // Member C의 파티클 시스템 호출
             if (inkParticleEffect != null)
             {
-                // 예: inkParticleEffect.SendMessage("PlayAttachEffect", target, SendMessageOptions.DontRequireReceiver);
+                inkParticleEffect.SendMessage("PlayAttachEffect", target, SendMessageOptions.DontRequireReceiver);
             }
             
-            // Member C의 셰이더 시스템 호출
-            if (camouflageShaderEffect != null)
+            // Member C의 사운드 시스템 호출
+            if (soundEffect != null)
             {
-                // 예: camouflageShaderEffect.SendMessage("TriggerAttachShader", target, SendMessageOptions.DontRequireReceiver);
+                soundEffect.SendMessage("PlayAttachSound", SendMessageOptions.DontRequireReceiver);
             }
         }
         
@@ -61,12 +61,12 @@ namespace HideAndInk.Core.Perception
             
             if (inkParticleEffect != null)
             {
-                // 예: inkParticleEffect.SendMessage("PlayPerfectEffect", target, SendMessageOptions.DontRequireReceiver);
+                inkParticleEffect.SendMessage("PlayPerfectEffect", target, SendMessageOptions.DontRequireReceiver);
             }
             
-            if (camouflageShaderEffect != null)
+            if (soundEffect != null)
             {
-                // 예: camouflageShaderEffect.SendMessage("TriggerPerfectShader", target, SendMessageOptions.DontRequireReceiver);
+                soundEffect.SendMessage("PlayPerfectSound", SendMessageOptions.DontRequireReceiver);
             }
         }
         
@@ -79,12 +79,12 @@ namespace HideAndInk.Core.Perception
             
             if (inkParticleEffect != null)
             {
-                // 예: inkParticleEffect.SendMessage("PlayDetachEffect", target, SendMessageOptions.DontRequireReceiver);
+                inkParticleEffect.SendMessage("PlayDetachEffect", target, SendMessageOptions.DontRequireReceiver);
             }
             
-            if (camouflageShaderEffect != null)
+            if (soundEffect != null)
             {
-                // 예: camouflageShaderEffect.SendMessage("TriggerDetachShader", target, SendMessageOptions.DontRequireReceiver);
+                soundEffect.SendMessage("PlayDetachSound", SendMessageOptions.DontRequireReceiver);
             }
         }
     }
