@@ -58,6 +58,7 @@ namespace HideAndInk.Player
         private Color _originalOutlineColor;
         private float _outlineChangeProgress;
         private bool _isAttachingFromBehind;
+        private bool _isRestoringOutline;
 
         private void Awake()
         {
@@ -160,7 +161,7 @@ namespace HideAndInk.Player
                 Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
-                RestoreOutline();  // Outline도 함께 복원
+                StartRestoreOutline();  // Outline 보간 복원 시작
                 Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
                 // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
             }
@@ -234,7 +235,7 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Perfect state, C Down → cancelling camouflage");
                 _stateMachine.CancelCamouflage(true);
-                RestoreOutline();
+                StartRestoreOutline();
                 _justTransitionedFromPerfect = false;
                 _transitionTimer = 0f;
                 return;
@@ -312,7 +313,7 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Not perfect yet, cancelling...");
                 _stateMachine.CancelCamouflage(true);
-                RestoreOutline();
+                StartRestoreOutline();
             }
             else
             {
@@ -326,21 +327,22 @@ namespace HideAndInk.Player
         /// </summary>
         private void UpdateBlend()
         {
-            // [방법1] SpriteRenderer.color 복원 중이면 천천히 복원
+            // OriginalRate 복원 중이면 천천히 복원
             if (_isRestoringRate)
             {
                 _rateRestoreProgress += Time.deltaTime;
                 float progress = Mathf.Clamp01(_rateRestoreProgress / RATE_RESTORE_DURATION);
 
-                // SpriteRenderer.color를 원래 색으로 천천히 복원
-                _materialCloner?.BlendToOriginal(progress);
+                // 0 → 1로 복원 (같은 속도로)
+                float rate = Mathf.Lerp(0f, 1f, progress);
+                _materialCloner?.SetOriginalRate(rate);
 
                 // 복원 완료
                 if (progress >= 1f)
                 {
                     _isRestoringRate = false;
                     _rateRestoreProgress = 0f;
-                    Debug.Log("[CamouflageAdapter] Color restore complete");
+                    Debug.Log("[CamouflageAdapter] OriginalRate restore complete");
                 }
                 return;
             }
@@ -350,15 +352,34 @@ namespace HideAndInk.Player
             switch (_stateMachine.CurrentState)
             {
                 case CamouflageState.Attached:
-                case CamouflageState.Locked:
-                case CamouflageState.Partial:
-                case CamouflageState.Perfect:
-                    // [방법1] 상태 유지 중에는 타겟 색상으로 유지 (매 프레임 설정)
+                    // SpriteRenderer.color를 타겟 색으로 즉시 변경, OriginalRate = 1
                     _materialCloner?.BlendToTarget(_stateMachine.TargetObject, 1f);
+                    _materialCloner?.SetOriginalRate(1f);
+                    break;
+
+                case CamouflageState.Locked:
+                    // SpriteRenderer.color는 유지, OriginalRate = 1
+                    _materialCloner?.SetOriginalRate(1f);
+                    break;
+
+                case CamouflageState.Partial:
+                    // SpriteRenderer.color는 유지 (이미 타겟 색)
+                    // OriginalRate: 1 → 0 감소 (blendProgress에 비례)
+                    if (_stateMachine is CamouflageStateMachine stateMachineImpl)
+                    {
+                        float rate = Mathf.Lerp(1f, 0f, stateMachineImpl.BlendProgress);
+                        _materialCloner?.SetOriginalRate(rate);
+                    }
+                    break;
+
+                case CamouflageState.Perfect:
+                    // SpriteRenderer.color는 유지, OriginalRate = 0
+                    _materialCloner?.SetOriginalRate(0f);
                     break;
 
                 case CamouflageState.None:
-                    // 해제 시 SpriteRenderer.color는 _isRestoringRate에서 처리
+                    // 해제 시 SpriteRenderer.color는 변경하지 않음
+                    // OriginalRate는 _isRestoringRate에서 처리
                     break;
             }
         }
@@ -483,68 +504,75 @@ namespace HideAndInk.Player
             }
             else
             {
-                // 앞면에서 접근: Outline 변경 없음
-                _targetOutline = null;
+                // 앞면에서 접근: Outline 원래 색상으로 시작
+                _originalOutlineColor = _targetOutline.OutlineColor;
+                _outlineChangeProgress = 0f;
             }
         }
 
         /// <summary>
-        /// Outline 색상 업데이트 (상태 전환과同步)
+        /// Outline 색상 업데이트 (blendTime과同步)
         /// </summary>
         private void UpdateOutlineColor()
         {
             if (_targetOutline == null) return;
             if (_stateMachine.TargetObject == null) return;
 
-            // 뒷면에서만 Outline 변경
-            if (_isAttachingFromBehind)
-            {
-                // Attached 상태에서는 Outline 변경 안 함 (상태 전환 후 변경)
-                if (_stateMachine.CurrentState == CamouflageState.Attached)
-                {
-                    return;
-                }
+            float duration = blendTime;
 
-                // Locked/Approaching/Partial 상태에서만 Outline 변경
-                _outlineChangeProgress += Time.deltaTime / lockTime;
-                _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
-
-                // 타겟 오브젝트의 메인 색상 가져오기 (어두운 계열로)
-                Renderer targetRenderer = _stateMachine.TargetObject.GetComponent<Renderer>();
-                if (targetRenderer != null)
-                {
-                    Color targetColor = targetRenderer.sharedMaterial?.color ?? Color.white;
-                    // 오브젝트 색상의 55% 어두운 계열로 변경
-                    Color darkOutlineColor = new Color(
-                        targetColor.r * 0.55f,
-                        targetColor.g * 0.55f,
-                        targetColor.b * 0.55f
-                    );
-                    Color newOutlineColor = Color.Lerp(_originalOutlineColor, darkOutlineColor, _outlineChangeProgress);
-                    _targetOutline.OutlineColor = newOutlineColor;
-                }
-            }
-            else
+            // 의태 시작 시점과 같은 시점에 Outline 변경 시작
+            if (_stateMachine.CurrentState == CamouflageState.None)
             {
-                // 앞면: Outline 원래 색상으로 복원
-                if (_outlineChangeProgress > 0f)
+                // 해제 시: Outline 천천히 복원 (OriginalRate 복원 속도와 동일)
+                if (_isRestoringOutline && _outlineChangeProgress > 0f)
                 {
-                    _outlineChangeProgress -= Time.deltaTime / lockTime;
+                    _outlineChangeProgress -= Time.deltaTime / RATE_RESTORE_DURATION;
                     _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
                     _targetOutline.OutlineColor = Color.Lerp(_originalOutlineColor, Color.white, _outlineChangeProgress);
+
+                    // 복원 완료
+                    if (_outlineChangeProgress <= 0f)
+                    {
+                        _isRestoringOutline = false;
+                        _targetOutline = null;
+                    }
                 }
+                return;
+            }
+
+            // Attached 상태: 아직 색상 보간 안 함
+            if (_stateMachine.CurrentState == CamouflageState.Attached && !_stateMachine.IsAttachedComplete)
+            {
+                return;
+            }
+
+            // Attached 완료 후 ~ Partial까지: Outline 색상 보간 시작
+            _outlineChangeProgress += Time.deltaTime / duration;
+            _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
+
+            Renderer targetRenderer = _stateMachine.TargetObject.GetComponent<Renderer>();
+            if (targetRenderer != null)
+            {
+                Color targetColor = targetRenderer.sharedMaterial?.color ?? Color.white;
+                // 오브젝트 색상의 55% 어두운 계열로 변경
+                Color darkOutlineColor = new Color(
+                    targetColor.r * 0.55f,
+                    targetColor.g * 0.55f,
+                    targetColor.b * 0.55f
+                );
+                Color newOutlineColor = Color.Lerp(_originalOutlineColor, darkOutlineColor, _outlineChangeProgress);
+                _targetOutline.OutlineColor = newOutlineColor;
             }
         }
 
         /// <summary>
-        /// Outline 색상 즉시 복원 (의태 해제 시 호출)
+        /// Outline 복원 시작 (의태 해제 시 호출 - OriginalRate 복원 속도와 동일)
         /// </summary>
-        private void RestoreOutline()
+        private void StartRestoreOutline()
         {
             if (_targetOutline == null) return;
-            _targetOutline.OutlineColor = Color.white;
-            _targetOutline = null;
-            _outlineChangeProgress = 0f;
+            _isRestoringOutline = true;
+            _outlineChangeProgress = 1f; // 복원 시작 (1 → 0으로 가야 함)
         }
 
         /// <summary>
