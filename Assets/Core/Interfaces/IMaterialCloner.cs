@@ -64,5 +64,11 @@ namespace HideAndInk.Core.Interfaces
         /// 현재 Material의 색상 가져오기
         /// </summary>
         Color GetCurrentMaterialColor();
+
+        /// <summary>
+        /// 타겟 오브젝트의 Material에 ZWrite 활성화 (2D OutlineHidden용)
+        /// </summary>
+        /// <param name="target">타겟 오브젝트</param>
+        void EnableTargetZWrite(GameObject target);
     }
 }

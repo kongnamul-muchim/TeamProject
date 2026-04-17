@@ -297,5 +297,22 @@ namespace HideAndInk.Core.Perception
             Debug.Log("[MaterialCloner] GetCurrentMaterialColor returning white (no renderer)");
             return Color.white;
         }
+
+        /// <summary>
+        /// 타겟 오브젝트의 Material에 ZWrite 활성화 (2D OutlineHidden용)
+        /// </summary>
+        public void EnableTargetZWrite(GameObject target)
+        {
+            if (target == null) return;
+
+            Renderer targetRenderer = target.GetComponent<Renderer>();
+            if (targetRenderer == null) return;
+
+            // MaterialPropertyBlock으로 ZWrite 설정
+            MaterialPropertyBlock block = new MaterialPropertyBlock();
+            targetRenderer.GetPropertyBlock(block);
+            block.SetFloat("_ZWrite", 1f);
+            targetRenderer.SetPropertyBlock(block);
+        }
     }
 }
