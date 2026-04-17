@@ -46,6 +46,19 @@ namespace HideAndInk.Player
         private const float IGNORE_MOVEMENT_AFTER_ATTACH = 0.35f;
         private float _ignoreMovementTimer;
 
+        [Header("의태 이동 설정")]
+        [SerializeField] private float attachMoveSpeed = 5f;
+        private float _positionLerpProgress;
+
+        // 뒷면 접근 시 이동 오프셋
+        private const float BACK_OFFSET = 0.2f;
+
+        // Outline 관련
+        private Outline _targetOutline;
+        private Color _originalOutlineColor;
+        private float _outlineChangeProgress;
+        private bool _isAttachingFromBehind;
+
         private void Awake()
         {
             _playerMovement = GetComponent<PlayerMovementAdapter>();
@@ -174,7 +187,10 @@ namespace HideAndInk.Player
                 }
             }
 
-            // Attached 완료 전에는 추가 처리 안 함
+            // 의태 상태에 따른 위치 조정 (Attached 상태에서도 실행되어야 함)
+            UpdatePosition();
+
+            // Attached 완료 전에는 색상/Outline 처리 안 함
             if (_stateMachine.CurrentState == CamouflageState.Attached && !_stateMachine.IsAttachedComplete)
             {
                 return;
@@ -183,8 +199,8 @@ namespace HideAndInk.Player
             // 색상 보간 업데이트
             UpdateBlend();
 
-            // 의태 상태에 따른 위치 조정
-            UpdatePosition();
+            // Outline 색상 업데이트 (뒷면 의태 시)
+            UpdateOutlineColor();
         }
 
         /// <summary>
@@ -219,6 +235,7 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Perfect state, C Down → cancelling camouflage");
                 _stateMachine.CancelCamouflage(true);
+                RestoreOutline();
                 _justTransitionedFromPerfect = false;
                 _transitionTimer = 0f;
                 return;
@@ -257,10 +274,13 @@ namespace HideAndInk.Player
                 Debug.Log($"[CamouflageAdapter] Found target: {nearest.name}");
                 _originalPosition = transform.position;
                 _stateMachine.StartAttach(nearest);
-                
+
+                // Outline 설정 (앞면/뒷면 감지)
+                SetupOutlineForTarget(nearest);
+
                 // 의태 시작 시 이동 무시 타이머 설정
                 _ignoreMovementTimer = IGNORE_MOVEMENT_AFTER_ATTACH;
-                
+
                 // 의태 시작 시 Octopus Material 적용
                 Debug.Log("[CamouflageAdapter] Applying Octopus Material on attach start");
                 _materialCloner?.ApplyOctopusMaterial();
@@ -297,6 +317,7 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Not perfect yet, cancelling...");
                 _stateMachine.CancelCamouflage(true);
+                RestoreOutline();
             }
             else
             {
@@ -377,31 +398,34 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 위치 스냅 업데이트
+        /// 위치 스냅 업데이트 (Z값만 부드럽게 보간)
         /// </summary>
         private void UpdatePosition()
         {
             if (_stateMachine.TargetObject == null) return;
 
-            Vector3 targetPos = _stateMachine.TargetObject.transform.position;
-            
-            // 끼임 방지를 위해 Z 위치를 살짝 앞으로 (카메라 방향)
-            // 오브젝트와 같은 Z에 있으면 충돌해서 끼이므로 0.1f 앞에 배치
-            const float FRONT_OFFSET = 0.1f;
+            Vector3 targetPos = CalculateTargetPosition();
 
             switch (_stateMachine.CurrentState)
             {
                 case CamouflageState.Attached:
-                    // Attached 상태: X, Y는 유지, Z만 타겟보다 살짝 앞으로 보정
-                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z - FRONT_OFFSET);
+                    // Attached 상태: Z값만 천천히 오브젝트 위치로 보간
+                    // attachMoveSpeed = 도달까지 걸리는 시간(초)
+                    _positionLerpProgress += Time.deltaTime / attachMoveSpeed;
+                    _positionLerpProgress = Mathf.Clamp01(_positionLerpProgress);
+
+                    float startZ = _originalPosition.z;
+                    float targetZ = targetPos.z;
+                    float newZ = startZ + ((targetZ - startZ) * _positionLerpProgress);
+                    transform.position = new Vector3(transform.position.x, transform.position.y, newZ);
                     break;
 
                 case CamouflageState.Locked:
                 case CamouflageState.Approaching:
                 case CamouflageState.Partial:
                 case CamouflageState.Perfect:
-                    // Attached 완료 후: X, Y는 유지, Z만 타겟보다 살짝 앞으로 보정
-                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z - FRONT_OFFSET);
+                    // Attached 완료 후: 현재 X,Y 유지, Z만 타겟으로
+                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z);
                     break;
 
                 case CamouflageState.None:
@@ -409,6 +433,126 @@ namespace HideAndInk.Player
                     // 지금은 복원 안 함
                     break;
             }
+        }
+
+        /// <summary>
+        /// 목표 위치 계산 (앞면/뒷면 따라 다름)
+        /// </summary>
+        private Vector3 CalculateTargetPosition()
+        {
+            if (_stateMachine.TargetObject == null) return transform.position;
+
+            Vector3 targetPos = _stateMachine.TargetObject.transform.position;
+
+            // 뒷면에서 접근: 오브젝트 뒤로 이동
+            // 앞면에서 접근: 오브젝트 앞으로 이동
+            Vector3 offset = _isAttachingFromBehind
+                ? -_stateMachine.TargetObject.transform.forward * BACK_OFFSET
+                : _stateMachine.TargetObject.transform.forward * BACK_OFFSET;
+
+            return targetPos + offset;
+        }
+
+        /// <summary>
+        /// 타겟 오브젝트의 Outline 설정 (앞면/뒷면 감지)
+        /// </summary>
+        private void SetupOutlineForTarget(GameObject target)
+        {
+            // Player Visual에서 Outline 찾기
+            Transform visual = transform.Find("Visual");
+            if (visual != null)
+            {
+                _targetOutline = visual.GetComponent<Outline>();
+            }
+            else
+            {
+                _targetOutline = GetComponent<Outline>();
+            }
+
+            _outlineChangeProgress = 0f;
+            _positionLerpProgress = 0f;
+
+            if (_targetOutline == null)
+            {
+                _isAttachingFromBehind = false;
+                return;
+            }
+
+            // 플레이어에서 타겟으로의 방향
+            Vector3 dirToPlayer = (transform.position - target.transform.position).normalized;
+
+            // 타겟의 forward 벡터 (앞면)
+            Vector3 targetForward = target.transform.forward;
+
+            // 내적으로 앞면/뒷면 판정
+            // 음수 = 뒷면 (플레이어가 오브젝트 뒤에 있음)
+            // 양수 = 앞면 (플레이어가 오브젝트 앞에 있음)
+            float dot = Vector3.Dot(dirToPlayer, targetForward);
+            _isAttachingFromBehind = dot < 0f;
+
+            if (_isAttachingFromBehind)
+            {
+                // 뒷면에서 접근: Outline 저장 후 타겟 색으로 변경 시작
+                _originalOutlineColor = _targetOutline.OutlineColor;
+                _outlineChangeProgress = 0f;
+            }
+            else
+            {
+                // 앞면에서 접근: Outline 변경 없음
+                _targetOutline = null;
+            }
+        }
+
+        /// <summary>
+        /// Outline 색상 업데이트 (뒷면 의태 시)
+        /// </summary>
+        private void UpdateOutlineColor()
+        {
+            if (_targetOutline == null) return;
+            if (_stateMachine.TargetObject == null) return;
+
+            // 뒷면에서만 Outline 변경
+            if (_isAttachingFromBehind)
+            {
+                _outlineChangeProgress += Time.deltaTime / lockTime;
+                _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
+
+                // 타겟 오브젝트의 메인 색상 가져오기 (어두운 계열로)
+                Renderer targetRenderer = _stateMachine.TargetObject.GetComponent<Renderer>();
+                if (targetRenderer != null)
+                {
+                    Color targetColor = targetRenderer.sharedMaterial?.color ?? Color.white;
+                    // 오브젝트 색상의 55% 어두운 계열로 변경
+                    Color darkOutlineColor = new Color(
+                        targetColor.r * 0.55f,
+                        targetColor.g * 0.55f,
+                        targetColor.b * 0.55f
+                    );
+                    Color newOutlineColor = Color.Lerp(_originalOutlineColor, darkOutlineColor, _outlineChangeProgress);
+                    _targetOutline.OutlineColor = newOutlineColor;
+                }
+            }
+            else
+            {
+                // 앞면: Outline 원래 색상으로 복원
+                if (_outlineChangeProgress > 0f)
+                {
+                    _outlineChangeProgress -= Time.deltaTime / lockTime;
+                    _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
+                    _targetOutline.OutlineColor = Color.Lerp(_originalOutlineColor, Color.white, _outlineChangeProgress);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Outline 색상 즉시 복원 (의태 해제 시 호출)
+        /// </summary>
+        private void RestoreOutline()
+        {
+            if (_targetOutline == null) return;
+            _targetOutline.OutlineColor = Color.white;
+            _targetOutline = null;
+            _outlineChangeProgress = 0f;
         }
 
         /// <summary>
