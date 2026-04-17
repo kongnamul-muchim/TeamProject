@@ -79,11 +79,22 @@ namespace HideAndInk.Core.Perception
 
         /// <summary>
         /// 타겟 오브젝트의 색상 가져옴
+        /// CamouflageTarget 컴포넌트 우선 확인 → 없으면 기존 방식
         /// </summary>
         public Color GetTargetColor(GameObject target)
         {
             if (target == null) return Color.white;
 
+            // 1순위: CamouflageTarget 컴포넌트 확인 (ScriptableObject 기반 색상)
+            CamouflageTarget camoTarget = target.GetComponent<CamouflageTarget>();
+            if (camoTarget != null)
+            {
+                Color dataColor = camoTarget.GetCamouflageColor();
+                Debug.Log($"[MaterialCloner] GetTargetColor from CamouflageTarget: {dataColor}");
+                return dataColor;
+            }
+
+            // 2순위: 기존 방식 (Renderer 색상)
             Renderer targetRenderer = target.GetComponent<Renderer>();
             if (targetRenderer == null) return Color.white;
 
