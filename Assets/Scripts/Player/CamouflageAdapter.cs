@@ -51,7 +51,7 @@ namespace HideAndInk.Player
         private float _positionLerpProgress;
 
         // 뒷면 접근 시 이동 오프셋
-        private const float BACK_OFFSET = 0.2f;
+        private const float BACK_OFFSET = 0.1f;
 
         // Outline 관련
         private Outline _targetOutline;
@@ -290,6 +290,7 @@ namespace HideAndInk.Player
                 _materialCloner?.SetOriginalRate(1f);
 
                 spriteDirector?.ChangeToDefaultSprite();
+                spriteDirector?.UpdateColorPart(_playerMovement.Direction);
             }
             else
             {
@@ -392,7 +393,17 @@ namespace HideAndInk.Player
         private void UpdateSpriteDirection()
         {
             if (_playerMovement == null || spriteDirector == null) return;
-            spriteDirector.UpdateDirection(_playerMovement.Direction);
+
+            // 의태 중이 아니면 스프라이트도 함께 업데이트
+            if (_stateMachine.CurrentState == CamouflageState.None)
+            {
+                spriteDirector.UpdateDirection(_playerMovement.Direction);
+            }
+            else
+            {
+                // 의태 중: 스프라이트는 그대로, ColorPart만 업데이트
+                spriteDirector.UpdateColorPart(_playerMovement.Direction);
+            }
         }
 
         /// <summary>

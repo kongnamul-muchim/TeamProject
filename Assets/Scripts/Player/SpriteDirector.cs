@@ -91,6 +91,22 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
+        /// 방향에 따라 ColorPart 텍스처 업데이트 (의태 시 사용)
+        /// </summary>
+        /// <param name="direction">이동 방향</param>
+        public void UpdateColorPart(MoveDirection direction)
+        {
+            if (_spriteRenderer == null) return;
+
+            Sprite shadowSprite = GetShadow(direction);
+            Material mat = _spriteRenderer.material;
+            if (mat != null && shadowSprite != null)
+            {
+                mat.SetTexture("_ColorPart", shadowSprite.texture);
+            }
+        }
+
+        /// <summary>
         /// 이동 방향에 따른 스프라이트 가져오기 (캐시)
         /// </summary>
         private Sprite GetSprite(MoveDirection direction)
