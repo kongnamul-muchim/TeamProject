@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using HideAndInk.Core.Interfaces;
 
 namespace HideAndInk.Core.Events
 {
