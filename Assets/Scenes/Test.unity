@@ -898,7 +898,7 @@ MonoBehaviour:
   perfectTime: 2
   camouflageKey: 99
   spriteDirector: {fileID: 1540738566}
-  attachMoveSpeed: 5
+  attachMoveSpeed: 0.5
 --- !u!114 &1540738565
 MonoBehaviour:
   m_ObjectHideFlags: 0
