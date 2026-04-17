@@ -188,7 +188,10 @@ namespace HideAndInk.Player
             // 의태 상태에 따른 위치 조정 (Attached 상태에서도 실행되어야 함)
             UpdatePosition();
 
-            // Attached 완료 전에는 색상/Outline 처리 안 함
+            // Outline 색상 업데이트 (모든 상태에서 계속 실행 - 뒷면 의태 시)
+            UpdateOutlineColor();
+
+            // Attached 완료 전에는 색상 보간 처리 안 함
             if (_stateMachine.CurrentState == CamouflageState.Attached && !_stateMachine.IsAttachedComplete)
             {
                 return;
@@ -196,9 +199,6 @@ namespace HideAndInk.Player
 
             // 색상 보간 업데이트
             UpdateBlend();
-
-            // Outline 색상 업데이트 (뒷면 의태 시)
-            UpdateOutlineColor();
         }
 
         /// <summary>
@@ -320,8 +320,9 @@ namespace HideAndInk.Player
             }
             else
             {
-                // Perfect 도달했으면 유지 (아무것도 안 함)
-                Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage...");
+                // Perfect 도달했으면 유지하되, Outline은 복원 (의태 효과는 유지)
+                Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage but restoring outline...");
+                RestoreOutline();
             }
         }
 
