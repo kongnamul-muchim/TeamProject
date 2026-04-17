@@ -4,31 +4,27 @@ namespace HideAndInk.Core.Perception
 {
     /// <summary>
     /// 의태 가능한 오브젝트에 부착하는 컴포넌트
-    /// CamouflageColorData를 참조하여 대표 색상 제공
+    /// Inspector에서 직접 대표 색상을 설정
     /// </summary>
     public class CamouflageTarget : MonoBehaviour
     {
-        [Header("의태 색상 데이터")]
-        [SerializeField] private CamouflageColorData colorData;
+        [Header("의태 색상")]
+        [SerializeField] private Color camouflageColor = Color.white;
 
         /// <summary>
-        /// 대표 색상 반환 (colorData가 없으면 흰색)
+        /// 대표 색상 반환
         /// </summary>
         public Color GetCamouflageColor()
         {
-            if (colorData != null)
-            {
-                return colorData.TargetColor;
-            }
-            return Color.white;
+            return camouflageColor;
         }
 
         /// <summary>
-        /// 색상 데이터 설정
+        /// 색상 설정
         /// </summary>
-        public void SetColorData(CamouflageColorData data)
+        public void SetCamouflageColor(Color color)
         {
-            colorData = data;
+            camouflageColor = color;
         }
     }
 }

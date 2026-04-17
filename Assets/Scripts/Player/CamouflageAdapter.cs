@@ -170,6 +170,12 @@ namespace HideAndInk.Player
                 restorePos.z = _originalZ;
                 transform.position = restorePos;
 
+                // [2D OutlineHidden] 타겟 Material 원래대로 복원
+                if (_stateMachine.TargetObject != null)
+                {
+                    _materialCloner?.RestoreTargetMaterial(_stateMachine.TargetObject);
+                }
+
                 Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
                 // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
             }

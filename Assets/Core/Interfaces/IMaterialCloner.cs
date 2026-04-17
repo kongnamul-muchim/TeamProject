@@ -70,5 +70,11 @@ namespace HideAndInk.Core.Interfaces
         /// </summary>
         /// <param name="target">타겟 오브젝트</param>
         void EnableTargetZWrite(GameObject target);
+
+        /// <summary>
+        /// 타겟 오브젝트의 Material을 원래대로 복원
+        /// </summary>
+        /// <param name="target">타겟 오브젝트</param>
+        void RestoreTargetMaterial(GameObject target);
     }
 }

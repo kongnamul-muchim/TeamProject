@@ -299,8 +299,11 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 타겟 오브젝트의 Material에 ZWrite 활성화 (2D OutlineHidden용)
+        /// 타겟 오브젝트의 Material을 ZWrite가 켜진 Material로 교체 (2D OutlineHidden용)
+        /// 의태 해제 시 RestoreTargetMaterial()로 복원 필요
         /// </summary>
+        private Material _originalTargetMaterial;
+
         public void EnableTargetZWrite(GameObject target)
         {
             if (target == null) return;
@@ -308,11 +311,59 @@ namespace HideAndInk.Core.Perception
             Renderer targetRenderer = target.GetComponent<Renderer>();
             if (targetRenderer == null) return;
 
-            // MaterialPropertyBlock으로 ZWrite 설정
-            MaterialPropertyBlock block = new MaterialPropertyBlock();
-            targetRenderer.GetPropertyBlock(block);
-            block.SetFloat("_ZWrite", 1f);
-            targetRenderer.SetPropertyBlock(block);
+            // 원본 Material 저장
+            _originalTargetMaterial = targetRenderer.sharedMaterial;
+
+            // ZWrite가 켜진 Material로 교체
+            Material zWriteMatTemplate = Resources.Load<Material>("Materials/Sprite-ZWrite");
+            if (zWriteMatTemplate != null)
+            {
+                // 인스턴스 생성 (공유 머티리얼 수정 방지)
+                Material zWriteMatInstance = new Material(zWriteMatTemplate);
+                
+                // 원본 텍스처 복사 (SpriteRenderer에서 직접 가져오기)
+                Texture tex = null;
+                if (targetRenderer is SpriteRenderer sr && sr.sprite != null)
+                {
+                    tex = sr.sprite.texture;
+                }
+                else if (targetRenderer.sharedMaterial != null)
+                {
+                    tex = targetRenderer.sharedMaterial.mainTexture;
+                }
+
+                if (tex != null)
+                {
+                    zWriteMatInstance.mainTexture = tex;
+                    Debug.Log($"[MaterialCloner] Texture copied to ZWrite material: {tex.name}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[MaterialCloner] No texture found on {target.name}!");
+                }
+                
+                targetRenderer.material = zWriteMatInstance;
+                Debug.Log($"[MaterialCloner] Applied ZWrite material to {target.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[MaterialCloner] Sprite-ZWrite material not found in Resources/Materials/");
+            }
+        }
+
+        /// <summary>
+        /// 타겟 오브젝트의 Material을 원래대로 복원
+        /// </summary>
+        public void RestoreTargetMaterial(GameObject target)
+        {
+            if (target == null || _originalTargetMaterial == null) return;
+
+            Renderer targetRenderer = target.GetComponent<Renderer>();
+            if (targetRenderer == null) return;
+
+            targetRenderer.material = _originalTargetMaterial;
+            _originalTargetMaterial = null;
+            Debug.Log($"[MaterialCloner] Restored original material to {target.name}");
         }
     }
 }
