@@ -154,12 +154,13 @@ namespace HideAndInk.Player
             // 상태 시스템 업데이트
             _stateMachine.Update(Time.deltaTime, isMoving);
 
-            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작
+            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작 + Outline 복원
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
                 Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
+                RestoreOutline();  // Outline도 함께 복원
                 Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
                 // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
             }
@@ -188,7 +189,7 @@ namespace HideAndInk.Player
             // 의태 상태에 따른 위치 조정 (Attached 상태에서도 실행되어야 함)
             UpdatePosition();
 
-            // Outline 색상 업데이트 (모든 상태에서 계속 실행 - 뒷면 의태 시)
+            // Outline 색상 업데이트 - 상태 전환 시점에 맞춰 실행
             UpdateOutlineColor();
 
             // Attached 완료 전에는 색상 보간 처리 안 함
@@ -514,7 +515,7 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// Outline 색상 업데이트 (뒷면 의태 시)
+        /// Outline 색상 업데이트 (상태 전환과同步)
         /// </summary>
         private void UpdateOutlineColor()
         {
@@ -524,6 +525,13 @@ namespace HideAndInk.Player
             // 뒷면에서만 Outline 변경
             if (_isAttachingFromBehind)
             {
+                // Attached 상태에서는 Outline 변경 안 함 (상태 전환 후 변경)
+                if (_stateMachine.CurrentState == CamouflageState.Attached)
+                {
+                    return;
+                }
+
+                // Locked/Approaching/Partial 상태에서만 Outline 변경
                 _outlineChangeProgress += Time.deltaTime / lockTime;
                 _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
 
