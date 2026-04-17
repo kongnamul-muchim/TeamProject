@@ -280,15 +280,10 @@ namespace HideAndInk.Player
                 // 의태 시작 시 이동 무시 타이머 설정
                 _ignoreMovementTimer = IGNORE_MOVEMENT_AFTER_ATTACH;
 
-                // 의태 시작 시 Octopus Material 적용
-                Debug.Log("[CamouflageAdapter] Applying Octopus Material on attach start");
-                _materialCloner?.ApplyOctopusMaterial();
-
-                // 의태 시작 시 SpriteRenderer.color를 타겟 색으로 즉시 변경
-                _materialCloner?.BlendToTarget(nearest, 1f);
-
-                // 의태 시작 시 OriginalRate를 1로 설정
-                _materialCloner?.SetOriginalRate(1f);
+                // [방법1] SpriteRenderer.color만 사용 - Octopus Material 미적용
+                Debug.Log("[CamouflageAdapter] Method 1: Using SpriteRenderer.color for camouflage");
+                _materialCloner?.RestoreDefaultMaterial();  // 혹시 모르니 기본 머티리얼으로
+                _materialCloner?.BlendToTarget(nearest, 1f);  // 타겟 색으로 즉시 변경
 
                 spriteDirector?.ChangeToDefaultSprite();
                 spriteDirector?.UpdateColorPart(_playerMovement.Direction);
@@ -331,22 +326,21 @@ namespace HideAndInk.Player
         /// </summary>
         private void UpdateBlend()
         {
-            // OriginalRate 복원 중이면 천천히 복원
+            // [방법1] SpriteRenderer.color 복원 중이면 천천히 복원
             if (_isRestoringRate)
             {
                 _rateRestoreProgress += Time.deltaTime;
                 float progress = Mathf.Clamp01(_rateRestoreProgress / RATE_RESTORE_DURATION);
 
-                // 0 → 1로 복원 (같은 속도로)
-                float rate = Mathf.Lerp(0f, 1f, progress);
-                _materialCloner?.SetOriginalRate(rate);
+                // SpriteRenderer.color를 원래 색으로 천천히 복원
+                _materialCloner?.BlendToOriginal(progress);
 
                 // 복원 완료
                 if (progress >= 1f)
                 {
                     _isRestoringRate = false;
                     _rateRestoreProgress = 0f;
-                    Debug.Log("[CamouflageAdapter] OriginalRate restore complete");
+                    Debug.Log("[CamouflageAdapter] Color restore complete");
                 }
                 return;
             }
@@ -356,34 +350,15 @@ namespace HideAndInk.Player
             switch (_stateMachine.CurrentState)
             {
                 case CamouflageState.Attached:
-                    // SpriteRenderer.color를 타겟 색으로 즉시 변경, OriginalRate = 1
-                    _materialCloner?.BlendToTarget(_stateMachine.TargetObject, 1f);
-                    _materialCloner?.SetOriginalRate(1f);
-                    break;
-
                 case CamouflageState.Locked:
-                    // SpriteRenderer.color는 유지, OriginalRate = 1
-                    _materialCloner?.SetOriginalRate(1f);
-                    break;
-
                 case CamouflageState.Partial:
-                    // SpriteRenderer.color는 유지 (이미 타겟 색)
-                    // OriginalRate: 1 → 0 감소 (blendProgress에 비례)
-                    if (_stateMachine is CamouflageStateMachine stateMachineImpl)
-                    {
-                        float rate = Mathf.Lerp(1f, 0f, stateMachineImpl.BlendProgress);
-                        _materialCloner?.SetOriginalRate(rate);
-                    }
-                    break;
-
                 case CamouflageState.Perfect:
-                    // SpriteRenderer.color는 유지, OriginalRate = 0
-                    _materialCloner?.SetOriginalRate(0f);
+                    // [방법1] 상태 유지 중에는 타겟 색상으로 유지 (매 프레임 설정)
+                    _materialCloner?.BlendToTarget(_stateMachine.TargetObject, 1f);
                     break;
 
                 case CamouflageState.None:
-                    // 해제 시 SpriteRenderer.color는 변경하지 않음
-                    // OriginalRate는 _isRestoringRate에서 처리
+                    // 해제 시 SpriteRenderer.color는 _isRestoringRate에서 처리
                     break;
             }
         }
