@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Managers;
+using HideAndInk.Core.Events;
 
 namespace HideAndInk.Player
 {
@@ -161,6 +162,10 @@ namespace HideAndInk.Player
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
                 Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
+                
+                // [이벤트] 의태 해제
+                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
                 StartRestoreOutline();  // Outline 보간 복원 시작
@@ -191,6 +196,10 @@ namespace HideAndInk.Player
                     Debug.Log($"[CamouflageAdapter] State changed from None! Current state: {_stateMachine.CurrentState}. Applying Octopus Material...");
                     Debug.Log($"[CamouflageAdapter] _materialCloner is null: {_materialCloner == null}");
                     _materialCloner?.ApplyOctopusMaterial();
+                    
+                    // [이벤트] 의태 상태 변경 + 의태 시작
+                    CamouflageEvents.InvokeStateChanged(_stateMachine.CurrentState);
+                    CamouflageEvents.InvokeCamouflageStart(_stateMachine.TargetObject);
                 }
 
                 // Partial 또는 Perfect에 도달하면 플래그 해제
@@ -198,6 +207,22 @@ namespace HideAndInk.Player
                     _stateMachine.CurrentState == CamouflageState.Perfect)
                 {
                     _justTransitionedFromPerfect = false;
+                }
+                
+                // Perfect 도달 시 이벤트 발생
+                if (_stateMachine.CurrentState == CamouflageState.Perfect && prevState != CamouflageState.Perfect)
+                {
+                    CamouflageEvents.InvokeCamouflageComplete(_stateMachine.TargetObject);
+                }
+            }
+            
+            // 상태 변경 이벤트 (모든 상태 변화에서 발생)
+            if (prevState != _stateMachine.CurrentState && _stateMachine.CurrentState != CamouflageState.None)
+            {
+                // None → Attached는 위에서 이미 처리했으므로 중복 방지
+                if (!(prevState == CamouflageState.None && _stateMachine.CurrentState != CamouflageState.None))
+                {
+                    CamouflageEvents.InvokeStateChanged(_stateMachine.CurrentState);
                 }
             }
 
