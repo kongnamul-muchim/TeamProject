@@ -16,6 +16,7 @@ namespace HideAndInk.Core.Perception
 
         private CamouflageAdapter _camouflageAdapter;
         private bool _wasCamouflaging;
+        private bool _wasPerfect;
 
         private void Awake()
         {
@@ -30,18 +31,13 @@ namespace HideAndInk.Core.Perception
             bool isCamouflaging = currentState != CamouflageState.None;
             bool isPerfect = currentState == CamouflageState.Perfect;
 
-            // 의태 상태가 변경되면SuspicionMeter에 알림
-            if (isCamouflaging != _wasCamouflaging)
+            // 의태 상태 또는 Perfect 상태가 변경되면 SuspicionMeter에 알림
+            if (isCamouflaging != _wasCamouflaging || isPerfect != _wasPerfect)
             {
                 _wasCamouflaging = isCamouflaging;
+                _wasPerfect = isPerfect;
                 suspicionMeter.SetCamouflageState(isCamouflaging, isPerfect);
                 Debug.Log($"[CamouflageSuspicion] Camouflage state changed: isCamouflaging={isCamouflaging}, isPerfect={isPerfect}");
-            }
-
-            // Perfect 상태가 변경되면
-            if (isCamouflaging && isPerfect)
-            {
-                // Perfect 도달 시 추가 처리 필요시
             }
         }
 

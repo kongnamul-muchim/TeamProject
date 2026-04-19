@@ -69,6 +69,7 @@ namespace HideAndInk.Core.Perception
             if (suspicionLevelText != null)
             {
                 suspicionLevelText.text = level.ToString();
+                suspicionLevelText.color = GetColorForLevel(level);
             }
 
             // 색상 변경
