@@ -753,23 +753,6 @@ MonoBehaviour:
   patrolDetectionMultiplier: 1.5
   observeDetectionMultiplier: 1
   guardDetectionMultiplier: 1.2
-  closeRangeDistance: 2
-  closeRangeMultiplier: 2
-  midRangeDistance: 4
-  midRangeMultiplier: 1.5
-  farRangeMultiplier: 1
-  veryFarRangeMultiplier: 0.75
-  normalDetectionMultiplier: 1
-  partialCamouflageMultiplier: 0.6
-  perfectCamouflageMultiplier: 0.3
-  nearbyDistanceMultiplier: 3
-  nearbyDetectionIntensity: 1
-  nearbyMinIntensityFactor: 0.3
-  memoryDuration: 3
-  memoryDetectionMultiplier: 0.4
-  trackingThreshold: 0.5
-  trackingMemoryMultiplier: 1.5
-  lostTargetThreshold: 0.2
   suspicionMeter: {fileID: 1540738567}
 --- !u!114 &710864463
 MonoBehaviour:
@@ -1018,14 +1001,13 @@ MonoBehaviour:
   detectionRadius: 0.5
   camouflageLayer:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 0
   attachDelay: 0.3
   lockTime: 1
   blendTime: 0.4
   perfectTime: 2
   camouflageKey: 99
   spriteDirector: {fileID: 1540738566}
-  attachMoveSpeed: 0.3
 --- !u!114 &1540738565
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1060,7 +1042,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Player.SpriteDirector
   spritePath: Assets/Art/1_Characters/Player/Spr_Player_Idle_
-  maskPath: Assets/Art/1_Characters/Player/Mask_Player_Idle_
 --- !u!114 &1540738567
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1073,17 +1054,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f0d6894c1067b24dafe318076728be8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.SuspicionMeter
-  cautionThreshold: 30
-  dangerThreshold: 60
-  criticalThreshold: 80
-  detectedThreshold: 100
-  increaseSpeed: 40
-  decreaseSpeed: 10
-  camouflageReduceMultiplier: 0.5
-  perfectCamouflageReducePerSec: 6
-  detectionGracePeriod: 0.5
-  detectedStateDuration: 2
-  minSuspicionAfterDetected: 0.3
 --- !u!114 &1540738568
 MonoBehaviour:
   m_ObjectHideFlags: 0

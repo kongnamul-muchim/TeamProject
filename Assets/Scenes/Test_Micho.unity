@@ -226,7 +226,7 @@ Transform:
   m_GameObject: {fileID: 511606643}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -20.9, y: 5.1, z: 12}
+  m_LocalPosition: {x: -20.9, y: 0, z: 12}
   m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -611,7 +611,7 @@ Transform:
   m_GameObject: {fileID: 974866920}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -13.2, y: 2.77, z: 8.2}
+  m_LocalPosition: {x: -13.2, y: 0, z: 8.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -724,7 +724,7 @@ Transform:
   m_GameObject: {fileID: 1018211696}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.2, y: 2.77, z: 6.2}
+  m_LocalPosition: {x: 8.2, y: 0, z: 6.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -928,7 +928,7 @@ Transform:
   m_GameObject: {fileID: 1256158447}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.6, y: 5.1, z: 12}
+  m_LocalPosition: {x: 2.6, y: 0, z: 12}
   m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1178,7 +1178,7 @@ Transform:
   m_GameObject: {fileID: 1482411712}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.6, y: 1.24, z: -6.6}
+  m_LocalPosition: {x: 2.6, y: 0, z: -6.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1308,7 +1308,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Player.SpriteDirector
   spritePath: Sprite/
-  maskPath: Art/1_Characters/Player/Mask_Player_Idle_
 --- !u!114 &2116902787
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1321,7 +1320,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2523b4a9dbe75f24786c676062497d93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Player.CamouflageAdapter
-  detectionRadius: 1
+  detectionRadius: 15
   camouflageLayer:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -1330,8 +1329,17 @@ MonoBehaviour:
   blendTime: 1
   perfectTime: 2
   camouflageKey: 99
+  startVfxPrefab: {fileID: 1486556164930593084, guid: a4bc52495f305114a875807894764471, type: 3}
+  followPlayerOnStart: 1
+  endAnimVfxPrefab: {fileID: 8696265744763694249, guid: 56eb73f1f297c564bb10119ee3848fc9, type: 3}
+  followPlayerOnEndAnim: 1
+  endVfxPrefabs:
+  - {fileID: 2208645742656046503, guid: 0c24982ac28380e46a71ee274037e12b, type: 3}
+  - {fileID: 1694595508668843548, guid: 36d4a4e4eb60cbd4f8337484bef80a61, type: 3}
+  - {fileID: 7052383418403472834, guid: 2acc90951562f6f4bba84f68e7daafaa, type: 3}
+  - {fileID: 7434583648830536641, guid: 3f52760b68794424086712e4f9ca7a2c, type: 3}
+  followPlayerOnEnd: 0
   spriteDirector: {fileID: 2116902786}
-  attachMoveSpeed: 5
 --- !u!114 &2116902788
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1389,7 +1397,7 @@ Transform:
   m_GameObject: {fileID: 2116902785}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalPosition: {x: 2.6, y: 3, z: 11}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

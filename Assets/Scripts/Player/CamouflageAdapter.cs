@@ -26,6 +26,19 @@ namespace HideAndInk.Player
         [Header("의태 키 설정")]
         [SerializeField] private KeyCode camouflageKey = KeyCode.C;
 
+        [Header("VFX 설정 (Lead Artist 전용)")]
+        [Tooltip("의태 시작 시 발생할 이펙트")]
+        [SerializeField] private GameObject startVfxPrefab;
+        [SerializeField] private bool followPlayerOnStart = true;
+        
+        [Tooltip("의태 해제 시 발생할 애니메이션 이펙트 (단일)")]
+        [SerializeField] private GameObject endAnimVfxPrefab;
+        [SerializeField] private bool followPlayerOnEndAnim = true;
+
+        [Tooltip("의태 해제 시 발생할 이펙트 (배열로 넣으면 랜덤 재생, 주로 보존되는 흔적용)")]
+        [SerializeField] private GameObject[] endVfxPrefabs;
+        [SerializeField] private bool followPlayerOnEnd = false;
+
         [Header("의존성")]
         [SerializeField] private SpriteDirector spriteDirector;
 
@@ -143,14 +156,26 @@ namespace HideAndInk.Player
             // 상태 시스템 업데이트
             _stateMachine.Update(Time.deltaTime, isMoving);
 
-            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작
+            // [Artist Fallback] 머티리얼 누락 시 경고 로그 (의태 시도 중일 때만)
+            if (_stateMachine.CurrentState != CamouflageState.None && _materialCloner != null && !_materialCloner.IsUsingOctopusMaterial)
+            {
+                // Octopus 머티리얼이 로드되지 않았을 때만 1회성 경고 (또는 지속 로그)
+                if (Time.frameCount % 120 == 0) // 매 2초마다 출력
+                {
+                    Debug.LogWarning("[CamouflageAdapter] 아티스트 알림: Resources/Materials/Octopus 머티리얼이 없습니다! 비주얼 효과가 제한됩니다.");
+                }
+            }
+
+            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작 및 해제 이펙트 발생
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
                 Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
-                Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
                 // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
+                
+                // 해제 이펙트 생성 (먹물 흔적 등)
+                PlayEndVfx();
             }
 
             // 상태 변화 로그
@@ -158,12 +183,14 @@ namespace HideAndInk.Player
             {
                 Debug.Log($"[CamouflageAdapter] State changed: {prevState} -> {_stateMachine.CurrentState}");
 
-                // None → 의태 상태로 전환 시 Octopus Material 적용
+                // None → 의태 상태로 전환 시 Octopus Material 적용 및 시작 이펙트 발생
                 if (prevState == CamouflageState.None && _stateMachine.CurrentState != CamouflageState.None)
                 {
                     Debug.Log($"[CamouflageAdapter] State changed from None! Current state: {_stateMachine.CurrentState}. Applying Octopus Material...");
-                    Debug.Log($"[CamouflageAdapter] _materialCloner is null: {_materialCloner == null}");
                     _materialCloner?.ApplyOctopusMaterial();
+                    
+                    // 시작 이펙트 생성
+                    PlayStartVfx();
                 }
 
                 // Partial 또는 Perfect에 도달하면 플래그 해제
@@ -409,6 +436,54 @@ namespace HideAndInk.Player
                     // 지금은 복원 안 함
                     break;
             }
+        }
+
+        /// <summary>
+        /// 의태 시작 이펙트 생성
+        /// </summary>
+        private void PlayStartVfx()
+        {
+            if (startVfxPrefab == null)
+            {
+                Debug.LogWarning("[CamouflageAdapter] 아티스트 알림: Start VFX Prefab이 할당되지 않았습니다.");
+                return;
+            }
+
+            Transform spawnParent = followPlayerOnStart ? transform : null;
+            GameObject vfx = Instantiate(startVfxPrefab, transform.position, Quaternion.identity, spawnParent);
+            Debug.Log($"[CamouflageAdapter] Played Start VFX: {vfx.name} (Follow: {followPlayerOnStart})");
+        }
+
+        /// <summary>
+        /// 의태 해제 이펙트 생성 (랜덤 형태 기능 및 단일 애니메이션 기능 포함)
+        /// </summary>
+        private void PlayEndVfx()
+        {
+            // 1. 단일 해제 애니메이션 생성
+            if (endAnimVfxPrefab != null)
+            {
+                Transform animParent = followPlayerOnEndAnim ? transform : null;
+                GameObject animVfx = Instantiate(endAnimVfxPrefab, transform.position, Quaternion.identity, animParent);
+                Debug.Log($"[CamouflageAdapter] Played End Animation VFX: {animVfx.name} (Follow: {followPlayerOnEndAnim})");
+            }
+
+            // 2. 랜덤 바닥 흔적 생성
+            if (endVfxPrefabs == null || endVfxPrefabs.Length == 0)
+            {
+                Debug.LogWarning("[CamouflageAdapter] 아티스트 알림: End VFX Prefabs 배열(흔적용)이 비어있습니다.");
+                return;
+            }
+
+            // 랜덤 선택
+            int randomIndex = Random.Range(0, endVfxPrefabs.Length);
+            GameObject selectedPrefab = endVfxPrefabs[randomIndex];
+
+            if (selectedPrefab == null) return;
+
+            Transform spawnParent = followPlayerOnEnd ? transform : null;
+            // 아티스트 요구사항: 정면 고정을 위해 Quaternion.identity 사용
+            GameObject vfx = Instantiate(selectedPrefab, transform.position, Quaternion.identity, spawnParent);
+            Debug.Log($"[CamouflageAdapter] Played End VFX (Random {randomIndex}): {vfx.name} (Follow: {followPlayerOnEnd})");
         }
 
         /// <summary>
