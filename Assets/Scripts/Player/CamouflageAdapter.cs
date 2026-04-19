@@ -422,9 +422,11 @@ namespace HideAndInk.Player
             }
 
             Transform spawnParent = followPlayerOnStart ? transform : null;
-            // 아티스트 요구사항: 프리팹에 설정된 회전값을 보존함
-            GameObject vfx = Instantiate(startVfxPrefab, transform.position, startVfxPrefab.transform.rotation, spawnParent);
-            Debug.Log($"[CamouflageAdapter] Played Start VFX: {vfx.name} (Follow: {followPlayerOnStart})");
+            // 아티스트 요구사항: 프리팹 회전 보존 + 가림 방지를 위해 Z축 상으로 카메라 방향(-0.5f) 오프셋 추가
+            Vector3 spawnPos = transform.position + new Vector3(0, 0, -0.5f);
+            GameObject vfx = Instantiate(startVfxPrefab, spawnPos, startVfxPrefab.transform.rotation, spawnParent);
+            
+            Debug.Log($"<color=cyan>[의태 시작]</color> 시각 효과 생성됨: {vfx.name} (Z-Offset 적용 완료)");
         }
 
         /// <summary>
@@ -436,9 +438,10 @@ namespace HideAndInk.Player
             if (endAnimVfxPrefab != null)
             {
                 Transform animParent = followPlayerOnEndAnim ? transform : null;
-                // 아티스트 요구사항: 프리팹에 설정된 회전값을 보존함
-                GameObject animVfx = Instantiate(endAnimVfxPrefab, transform.position, endAnimVfxPrefab.transform.rotation, animParent);
-                Debug.Log($"[CamouflageAdapter] Played End Animation VFX: {animVfx.name} (Follow: {followPlayerOnEndAnim})");
+                // 가림 방지를 위해 Z축 상으로 카메라 방향(-0.5f) 오프셋 추가
+                Vector3 animPos = transform.position + new Vector3(0, 0, -0.5f);
+                GameObject animVfx = Instantiate(endAnimVfxPrefab, animPos, endAnimVfxPrefab.transform.rotation, animParent);
+                Debug.Log($"<color=yellow>[의태 해제]</color> 애니메이션 효과 재생: {animVfx.name}");
             }
 
             // 2. 랜덤 바닥 흔적 생성
@@ -454,9 +457,10 @@ namespace HideAndInk.Player
             if (selectedPrefab == null) return;
 
             Transform spawnParent = followPlayerOnEnd ? transform : null;
-            // 아티스트 요구사항: 프리팹에 설정된 회전값을 보존하도록 수정 (기존 identity에서 변경)
-            GameObject vfx = Instantiate(selectedPrefab, transform.position, selectedPrefab.transform.rotation, spawnParent);
-            Debug.Log($"[CamouflageAdapter] Played End VFX (Random {randomIndex}): {vfx.name} (Follow: {followPlayerOnEnd})");
+            // 아티스트 요구사항: 프리팹 회전 보존 + 가림 방지를 위해 Z축 상으로 카메라 방향(-0.5f) 오프셋 추가
+            Vector3 tracePos = transform.position + new Vector3(0, 0, -0.5f);
+            GameObject vfx = Instantiate(selectedPrefab, tracePos, selectedPrefab.transform.rotation, spawnParent);
+            Debug.Log($"<color=white>[의태 흔적]</color> 랜덤 흔적 생성: {vfx.name}");
         }
 
         private Vector3 CalculateTargetPosition()

@@ -16,8 +16,9 @@ namespace HideAndInk.Core.Perception
         private MaterialPropertyBlock _propertyBlock;
         private bool _isBlending;
 
-        // Shader 속성 이름 (Standard Shader)
+        // Shader 속성 이름 (Standard / URP 대응)
         private const string COLOR_PROPERTY = "_Color";
+        private const string BASE_COLOR_PROPERTY = "_BaseColor";
 
         // Material 관리
         private Material _defaultMaterial;
@@ -44,9 +45,13 @@ namespace HideAndInk.Core.Perception
             }
             else if (_renderer != null)
             {
-                // 일반 Renderer는 PropertyBlock으로 접근
+                // 일반 Renderer는 PropertyBlock으로 접근 (URP 먼저 확인, 없으면 Standard)
                 _renderer.GetPropertyBlock(_propertyBlock);
-                if (_propertyBlock.HasProperty(COLOR_PROPERTY))
+                if (_propertyBlock.HasProperty(BASE_COLOR_PROPERTY))
+                {
+                    _originalColor = _propertyBlock.GetColor(BASE_COLOR_PROPERTY);
+                }
+                else if (_propertyBlock.HasProperty(COLOR_PROPERTY))
                 {
                     _originalColor = _propertyBlock.GetColor(COLOR_PROPERTY);
                 }
@@ -109,16 +114,22 @@ namespace HideAndInk.Core.Perception
             MaterialPropertyBlock targetBlock = new MaterialPropertyBlock();
             targetRenderer.GetPropertyBlock(targetBlock);
 
+            if (targetBlock.HasProperty(BASE_COLOR_PROPERTY))
+            {
+                return targetBlock.GetColor(BASE_COLOR_PROPERTY);
+            }
             if (targetBlock.HasProperty(COLOR_PROPERTY))
             {
                 return targetBlock.GetColor(COLOR_PROPERTY);
             }
 
             // 메테리얼에서 직접 색상 가져오기
-            if (targetRenderer.sharedMaterial != null && 
-                targetRenderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
+            if (targetRenderer.sharedMaterial != null)
             {
-                return targetRenderer.sharedMaterial.GetColor(COLOR_PROPERTY);
+                if (targetRenderer.sharedMaterial.HasProperty(BASE_COLOR_PROPERTY))
+                    return targetRenderer.sharedMaterial.GetColor(BASE_COLOR_PROPERTY);
+                if (targetRenderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
+                    return targetRenderer.sharedMaterial.GetColor(COLOR_PROPERTY);
             }
 
             return Color.white;
@@ -184,9 +195,13 @@ namespace HideAndInk.Core.Perception
             }
             else if (_renderer != null)
             {
-                // 일반 Renderer는 PropertyBlock 사용
+                // 일반 Renderer는 PropertyBlock 사용 (두 속성 모두 설정하여 호환성 보장)
                 _renderer.GetPropertyBlock(_propertyBlock);
+                
+                // 쉐이더가 가진 속성에 맞춰서 둘 다 넣어줌 (존재하지 않는 속성은 무시됨)
+                _propertyBlock.SetColor(BASE_COLOR_PROPERTY, color);
                 _propertyBlock.SetColor(COLOR_PROPERTY, color);
+                
                 _renderer.SetPropertyBlock(_propertyBlock);
             }
         }
