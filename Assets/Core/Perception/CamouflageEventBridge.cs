@@ -281,7 +281,7 @@ namespace HideAndInk.Core.Perception
                 return;
             }
 
-            GameObject selectedMark = inkMarkVFXs[Random.Range(0, inkMarkVFXs.Length)];
+            GameObject selectedMark = inkMarkVFXs[UnityEngine.Random.Range(0, inkMarkVFXs.Length)];
 
             Vector3 spawnPos = _playerTransform.position;
             spawnPos.y += inkMarkYOffset;
