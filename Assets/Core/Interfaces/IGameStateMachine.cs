@@ -24,7 +24,7 @@ namespace HideAndInk.Core.Interfaces
         Detected,
 
         /// <summary>
-        ///逃脱 성공
+        /// 탈출 성공
         /// </summary>
         Escaped,
 

@@ -23,6 +23,7 @@ namespace HideAndInk.Core.Perception
         private Material _defaultMaterial;
         private Material _octopusMaterial;
         private bool _isUsingOctopusMaterial;
+        private bool _octopusMaterialLoaded; // lazy loading 플래그
 
         /// <summary>
         /// 생성자
@@ -35,6 +36,7 @@ namespace HideAndInk.Core.Perception
             _propertyBlock = new MaterialPropertyBlock();
             _isBlending = false;
             _isUsingOctopusMaterial = false;
+            _octopusMaterialLoaded = false;
 
             // 원본 색상 저장
             if (_spriteRenderer != null)
@@ -71,10 +73,6 @@ namespace HideAndInk.Core.Perception
             {
                 _defaultMaterial = _renderer.material;
             }
-
-            // Octopus Material 로드 (Resources에서)
-            _octopusMaterial = Resources.Load<Material>("Materials/Octopus");
-            Debug.Log($"[MaterialCloner] Awake: _defaultMaterial={_defaultMaterial?.name ?? "null"}, _octopusMaterial={_octopusMaterial?.name ?? "null"}, path=Materials/Octopus");
         }
 
         /// <summary>
@@ -89,9 +87,7 @@ namespace HideAndInk.Core.Perception
             CamouflageTarget camoTarget = target.GetComponent<CamouflageTarget>();
             if (camoTarget != null)
             {
-                Color dataColor = camoTarget.GetCamouflageColor();
-                Debug.Log($"[MaterialCloner] GetTargetColor from CamouflageTarget: {dataColor}");
-                return dataColor;
+                return camoTarget.GetCamouflageColor();
             }
 
             // 2순위: 기존 방식 (Renderer 색상)
@@ -202,24 +198,35 @@ namespace HideAndInk.Core.Perception
         public Color OriginalColor => _originalColor;
 
         /// <summary>
+        /// Octopus Material을 lazy loading으로 가져오기
+        /// </summary>
+        private Material GetOctopusMaterial()
+        {
+            if (!_octopusMaterialLoaded)
+            {
+                _octopusMaterial = Resources.Load<Material>("Materials/Octopus");
+                _octopusMaterialLoaded = true;
+            }
+            return _octopusMaterial;
+        }
+
+        /// <summary>
         /// Octopus Material로 전환 (의태 시 사용)
         /// </summary>
         public void ApplyOctopusMaterial()
         {
-            Debug.Log($"[MaterialCloner] ApplyOctopusMaterial called. _octopusMaterial is null: {_octopusMaterial == null}, _spriteRenderer is null: {_spriteRenderer == null}, _renderer is null: {_renderer == null}");
-            if (_octopusMaterial == null) return;
+            Material octopusMat = GetOctopusMaterial();
+            if (octopusMat == null) return;
 
             if (_spriteRenderer != null)
             {
-                _spriteRenderer.material = _octopusMaterial;
+                _spriteRenderer.material = octopusMat;
                 _isUsingOctopusMaterial = true;
-                Debug.Log("[MaterialCloner] Applied to SpriteRenderer");
             }
             else if (_renderer != null)
             {
-                _renderer.material = _octopusMaterial;
+                _renderer.material = octopusMat;
                 _isUsingOctopusMaterial = true;
-                Debug.Log("[MaterialCloner] Applied to Renderer");
             }
         }
 
@@ -272,29 +279,22 @@ namespace HideAndInk.Core.Perception
                 _renderer.GetPropertyBlock(_propertyBlock);
                 if (_propertyBlock.HasProperty(COLOR_PROPERTY))
                 {
-                    Color c = _propertyBlock.GetColor(COLOR_PROPERTY);
-                    Debug.Log($"[MaterialCloner] GetCurrentMaterialColor from PropertyBlock: {c}");
-                    return c;
+                    return _propertyBlock.GetColor(COLOR_PROPERTY);
                 }
                 
                 // 또는 material에서 직접 가져오기
                 if (_renderer.sharedMaterial != null && 
                     _renderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
                 {
-                    Color c = _renderer.sharedMaterial.GetColor(COLOR_PROPERTY);
-                    Debug.Log($"[MaterialCloner] GetCurrentMaterialColor from sharedMaterial: {c}");
-                    return c;
+                    return _renderer.sharedMaterial.GetColor(COLOR_PROPERTY);
                 }
                 
                 // SpriteRenderer면 color 프로퍼티 사용
                 if (_spriteRenderer != null)
                 {
-                    Color c = _spriteRenderer.color;
-                    Debug.Log($"[MaterialCloner] GetCurrentMaterialColor from SpriteRenderer.color: {c}");
-                    return c;
+                    return _spriteRenderer.color;
                 }
             }
-            Debug.Log("[MaterialCloner] GetCurrentMaterialColor returning white (no renderer)");
             return Color.white;
         }
 
@@ -335,7 +335,6 @@ namespace HideAndInk.Core.Perception
                 if (tex != null)
                 {
                     zWriteMatInstance.mainTexture = tex;
-                    Debug.Log($"[MaterialCloner] Texture copied to ZWrite material: {tex.name}");
                 }
                 else
                 {
@@ -343,7 +342,6 @@ namespace HideAndInk.Core.Perception
                 }
                 
                 targetRenderer.material = zWriteMatInstance;
-                Debug.Log($"[MaterialCloner] Applied ZWrite material to {target.name}");
             }
             else
             {
@@ -363,7 +361,6 @@ namespace HideAndInk.Core.Perception
 
             targetRenderer.material = _originalTargetMaterial;
             _originalTargetMaterial = null;
-            Debug.Log($"[MaterialCloner] Restored original material to {target.name}");
         }
     }
 }

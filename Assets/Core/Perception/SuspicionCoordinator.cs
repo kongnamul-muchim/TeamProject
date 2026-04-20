@@ -32,7 +32,7 @@ namespace HideAndInk.Core.Perception
         [Header("정보 공유 설정")]
         [SerializeField] private float alertBroadcastRadius = 10f;  // 경계 정보를 공유하는 반경
         [SerializeField] private float sharedSuspicionAmount = 0.3f;  // 공유되는 의심도 양 (0~1)
-        [SerializeField] private float sharedSuspicionCooldown = 2f;  //同一个 적에게 정보 공유하는 간격
+        [SerializeField] private float sharedSuspicionCooldown = 2f;  // 같은 적에게 정보 공유하는 간격
 
         // 등록된 적들
         private List<VisionBasedSuspicionManager> _registeredEnemies = new List<VisionBasedSuspicionManager>();
@@ -95,8 +95,6 @@ namespace HideAndInk.Core.Perception
             }
             _lastBroadcastTime[sourceEnemy.gameObject] = currentTime;
 
-            LogModule.Instance.Log($"Broadcasting alert from {sourceEnemy.name}, position={alertPosition}, intensity={alertIntensity}", "INFO");
-
             foreach (var enemy in _registeredEnemies)
             {
                 if (enemy == null || enemy == sourceEnemy) continue;
@@ -112,8 +110,6 @@ namespace HideAndInk.Core.Perception
 
                     // 해당 적의 의심도 상승
                     enemy.ReceiveSharedAlert(alertPosition, sharedIntensity);
-
-                    LogModule.Instance.Log($"Alert shared to {enemy.name}, distance={distance:F1}, intensity={sharedIntensity:F2}", "INFO");
                 }
             }
         }
@@ -123,9 +119,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void ReceiveSharedAlert(VisionBasedSuspicionManager targetEnemy, Vector3 alertPosition, float intensity)
         {
-            // 이건 VisionBasedSuspicionManager가 직접 처리하지만,
-            // 여기서 추가적인 로직 (예: 사운드 기반 알림 등) 을 넣을 수 있음
-            LogModule.Instance.Log($"{targetEnemy.name} received shared alert at {alertPosition}, intensity={intensity}", "INFO");
+            // VisionBasedSuspicionManager가 직접 처리
         }
     }
 }

@@ -126,7 +126,6 @@ namespace HideAndInk.Core.Perception
                 float intensity = CalculateDetectionIntensity(distance, isInVision);
 
                 suspicionMeter.OnDetectedTarget(intensity);
-                LogModule.Instance.Log($"Target in view, distance={distance:F1}, intensity={intensity:F2}", "INFO");
 
                 // 마지막으로 본 위치 기억 업데이트
                 _lastKnownTargetPosition = nearestTarget.transform.position;
@@ -147,7 +146,6 @@ namespace HideAndInk.Core.Perception
                 if (suspicionMeter.IsCamouflaging)
                 {
                     // 의태 중에는 근처 감지 무시 → 자연 하락 ↑
-                    LogModule.Instance.Log("Target camouflaged and out of vision, allowing suspicion decay", "INFO");
                     _currentlyDetectedTargets.Clear();
                 }
                 // 의태가 아닌 경우
@@ -167,7 +165,6 @@ namespace HideAndInk.Core.Perception
                             if (intensity > 0f)
                             {
                                 suspicionMeter.OnDetectedTarget(intensity);
-                                LogModule.Instance.Log($"Target in memory, distance={Vector3.Distance(transform.position, _lastKnownTargetPosition):F1}, intensity={intensity:F2}", "INFO");
                                 _nearbyCooldown = NEARBY_COOLDOWN_TIME;
                             }
                         }
@@ -182,7 +179,6 @@ namespace HideAndInk.Core.Perception
                             if (intensity > 0f)
                             {
                                 suspicionMeter.OnDetectedTarget(intensity);
-                                LogModule.Instance.Log($"Target left vision but nearby, intensity={intensity:F2}", "INFO");
                                 _nearbyCooldown = NEARBY_COOLDOWN_TIME;
                             }
                         }
@@ -356,12 +352,12 @@ namespace HideAndInk.Core.Perception
             }
             else if (isInVision)
             {
-                // 시야内有 → 즉시 추적
+                // 시야 내 → 즉시 추적
                 newState = EnemyAlertState.Tracking;
             }
             else if (suspicionNormalized >= trackingThreshold)
             {
-                // 의심도가 높음 + 시야外 → 추적 모드
+                // 의심도가 높음 + 시야 밖 → 추적 모드
                 newState = EnemyAlertState.Tracking;
             }
             else if (suspicionNormalized > 0f && suspicionNormalized < trackingThreshold)
@@ -493,7 +489,6 @@ namespace HideAndInk.Core.Perception
             {
                 _currentAlertState = EnemyAlertState.Tracking;
                 _trackingMemoryDuration = memoryDuration * trackingMemoryMultiplier;
-                LogModule.Instance.Log($"{name} switched to Tracking due to shared alert", "INFO");
                 OnAlertStateChanged?.Invoke(_currentAlertState);
             }
         }

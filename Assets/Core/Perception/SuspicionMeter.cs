@@ -28,7 +28,7 @@ namespace HideAndInk.Core.Perception
 
         [Header("발각 후 추적 복귀 설정")]
         [SerializeField] private float detectedStateDuration = 2f;  // 발각 후 추적 상태 유지 시간
-        [SerializeField] private float minSuspicionAfterDetected = 0.3f;  // 발각 후最低 의심도 (30%)
+        [SerializeField] private float minSuspicionAfterDetected = 0.3f;  // 발각 후 최소 의심도 (30%)
 
         // 현재 의심도 값
         private float _currentValue;
@@ -234,7 +234,6 @@ namespace HideAndInk.Core.Perception
             SuspicionLevel newLevel = CalculateLevel(_currentValue);
             if (newLevel != _currentLevel)
             {
-                LogModule.Instance.Log($"Level changed: {_currentLevel} -> {newLevel}, value={_currentValue}", "INFO");
                 _currentLevel = newLevel;
                 OnLevelChanged?.Invoke(_currentLevel);
             }
@@ -252,7 +251,6 @@ namespace HideAndInk.Core.Perception
                 {
                     _wasDetected = true;
                     _lastDetectedTime = Time.time;
-                    LogModule.Instance.Log($"Detected! Starting recovery cooldown for {detectedStateDuration}s, min suspicion {minSuspicionAfterDetected * 100f}%", "INFO");
                 }
                 OnDetected?.Invoke();
             }

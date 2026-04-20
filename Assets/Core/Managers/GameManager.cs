@@ -83,34 +83,33 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void SubscribeToEvents()
         {
+            // SuspicionToGameStateLink에서 발각 이벤트 구독
             if (suspicionToGameStateLink != null)
             {
                 suspicionToGameStateLink.OnPlayerDetected += OnPlayerDetected;
             }
             
-            // [이벤트] GameEvents 구독 (발각/사망)
+            // GameEvents 구독 (UI, 사운드 등 추가 처리용)
             GameEvents.OnPlayerDetected += HandlePlayerDetected;
             GameEvents.OnPlayerDeath += HandlePlayerDeath;
         }
 
         /// <summary>
-        /// 플레이어 발각 시 호출 (이벤트 핸들러)
+        /// 플레이어 발각 시 호출 (GameStateMachine.Detected 전환)
         /// </summary>
         private void OnPlayerDetected()
         {
             if (_gameStateMachine != null && _gameStateMachine.CanTransitionTo(GameState.Detected))
             {
                 _gameStateMachine.TransitionTo(GameState.Detected);
-                Debug.Log("[GameManager] Player detected - transitioned to Detected state.");
             }
         }
         
         /// <summary>
-        /// GameEvents.OnPlayerDetected 핸들러 (GameStateMachine에서 직접 호출)
+        /// GameEvents.OnPlayerDetected 핸들러 (추가 처리: UI, 사운드 등)
         /// </summary>
         private void HandlePlayerDetected()
         {
-            Debug.Log("[GameManager] Received PlayerDetected event from GameEvents.");
             // 추가 처리 (UI, 사운드 등) 가능
         }
         
@@ -119,7 +118,6 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void HandlePlayerDeath()
         {
-            Debug.Log("[GameManager] Received PlayerDeath event from GameEvents.");
             // 추가 처리 (게임 오버 화면, 사운드 등) 가능
         }
 

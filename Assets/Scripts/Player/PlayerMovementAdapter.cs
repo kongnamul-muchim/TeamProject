@@ -121,7 +121,7 @@ namespace HideAndInk.Player
         public Rigidbody Rigidbody => _rigidbody;
 
         /// <summary>
-        /// 이동 잠금 설정 (의태系统中使用)
+        /// 이동 잠금 설정 (의태 시스템에서 사용)
         /// </summary>
         /// <param name="locked">잠금 여부</param>
         public void SetMovementLocked(bool locked)
@@ -130,7 +130,7 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 벽 충돌 무시 설정 (의태系统中使用)
+        /// 벽 충돌 무시 설정 (의태 시스템에서 사용)
         /// </summary>
         /// <param name="ignore">무시 여부</param>
         public void SetIgnoreWallCollision(bool ignore)

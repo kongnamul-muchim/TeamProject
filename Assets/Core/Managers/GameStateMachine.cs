@@ -40,7 +40,6 @@ namespace HideAndInk.Core.Managers
         public GameStateMachine(GameState initialState = GameState.Playing)
         {
             _currentState = initialState;
-            Debug.Log($"[GameStateMachine] Initialized with state: {_currentState}");
         }
 
         /// <summary>
@@ -50,14 +49,11 @@ namespace HideAndInk.Core.Managers
         {
             if (!CanTransitionTo(newState))
             {
-                Debug.LogWarning($"[GameStateMachine] Invalid transition from {_currentState} to {newState}");
                 return;
             }
 
             GameState previousState = _currentState;
             _currentState = newState;
-
-            Debug.Log($"[GameStateMachine] State transition: {previousState} → {_currentState}");
 
             // [이벤트] 게임 상태 전환에 따른 전역 이벤트 발생
             if (newState == GameState.Detected)
@@ -114,7 +110,7 @@ namespace HideAndInk.Core.Managers
         }
 
         /// <summary>
-        ///逃脱 시도
+        /// 탈출 시도
         /// </summary>
         public void TryEscape()
         {

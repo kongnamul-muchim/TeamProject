@@ -118,7 +118,7 @@ namespace HideAndInk.Core.Perception
         {
             var visibleTargets = new List<GameObject>();
 
-            // 레이어 마스크范围内的 모든 Collider 가져오기
+            // 레이어 마스크 내의 모든 Collider 가져오기
             Collider[] colliders = Physics.OverlapSphere(Origin, viewRadius, targetLayer);
 
             foreach (var collider in colliders)
