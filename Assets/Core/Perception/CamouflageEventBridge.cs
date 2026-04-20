@@ -73,6 +73,7 @@ namespace HideAndInk.Core.Perception
         private readonly List<GameObject> _activeEndVFXs = new List<GameObject>();
         private float _startVFXSpawnTime; // Start VFX 생성 시간 기록
         private bool _wasPerfect; // Perfect 상태였는지 기록 (Perfect 해제 시 End VFX 생성용)
+        private bool _endVFXSpawnedForCurrentCycle; // 의태 사이클당 End VFX 생성 여부 (중복 방지)
 
         private void Awake()
         {
@@ -151,6 +152,10 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageStart(GameObject target)
         {
+            // 의태 사이클 시작 시 플래그 리셋
+            _endVFXSpawnedForCurrentCycle = false;
+            _wasPerfect = false;
+
             // 기존 Start VFX가 있으면 삭제
             if (_activeStartVFX != null)
             {
@@ -203,32 +208,33 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageEnd(GameObject target)
         {
+            // 의태 사이클당 End VFX 한 번만 생성 (중복 방지)
+            if (_endVFXSpawnedForCurrentCycle)
+            {
+                return;
+            }
+            _endVFXSpawnedForCurrentCycle = true;
+
             // Start VFX 정리
             if (_activeStartVFX != null)
             {
                 Destroy(_activeStartVFX);
                 _activeStartVFX = null;
             }
-            else if (!_wasPerfect)
-            {
-                // Start VFX가 이미 삭제됨 + Perfect 상태가 아님 = 이미 End VFX 생성 처리 완료
-                return;
-            }
 
             // Perfect 상태였다면 Start VFX 재생 시간과 관계없이 End VFX 생성
             if (_wasPerfect)
             {
-                _wasPerfect = false;
                 SpawnEndVFX();
+                _wasPerfect = false;
                 return;
             }
 
-            // Start VFX가 충분히 재생되었는지 확인
+            // Start VFX가 충분히 재생되었는지 확인 (권장 사항, 차단 아님)
             float elapsed = Time.time - _startVFXSpawnTime;
             if (elapsed < endVFXMinDelay)
             {
-                // 충분히 재생되지 않았으면 End VFX 생성 안 함
-                return;
+                Debug.LogWarning($"[EventBridge] End VFX spawned before min delay ({elapsed:F2}s < {endVFXMinDelay:F2}s)");
             }
 
             SpawnEndVFX();
