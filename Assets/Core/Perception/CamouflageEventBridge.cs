@@ -255,6 +255,15 @@ namespace HideAndInk.Core.Perception
             spawnPos.z += vfxZOffset;
 
             GameObject vfx = Instantiate(camouflageEndVFX, spawnPos, Quaternion.identity);
+
+            if (vfx == null)
+            {
+                Debug.LogError("[EventBridge] End VFX Instantiate returned NULL! Prefab may be missing or destroyed.");
+                return;
+            }
+
+            Debug.Log($"[EventBridge] End VFX spawned: {vfx.name} (instanceID: {vfx.GetInstanceID()})");
+
             vfx.transform.localScale = camouflageEndScale;
 
             // Animator 명시적 초기화 (Instantiate 후 캐시된 상태 방지)
