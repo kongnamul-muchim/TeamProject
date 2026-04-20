@@ -2,59 +2,69 @@ using UnityEngine;
 
 namespace HideAndInk.ParallaxSystem
 {
+    /// <summary>
+    /// 카메라 X 이동에 따라 레이어 좌표를 보간하여 원근감 생성
+    /// 
+    /// rate = 1 → 카메라와 동일하게 이동 → 화면상 움직임 0 (고정)
+    /// rate = 0 → 전혀 이동 안함 → 최대 원근감
+    /// rate = 0.5 → 카메라 이동의 절반 → 중간 원근감
+    /// 
+    /// 공식: layerX = originLayerX + (cameraX - originCameraX) * rate
+    /// 
+    /// SRP: 좌표 보간만 담당
+    /// DI: [SerializeField]로 카메라 참조
+    /// </summary>
     public sealed class ParallaxLayer : MonoBehaviour, IParallaxLayer
     {
-        [Header("패럴랙스 속도 비율")]
-        [SerializeField] private float speedRatio = 0.5f;
+        [Header("DI - 추적할 카메라")]
+        [SerializeField] private UnityEngine.Camera targetCamera;
 
-        [Header("무한 스크롤 (Texture Offset)")]
-        [SerializeField] private bool useInfiniteScroll;
-        [SerializeField] private float textureScaleX = 1f;
+        [Header("보간 비율 (0=최대원근, 1=고정)")]
+        [SerializeField] private float rate = 0.5f;
 
-        [Header("DI - 패럴랙스 컨트롤러")]
-        [SerializeField] private ParallaxController parallaxController;
+        [Header("Y축도 보간 적용")]
+        [SerializeField] private bool applyY;
 
-        private Material _material;
-        private Vector2 _textureOffset;
+        private float _originLayerX;
+        private float _originLayerY;
+        private float _originCameraX;
+        private float _originCameraY;
+        private bool _isInitialized;
 
-        public float SpeedRatio => speedRatio;
-
-        private void OnEnable()
-        {
-            if (parallaxController != null)
-                parallaxController.OnCameraMoved += ApplyOffset;
-        }
-
-        private void OnDisable()
-        {
-            if (parallaxController != null)
-                parallaxController.OnCameraMoved -= ApplyOffset;
-        }
+        public float SpeedRatio => rate;
 
         private void Start()
         {
-            if (useInfiniteScroll)
+            if (targetCamera == null)
+                targetCamera = UnityEngine.Camera.main;
+
+            if (targetCamera != null)
             {
-                SpriteRenderer renderer = GetComponent<SpriteRenderer>();
-                if (renderer != null)
-                    _material = renderer.material;
+                _originLayerX = transform.position.x;
+                _originLayerY = transform.position.y;
+                _originCameraX = targetCamera.transform.position.x;
+                _originCameraY = targetCamera.transform.position.y;
+                _isInitialized = true;
             }
         }
 
-        public void ApplyOffset(Vector3 delta)
+        private void LateUpdate()
         {
-            Vector3 offset = new Vector3(delta.x * speedRatio, delta.y * speedRatio, 0f);
+            if (!_isInitialized || targetCamera == null) return;
 
-            if (useInfiniteScroll && _material != null)
+            float cameraDeltaX = targetCamera.transform.position.x - _originCameraX;
+            float newX = _originLayerX + cameraDeltaX * rate;
+
+            float newY = transform.position.y;
+            if (applyY)
             {
-                _textureOffset.x += (delta.x * speedRatio) * textureScaleX;
-                _textureOffset.y += (delta.y * speedRatio) * textureScaleX;
-                _material.mainTextureOffset = _textureOffset;
+                float cameraDeltaY = targetCamera.transform.position.y - _originCameraY;
+                newY = _originLayerY + cameraDeltaY * rate;
             }
-            else
-            {
-                transform.position += offset;
-            }
+
+            transform.position = new Vector3(newX, newY, transform.position.z);
         }
+
+        public void ApplyOffset(Vector3 delta) { }
     }
 }
