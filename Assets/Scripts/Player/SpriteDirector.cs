@@ -165,8 +165,16 @@ namespace HideAndInk.Player
         private Sprite LoadSprite(string path)
         {
 #if UNITY_EDITOR
-            return AssetDatabase.LoadAssetAtPath<Sprite>(path + ".png");
+            // 에디터: AssetDatabase로 직접 로드 (Resources 폴더 불필요)
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path + ".png");
+            if (sprite == null)
+            {
+                // 폴백: Resources.Load 시도
+                sprite = Resources.Load<Sprite>(path);
+            }
+            return sprite;
 #else
+            // 빌드: Resources.Load만 사용
             return Resources.Load<Sprite>(path);
 #endif
         }

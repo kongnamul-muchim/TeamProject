@@ -25,23 +25,27 @@ namespace HideAndInk.Core.Managers
     {
         private readonly Dictionary<Type, ServiceDescriptor> _services = new Dictionary<Type, ServiceDescriptor>();
         private readonly Dictionary<Type, object> _singletons = new Dictionary<Type, object>();
+        private readonly Dictionary<Type, object> _scopedInstances = new Dictionary<Type, object>(); // Scoped 인스턴스 캐시
+        private readonly DIContainer _parentContainer; // 부모 컨테이너 참조 (스코프 체이닝)
         private readonly bool _isScope;
         private bool _disposed;
 
         /// <summary>
-        /// 기본 생성자
+        /// 기본 생성자 (루트 컨테이너)
         /// </summary>
         public DIContainer()
         {
             _isScope = false;
+            _parentContainer = null;
         }
 
         /// <summary>
         /// 스코프 생성자 (내부용)
         /// </summary>
-        private DIContainer(bool isScope)
+        private DIContainer(DIContainer parent)
         {
-            _isScope = isScope;
+            _isScope = true;
+            _parentContainer = parent;
         }
 
         /// <summary>
@@ -126,7 +130,7 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         public IDIContainer CreateScope()
         {
-            var scopeContainer = new DIContainer(isScope: true);
+            var scopeContainer = new DIContainer(parent: this);
             
             foreach (var kvp in _services)
             {
@@ -156,6 +160,12 @@ namespace HideAndInk.Core.Managers
 
             if (!_services.TryGetValue(serviceType, out var descriptor))
             {
+                // 부모 컨테이너에서 탐색 (스코프 체이닝)
+                if (_parentContainer != null)
+                {
+                    return _parentContainer.Resolve(serviceType);
+                }
+
                 throw new InvalidOperationException(
                     $"서비스 '{serviceType.Name}'이(가) 등록되어 있지 않습니다. " +
                     $"Register<TInterface, TImplementation>()으로 등록해주세요.");
@@ -169,6 +179,7 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private object CreateInstance(ServiceDescriptor descriptor)
         {
+            // Singleton: 전역 인스턴스 재사용
             if (descriptor.Lifetime == ServiceLifetime.Singleton && descriptor.Instance != null)
             {
                 return descriptor.Instance;
@@ -177,6 +188,12 @@ namespace HideAndInk.Core.Managers
             if (descriptor.Lifetime == ServiceLifetime.Singleton && _singletons.TryGetValue(descriptor.ServiceType, out var existingSingleton))
             {
                 return existingSingleton;
+            }
+
+            // Scoped: 스코프 내 인스턴스 재사용
+            if (descriptor.Lifetime == ServiceLifetime.Scoped && _scopedInstances.TryGetValue(descriptor.ServiceType, out var existingScoped))
+            {
+                return existingScoped;
             }
 
             var constructor = GetInjectableConstructor(descriptor.ImplementationType);
@@ -198,9 +215,16 @@ namespace HideAndInk.Core.Managers
 
             var instance = constructor.Invoke(parameterInstances.ToArray());
 
+            // Singleton 캐싱
             if (descriptor.Lifetime == ServiceLifetime.Singleton)
             {
                 _singletons[descriptor.ServiceType] = instance;
+            }
+
+            // Scoped 캐싱
+            if (descriptor.Lifetime == ServiceLifetime.Scoped)
+            {
+                _scopedInstances[descriptor.ServiceType] = instance;
             }
 
             return instance;
@@ -268,6 +292,16 @@ namespace HideAndInk.Core.Managers
             }
 
             _disposed = true;
+
+            // Scoped 인스턴스 먼저 정리
+            foreach (var scoped in _scopedInstances.Values)
+            {
+                if (scoped is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            _scopedInstances.Clear();
 
             foreach (var singleton in _singletons.Values)
             {

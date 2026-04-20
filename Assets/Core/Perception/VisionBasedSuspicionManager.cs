@@ -55,6 +55,7 @@ namespace HideAndInk.Core.Perception
         private bool _wasInVision;  // 이전 프레임에서 시야에 있었는지
         private float _nearbyCooldown;  // 근처 감지 쿨다운
         private const float NEARBY_COOLDOWN_TIME = 0.5f;  // 0.5초 쿨다운
+        private bool _currentFrameInVision; // 현재 프레임 시야 상태 (UpdateAlertState에서 사용)
 
         // AI 기억 시스템
         private Vector3 _lastKnownTargetPosition;  // 마지막으로 본 플레이어 위치
@@ -111,12 +112,13 @@ namespace HideAndInk.Core.Perception
             // 0. 경계 상태 업데이트
             UpdateAlertState();
 
-            // 시야 내 감지된 대상 확인
+            // 시야 내 감지된 대상 확인 (한 번만 호출)
             var visibleTargets = visionSensor.GetAllVisibleTargets();
-            bool isInVision = visibleTargets.Count > 0;
+            _currentFrameInVision = visibleTargets.Count > 0;
+            bool isInVision = _currentFrameInVision;
 
             // 1. 시야 내 감지 → 의심도 증가
-            if (visibleTargets.Count > 0)
+            if (isInVision)
             {
                 // 가장 가까운 대상 기준 거리 계산
                 GameObject nearestTarget = GetNearestTarget(visibleTargets);
@@ -337,8 +339,7 @@ namespace HideAndInk.Core.Perception
         private void UpdateAlertState()
         {
             float suspicionNormalized = suspicionMeter.CurrentValue / 100f;  // 0~1로 정규화
-            var visibleTargets = visionSensor.GetAllVisibleTargets();
-            bool isInVision = visibleTargets.Count > 0;
+            bool isInVision = _currentFrameInVision;
             float timeSinceLastSeen = _hasLastKnownPosition ? Time.time - _lastSeenTime : float.MaxValue;
             bool isInMemoryDuration = _hasLastKnownPosition && timeSinceLastSeen < _trackingMemoryDuration;
 
@@ -393,7 +394,6 @@ namespace HideAndInk.Core.Perception
                     BroadcastAlertToOthers();
                 }
 
-                LogModule.Instance.Log($"AlertState changed: {_previousAlertState} -> {_currentAlertState}", "INFO");
                 OnAlertStateChanged?.Invoke(_currentAlertState);
             }
         }
