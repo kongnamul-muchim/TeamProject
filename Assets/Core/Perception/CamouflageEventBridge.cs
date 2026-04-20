@@ -257,6 +257,15 @@ namespace HideAndInk.Core.Perception
             GameObject vfx = Instantiate(camouflageEndVFX, spawnPos, Quaternion.identity);
             vfx.transform.localScale = camouflageEndScale;
 
+            // Animator 명시적 초기화 (Instantiate 후 캐시된 상태 방지)
+            Animator animator = vfx.GetComponent<Animator>();
+            if (animator != null)
+            {
+                animator.Rebind();
+                animator.Play(0, 0, 0f);
+                animator.Update(0f);
+            }
+
             // Sorting Order 설정 (Player보다 우선 표시)
             SpriteRenderer sr = vfx.GetComponent<SpriteRenderer>();
             if (sr != null)
