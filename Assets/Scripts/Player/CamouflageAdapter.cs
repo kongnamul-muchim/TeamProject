@@ -276,8 +276,8 @@ namespace HideAndInk.Player
         /// </summary>
         private void TryHandleKeyDown()
         {
-            // 쿨타임 중이면 무시
-            if (_camouflageCooldown > 0f)
+            // Perfect 상태에서는 쿨타임 무시 (즉시 해제 가능)
+            if (_stateMachine.CurrentState != CamouflageState.Perfect && _camouflageCooldown > 0f)
             {
                 return;
             }
@@ -319,6 +319,9 @@ namespace HideAndInk.Player
                 _isRestoringRate = false;
                 _rateRestoreProgress = 0f;
             }
+
+            // End 이벤트 플래그 리셋 (이전 사이클 잔여 방지)
+            _hasInvokedEndEvent = false;
 
             // 반경 내 가장 가까운 오브젝트 탐지
             GameObject nearest = _detector.FindNearestCandidate(transform.position);
