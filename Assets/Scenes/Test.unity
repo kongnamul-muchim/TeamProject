@@ -865,7 +865,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18518cace53cb284c8868d47039e85a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageEventBridge
-  inkParticleEffect: {fileID: 0}
+  camouflageStartVFX: {fileID: 0}
+  camouflageStartScale: {x: 1, y: 1, z: 1}
+  camouflageEndVFX: {fileID: 0}
+  camouflageEndScale: {x: 1, y: 1, z: 1}
+  inkMarkVFXs: []
+  inkMarkYOffset: -0.5
+  inkMarkSortingOrder: -1
+  inkMarkScale: {x: 1, y: 1, z: 1}
+  vfxSpeedMultiplier: 1
   soundEffect: {fileID: 0}
 --- !u!1 &1540738556
 GameObject:
@@ -883,6 +891,7 @@ GameObject:
   - component: {fileID: 1540738566}
   - component: {fileID: 1540738567}
   - component: {fileID: 1540738568}
+  - component: {fileID: 1540738569}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -1049,6 +1058,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageToSuspicionLink
   suspicionMeter: {fileID: 1540738567}
+--- !u!114 &1540738569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1540738556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18518cace53cb284c8868d47039e85a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageEventBridge
+  camouflageStartVFX: {fileID: 1486556164930593084, guid: a4bc52495f305114a875807894764471, type: 3}
+  camouflageStartScale: {x: 0.2, y: 0.2, z: 0.2}
+  camouflageEndVFX: {fileID: 8696265744763694249, guid: 56eb73f1f297c564bb10119ee3848fc9, type: 3}
+  camouflageEndScale: {x: 0.2, y: 0.2, z: 0.2}
+  inkMarkVFXs:
+  - {fileID: 2208645742656046503, guid: 0c24982ac28380e46a71ee274037e12b, type: 3}
+  - {fileID: 1694595508668843548, guid: 36d4a4e4eb60cbd4f8337484bef80a61, type: 3}
+  - {fileID: 7052383418403472834, guid: 2acc90951562f6f4bba84f68e7daafaa, type: 3}
+  - {fileID: 7434583648830536641, guid: 3f52760b68794424086712e4f9ca7a2c, type: 3}
+  inkMarkYOffset: -0.5
+  inkMarkSortingOrder: -1
+  inkMarkScale: {x: 0.2, y: 0.2, z: 0.2}
+  vfxSpeedMultiplier: 1
+  soundEffect: {fileID: 0}
 --- !u!1 &1556155324
 GameObject:
   m_ObjectHideFlags: 0
