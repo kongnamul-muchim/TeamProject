@@ -37,5 +37,10 @@ namespace HideAndInk.Core.Interfaces
         event Action<SuspicionLevel> OnLevelChanged;
         event Action OnDetected;
         event Action OnClear;
+
+        /// <summary>
+        /// 발각 후 쿨다운 중인지 여부 (의심도 강제 유지 기간)
+        /// </summary>
+        bool IsInDetectedCooldown { get; }
     }
 }

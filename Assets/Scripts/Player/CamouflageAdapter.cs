@@ -12,7 +12,7 @@ namespace HideAndInk.Player
     /// 실제 작업은 전용 컴포넌트에 위임
     /// </summary>
     [RequireComponent(typeof(PlayerMovementAdapter))]
-    public sealed class CamouflageAdapter : MonoBehaviour
+    public sealed class CamouflageAdapter : MonoBehaviour, ICamouflageStateProvider
     {
         [Header("의태 탐지 설정")]
         [SerializeField] private float detectionRadius = 1.0f;
@@ -634,9 +634,19 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 현재 의태 상태 확인 (외부 참조용)
+        /// 현재 의태 상태 확인 (외부 참조용) - ICamouflageStateProvider 구현
         /// </summary>
         public CamouflageState CurrentState => _stateMachine.CurrentState;
+
+        /// <summary>
+        /// 의태 중인지 여부 - ICamouflageStateProvider 구현
+        /// </summary>
+        public bool IsCamouflaging => _stateMachine.CurrentState != CamouflageState.None;
+
+        /// <summary>
+        /// 완벽 의태 여부 - ICamouflageStateProvider 구현
+        /// </summary>
+        public bool IsPerfect => _stateMachine.CurrentState == CamouflageState.Perfect;
 
         /// <summary>
         /// 의태 가능한 오브젝트 탐지 (디버그/UI용)

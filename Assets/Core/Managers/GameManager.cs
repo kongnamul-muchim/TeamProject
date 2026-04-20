@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Logging;
 
 namespace HideAndInk.Core.Managers
 {

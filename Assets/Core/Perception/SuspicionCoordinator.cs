@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Utilities;
+using HideAndInk.Core.Logging;
 
 namespace HideAndInk.Core.Perception
 {

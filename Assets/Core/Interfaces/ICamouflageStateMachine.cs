@@ -91,5 +91,10 @@ namespace HideAndInk.Core.Interfaces
         /// Perfect 도달 여부
         /// </summary>
         bool IsPerfectReached { get; }
+
+        /// <summary>
+        /// 색상 보간 진행률 (0~1, Partial/Perfect 상태에서 사용)
+        /// </summary>
+        float BlendProgress { get; }
     }
 }

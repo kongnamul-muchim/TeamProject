@@ -58,5 +58,20 @@ namespace HideAndInk.Core.Interfaces
         /// 상태 변경 이벤트 (이전상태, 새상태)
         /// </summary>
         event Action<GameState, GameState> OnStateChanged;
+
+        /// <summary>
+        /// 현재 Playing 상태인지 확인
+        /// </summary>
+        bool IsPlaying { get; }
+
+        /// <summary>
+        /// 현재 Detected 상태인지 확인
+        /// </summary>
+        bool IsDetected { get; }
+
+        /// <summary>
+        /// 일시 정지/재개 토글
+        /// </summary>
+        void TogglePause();
     }
 }

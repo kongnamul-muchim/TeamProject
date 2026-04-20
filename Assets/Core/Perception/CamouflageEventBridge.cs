@@ -82,6 +82,13 @@ namespace HideAndInk.Core.Perception
 
         private void OnEnable()
         {
+            // VFX 프리팹이 할당되지 않은 인스턴스는 이벤트 구독 안 함 (더미 방지)
+            if (camouflageStartVFX == null && camouflageEndVFX == null)
+            {
+                enabled = false;
+                return;
+            }
+
             // 의태 이벤트 구독
             CamouflageEvents.OnCamouflageStart += HandleCamouflageStart;
             CamouflageEvents.OnCamouflageComplete += HandleCamouflageComplete;
