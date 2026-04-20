@@ -1,6 +1,7 @@
 using UnityEngine;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.VFX;
+using HideAndInk.Player;
 using System.Collections.Generic;
 
 namespace HideAndInk.Core.Perception
