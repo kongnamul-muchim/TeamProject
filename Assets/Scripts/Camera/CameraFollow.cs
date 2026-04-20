@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace HideAndInk.Camera
+namespace HideAndInk.CameraSystem
 {
     /// <summary>
     /// 타겟을 카메라가 부드럽게 추적

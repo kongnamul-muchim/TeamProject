@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace HideAndInk.Parallax
+namespace HideAndInk.ParallaxSystem
 {
     public sealed class ParallaxLayer : MonoBehaviour, IParallaxLayer
     {

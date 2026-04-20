@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace HideAndInk.Parallax
+namespace HideAndInk.ParallaxSystem
 {
     /// <summary>
     /// 배경 Sprite를 카메라 뷰포트에 꽉 차게 자동 스케일링

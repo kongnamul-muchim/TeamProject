@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace HideAndInk.Parallax
+namespace HideAndInk.ParallaxSystem
 {
     public sealed class ParallaxController : MonoBehaviour
     {
