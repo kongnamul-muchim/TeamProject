@@ -2,7 +2,9 @@
     "name": "HideAndInk",
     "rootNamespace": "HideAndInk",
     "references": [
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Managers;
+using HideAndInk.Core.Events;
 
 namespace HideAndInk.Player
 {
@@ -36,6 +37,7 @@ namespace HideAndInk.Player
         private Renderer _playerRenderer;
 
         private Vector3 _originalPosition;
+        private float _originalZ;  // 원래 Z값 저장
         private bool _justTransitionedFromPerfect;
         private float _transitionTimer;
 
@@ -45,6 +47,21 @@ namespace HideAndInk.Player
 
         private const float IGNORE_MOVEMENT_AFTER_ATTACH = 0.35f;
         private float _ignoreMovementTimer;
+
+        [Header("의태 이동 설정")]
+        [SerializeField] private float attachMoveSpeed = 5f;
+        private float _positionLerpProgress;
+
+        // 뒷면 접근 시 이동 오프셋
+        private const float BACK_OFFSET = 0.1f;
+
+        // Outline 관련
+        private Outline _targetOutline;
+        private Color _originalOutlineColor;
+        private Color _darkOutlineColor;  // 타겟 어두운 색상 저장
+        private float _outlineChangeProgress;
+        private bool _isAttachingFromBehind;
+        private bool _isRestoringOutline;
 
         private void Awake()
         {
@@ -86,11 +103,9 @@ namespace HideAndInk.Player
 
             if (spriteDirector != null)
             {
-                SpriteRenderer sr = _playerRenderer as SpriteRenderer;
-                if (sr == null && visual != null)
-                {
-                    sr = visual.GetComponentInChildren<SpriteRenderer>();
-                }
+                SpriteRenderer sr = visual != null
+                    ? visual.GetComponentInChildren<SpriteRenderer>()
+                    : GetComponentInChildren<SpriteRenderer>();
                 spriteDirector.SetSpriteRenderer(sr);
             }
         }
@@ -143,12 +158,29 @@ namespace HideAndInk.Player
             // 상태 시스템 업데이트
             _stateMachine.Update(Time.deltaTime, isMoving);
 
-            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작
+            // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작 + Outline 복원 + Z값 복원
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
                 Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
+                
+                // [이벤트] 의태 해제
+                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
+                StartRestoreOutline();  // Outline 보간 복원 시작
+
+                // [2D OutlineHidden] Player Z값 원래대로 복원
+                Vector3 restorePos = transform.position;
+                restorePos.z = _originalZ;
+                transform.position = restorePos;
+
+                // [2D OutlineHidden] 타겟 Material 원래대로 복원
+                if (_stateMachine.TargetObject != null)
+                {
+                    _materialCloner?.RestoreTargetMaterial(_stateMachine.TargetObject);
+                }
+
                 Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
                 // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
             }
@@ -164,17 +196,43 @@ namespace HideAndInk.Player
                     Debug.Log($"[CamouflageAdapter] State changed from None! Current state: {_stateMachine.CurrentState}. Applying Octopus Material...");
                     Debug.Log($"[CamouflageAdapter] _materialCloner is null: {_materialCloner == null}");
                     _materialCloner?.ApplyOctopusMaterial();
+                    
+                    // [이벤트] 의태 상태 변경 + 의태 시작
+                    CamouflageEvents.InvokeStateChanged(_stateMachine.CurrentState);
+                    CamouflageEvents.InvokeCamouflageStart(_stateMachine.TargetObject);
                 }
 
                 // Partial 또는 Perfect에 도달하면 플래그 해제
-                if (_stateMachine.CurrentState == CamouflageState.Partial || 
+                if (_stateMachine.CurrentState == CamouflageState.Partial ||
                     _stateMachine.CurrentState == CamouflageState.Perfect)
                 {
                     _justTransitionedFromPerfect = false;
                 }
+                
+                // Perfect 도달 시 이벤트 발생
+                if (_stateMachine.CurrentState == CamouflageState.Perfect && prevState != CamouflageState.Perfect)
+                {
+                    CamouflageEvents.InvokeCamouflageComplete(_stateMachine.TargetObject);
+                }
+            }
+            
+            // 상태 변경 이벤트 (모든 상태 변화에서 발생)
+            if (prevState != _stateMachine.CurrentState && _stateMachine.CurrentState != CamouflageState.None)
+            {
+                // None → Attached는 위에서 이미 처리했으므로 중복 방지
+                if (!(prevState == CamouflageState.None && _stateMachine.CurrentState != CamouflageState.None))
+                {
+                    CamouflageEvents.InvokeStateChanged(_stateMachine.CurrentState);
+                }
             }
 
-            // Attached 완료 전에는 추가 처리 안 함
+            // 의태 상태에 따른 위치 조정 (Attached 상태에서도 실행되어야 함)
+            UpdatePosition();
+
+            // Outline 색상 업데이트 - 상태 전환 시점에 맞춰 실행
+            UpdateOutlineColor();
+
+            // Attached 완료 전에는 색상 보간 처리 안 함
             if (_stateMachine.CurrentState == CamouflageState.Attached && !_stateMachine.IsAttachedComplete)
             {
                 return;
@@ -182,9 +240,6 @@ namespace HideAndInk.Player
 
             // 색상 보간 업데이트
             UpdateBlend();
-
-            // 의태 상태에 따른 위치 조정
-            UpdatePosition();
         }
 
         /// <summary>
@@ -198,7 +253,7 @@ namespace HideAndInk.Player
                 Debug.Log("[CamouflageAdapter] C keyDown detected");
                 TryHandleKeyDown();
             }
-            
+
             // C Up 감지
             if (Input.GetKeyUp(camouflageKey))
             {
@@ -219,6 +274,9 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Perfect state, C Down → cancelling camouflage");
                 _stateMachine.CancelCamouflage(true);
+                _isRestoringRate = true;
+                _rateRestoreProgress = 0f;
+                StartRestoreOutline();
                 _justTransitionedFromPerfect = false;
                 _transitionTimer = 0f;
                 return;
@@ -256,22 +314,28 @@ namespace HideAndInk.Player
             {
                 Debug.Log($"[CamouflageAdapter] Found target: {nearest.name}");
                 _originalPosition = transform.position;
+                _originalZ = transform.position.z;  // 원래 Z값 저장
                 _stateMachine.StartAttach(nearest);
-                
+
+                // [이벤트] 의태 시작 (StartAttach 직후 호출 - 상태 변화 감지보다 안정적)
+                CamouflageEvents.InvokeCamouflageStart(nearest);
+
+                // Outline 설정 (앞면/뒷면 감지)
+                SetupOutlineForTarget(nearest);
+
                 // 의태 시작 시 이동 무시 타이머 설정
                 _ignoreMovementTimer = IGNORE_MOVEMENT_AFTER_ATTACH;
-                
-                // 의태 시작 시 Octopus Material 적용
-                Debug.Log("[CamouflageAdapter] Applying Octopus Material on attach start");
+
+                // Outline 복원 플래그 리셋
+                _isRestoringOutline = false;
+
+                // 의태 색상 적용
                 _materialCloner?.ApplyOctopusMaterial();
-                
-                // 의태 시작 시 SpriteRenderer.color를 타겟 색으로 즉시 변경
                 _materialCloner?.BlendToTarget(nearest, 1f);
-                
-                // 의태 시작 시 OriginalRate를 1로 설정
                 _materialCloner?.SetOriginalRate(1f);
-                
+
                 spriteDirector?.ChangeToDefaultSprite();
+                spriteDirector?.UpdateColorPart(_playerMovement.Direction);
             }
             else
             {
@@ -297,10 +361,11 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Not perfect yet, cancelling...");
                 _stateMachine.CancelCamouflage(true);
+                StartRestoreOutline();
             }
             else
             {
-                // Perfect 도달했으면 유지 (아무것도 안 함)
+                // Perfect 도달했으면 유지 (Outline도 유지, 복원 안 함)
                 Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage...");
             }
         }
@@ -315,11 +380,11 @@ namespace HideAndInk.Player
             {
                 _rateRestoreProgress += Time.deltaTime;
                 float progress = Mathf.Clamp01(_rateRestoreProgress / RATE_RESTORE_DURATION);
-                
+
                 // 0 → 1로 복원 (같은 속도로)
                 float rate = Mathf.Lerp(0f, 1f, progress);
                 _materialCloner?.SetOriginalRate(rate);
-                
+
                 // 복원 완료
                 if (progress >= 1f)
                 {
@@ -373,35 +438,48 @@ namespace HideAndInk.Player
         private void UpdateSpriteDirection()
         {
             if (_playerMovement == null || spriteDirector == null) return;
-            spriteDirector.UpdateDirection(_playerMovement.Direction);
+
+            // 의태 중이 아니면 스프라이트도 함께 업데이트
+            if (_stateMachine.CurrentState == CamouflageState.None)
+            {
+                spriteDirector.UpdateDirection(_playerMovement.Direction);
+            }
+            else
+            {
+                // 의태 중: 스프라이트는 그대로, ColorPart만 업데이트
+                spriteDirector.UpdateColorPart(_playerMovement.Direction);
+            }
         }
 
         /// <summary>
-        /// 위치 스냅 업데이트
+        /// 위치 스냅 업데이트 (Z값만 부드럽게 보간)
         /// </summary>
         private void UpdatePosition()
         {
             if (_stateMachine.TargetObject == null) return;
 
-            Vector3 targetPos = _stateMachine.TargetObject.transform.position;
-            
-            // 끼임 방지를 위해 Z 위치를 살짝 앞으로 (카메라 방향)
-            // 오브젝트와 같은 Z에 있으면 충돌해서 끼이므로 0.1f 앞에 배치
-            const float FRONT_OFFSET = 0.1f;
+            Vector3 targetPos = CalculateTargetPosition();
 
             switch (_stateMachine.CurrentState)
             {
                 case CamouflageState.Attached:
-                    // Attached 상태: X, Y는 유지, Z만 타겟보다 살짝 앞으로 보정
-                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z - FRONT_OFFSET);
+                    // Attached 상태: Z값만 천천히 오브젝트 위치로 보간
+                    // attachMoveSpeed = 도달까지 걸리는 시간(초)
+                    _positionLerpProgress += Time.deltaTime / attachMoveSpeed;
+                    _positionLerpProgress = Mathf.Clamp01(_positionLerpProgress);
+
+                    float startZ = _originalPosition.z;
+                    float targetZ = targetPos.z;
+                    float newZ = startZ + ((targetZ - startZ) * _positionLerpProgress);
+                    transform.position = new Vector3(transform.position.x, transform.position.y, newZ);
                     break;
 
                 case CamouflageState.Locked:
                 case CamouflageState.Approaching:
                 case CamouflageState.Partial:
                 case CamouflageState.Perfect:
-                    // Attached 완료 후: X, Y는 유지, Z만 타겟보다 살짝 앞으로 보정
-                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z - FRONT_OFFSET);
+                    // Attached 완료 후: 현재 X,Y 유지, Z만 타겟으로
+                    transform.position = new Vector3(transform.position.x, transform.position.y, targetPos.z);
                     break;
 
                 case CamouflageState.None:
@@ -409,6 +487,131 @@ namespace HideAndInk.Player
                     // 지금은 복원 안 함
                     break;
             }
+        }
+
+        /// <summary>
+        /// 목표 위치 계산 (앞면/뒷면 따라 다름)
+        /// </summary>
+        private Vector3 CalculateTargetPosition()
+        {
+            if (_stateMachine.TargetObject == null) return transform.position;
+
+            Vector3 targetPos = _stateMachine.TargetObject.transform.position;
+
+            // 뒷면에서 접근: 오브젝트 뒤로 이동
+            // 앞면에서 접근: 오브젝트 앞으로 이동
+            Vector3 offset = _isAttachingFromBehind
+                ? -_stateMachine.TargetObject.transform.forward * BACK_OFFSET
+                : _stateMachine.TargetObject.transform.forward * BACK_OFFSET;
+
+            return targetPos + offset;
+        }
+
+        /// <summary>
+        /// 타겟 오브젝트의 Outline 설정
+        /// </summary>
+        private void SetupOutlineForTarget(GameObject target)
+        {
+            // Player Visual에서 Outline 찾기
+            Transform visual = transform.Find("Visual");
+            if (visual != null)
+            {
+                _targetOutline = visual.GetComponent<Outline>();
+            }
+            else
+            {
+                _targetOutline = GetComponent<Outline>();
+            }
+
+            _outlineChangeProgress = 0f;
+            _positionLerpProgress = 0f;
+
+            if (_targetOutline == null) return;
+
+            // 앞면/뒷면 감지 (위치 계산용)
+            Vector3 dirToPlayer = (transform.position - target.transform.position).normalized;
+            Vector3 targetForward = target.transform.forward;
+            float dot = Vector3.Dot(dirToPlayer, targetForward);
+            _isAttachingFromBehind = dot < 0f;
+
+            // Outline 원래 색상 저장
+            _originalOutlineColor = _targetOutline.OutlineColor;
+
+            // 타겟 어두운 색상 미리 계산
+            Renderer targetRenderer = target.GetComponent<Renderer>();
+            if (targetRenderer != null)
+            {
+                Color targetColor = targetRenderer.sharedMaterial?.color ?? Color.white;
+                _darkOutlineColor = new Color(
+                    targetColor.r * 0.55f,
+                    targetColor.g * 0.55f,
+                    targetColor.b * 0.55f
+                );
+            }
+            else
+            {
+                _darkOutlineColor = Color.white;
+            }
+        }
+
+        /// <summary>
+        /// Outline 색상 업데이트 (blendTime과同期)
+        /// </summary>
+        private void UpdateOutlineColor()
+        {
+            if (_targetOutline == null) return;
+
+            float duration = blendTime;
+
+            // 의태 해제 시 Outline 복원 (천천히 의태 색상 → 흰색)
+            if (_isRestoringOutline)
+            {
+                _outlineChangeProgress += Time.deltaTime / RATE_RESTORE_DURATION;
+                _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
+                Color lerpColor = Color.Lerp(_darkOutlineColor, Color.white, _outlineChangeProgress);
+                _targetOutline.OutlineColor = lerpColor;
+                Debug.Log($"[Outline] Restoring: progress={_outlineChangeProgress}, lerpColor={lerpColor}");
+
+                // 복원 완료
+                if (_outlineChangeProgress >= 1f)
+                {
+                    _isRestoringOutline = false;
+                    _targetOutline = null;
+                }
+                return;
+            }
+
+            // 의태 중이 아니면 Outline 복원 시작
+            if (_stateMachine.CurrentState == CamouflageState.None)
+            {
+                return;
+            }
+
+            // 의태 중: TargetObject 필요
+            if (_stateMachine.TargetObject == null) return;
+
+            // Attached 상태: 아직 색상 보간 안 함
+            if (_stateMachine.CurrentState == CamouflageState.Attached && !_stateMachine.IsAttachedComplete)
+            {
+                return;
+            }
+
+            // Attached 완료 후 ~ Partial까지: Outline 색상 보간 시작
+            _outlineChangeProgress += Time.deltaTime / duration;
+            _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
+
+            Color newOutlineColor = Color.Lerp(_originalOutlineColor, _darkOutlineColor, _outlineChangeProgress);
+            _targetOutline.OutlineColor = newOutlineColor;
+        }
+
+        /// <summary>
+        /// Outline 복원 시작 (의태 해제 시 호출 - OriginalRate 복원 속도와 동일)
+        /// </summary>
+        private void StartRestoreOutline()
+        {
+            if (_targetOutline == null) return;
+            _isRestoringOutline = true;
+            _outlineChangeProgress = 0f; // 복원 시작 (0 → 1로 가야 함)
         }
 
         /// <summary>
