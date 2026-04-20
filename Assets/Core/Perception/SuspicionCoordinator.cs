@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Utilities;
 
 namespace HideAndInk.Core.Perception
 {
@@ -8,27 +9,8 @@ namespace HideAndInk.Core.Perception
     /// 적들 간 의심도/경계 상태 정보 공유 관리자
     /// 한 적이 플레이어를 발견하면 근처 적들도 경계/추적 모드로 전환
     /// </summary>
-    public sealed class SuspicionCoordinator : MonoBehaviour
+    public sealed class SuspicionCoordinator : Singleton<SuspicionCoordinator>
     {
-        private static SuspicionCoordinator _instance;
-        public static SuspicionCoordinator Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = FindObjectOfType<SuspicionCoordinator>();
-                    if (_instance == null)
-                    {
-                        var go = new GameObject("[SuspicionCoordinator]");
-                        _instance = go.AddComponent<SuspicionCoordinator>();
-                        DontDestroyOnLoad(go);
-                    }
-                }
-                return _instance;
-            }
-        }
-
         [Header("정보 공유 설정")]
         [SerializeField] private float alertBroadcastRadius = 10f;  // 경계 정보를 공유하는 반경
         [SerializeField] private float sharedSuspicionAmount = 0.3f;  // 공유되는 의심도 양 (0~1)
@@ -43,17 +25,6 @@ namespace HideAndInk.Core.Perception
         // 외부에서 참조할 때 사용할 프로퍼티
         public float AlertBroadcastRadius => alertBroadcastRadius;
         public float SharedSuspicionAmount => sharedSuspicionAmount;
-
-        private void Awake()
-        {
-            if (_instance != null && _instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            _instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
 
         /// <summary>
         /// 적을 등록 (VisionBasedSuspicionManager가 시작 시 호출)

@@ -2,44 +2,19 @@ using UnityEngine;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using HideAndInk.Core.Utilities;
 
-public class LogModule : MonoBehaviour
+public class LogModule : Singleton<LogModule>
 {
-    private static LogModule _instance;
-    public static LogModule Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                _instance = FindObjectOfType<LogModule>();
-                if (_instance == null)
-                {
-                    GameObject obj = new GameObject("LogModule");
-                    _instance = obj.AddComponent<LogModule>();
-                    DontDestroyOnLoad(obj);
-                }
-            }
-            return _instance;
-        }
-    }
-
     private string _logFolder;
     private Dictionary<string, StreamWriter> _writers = new Dictionary<string, StreamWriter>();
     private Dictionary<string, List<string>> _pendingLogs = new Dictionary<string, List<string>>();
 
     private string[] _logTypeTags = { "INFO", "WARN", "ERROR", "FATAL", "DEBUG" };
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (_instance != null && _instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        _instance = this;
-        DontDestroyOnLoad(gameObject);
+        base.Awake();
     }
 
     private void Start()

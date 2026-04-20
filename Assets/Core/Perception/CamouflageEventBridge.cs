@@ -1,8 +1,9 @@
 using UnityEngine;
+using System;
+using System.Collections.Generic;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.VFX;
-using System.Collections.Generic;
 
 namespace HideAndInk.Core.Perception
 {
@@ -59,9 +60,12 @@ namespace HideAndInk.Core.Perception
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
         [SerializeField] private float vfxSpeedMultiplier = 1f;
 
-        [Header("기존 효과 시스템 참조 (Member C가 작성한 컴포넌트 할당)")]
-        [Tooltip("의태 시작/종료 시 사운드를 재생하는 컴포넌트")]
+        [Header("기존 효과 시스템 참조")]
+        [Tooltip("의태 시작/종료 시 사운드를 재생하는 컴포넌트 (ISoundEffect 구현 권장)")]
         [SerializeField] private MonoBehaviour soundEffect;
+
+        // 캐싱된 인터페이스 참조
+        private ISoundEffect _soundEffectInterface;
 
         private Transform _playerTransform;
         private GameObject _activeStartVFX;
@@ -73,6 +77,7 @@ namespace HideAndInk.Core.Perception
         private void Awake()
         {
             _playerTransform = transform;
+            _soundEffectInterface = soundEffect as ISoundEffect;
         }
 
         private void OnEnable()
@@ -174,11 +179,8 @@ namespace HideAndInk.Core.Perception
                 }
             }
 
-            // Member C의 사운드 시스템 호출
-            if (soundEffect != null)
-            {
-                soundEffect.SendMessage("PlayAttachSound", SendMessageOptions.DontRequireReceiver);
-            }
+            // 사운드 효과 호출 (인터페이스 우선, 폴백으로 SendMessage)
+            PlaySound(s => s.PlayAttachSound(), "PlayAttachSound");
         }
 
         /// <summary>
@@ -186,10 +188,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageComplete(GameObject target)
         {
-            if (soundEffect != null)
-            {
-                soundEffect.SendMessage("PlayPerfectSound", SendMessageOptions.DontRequireReceiver);
-            }
+            PlaySound(s => s.PlayPerfectSound(), "PlayPerfectSound");
         }
 
         /// <summary>
@@ -268,10 +267,7 @@ namespace HideAndInk.Core.Perception
 
             _activeEndVFXs.Add(vfx);
 
-            if (soundEffect != null)
-            {
-                soundEffect.SendMessage("PlayDetachSound", SendMessageOptions.DontRequireReceiver);
-            }
+            PlaySound(s => s.PlayDetachSound(), "PlayDetachSound");
         }
 
         /// <summary>
@@ -314,6 +310,21 @@ namespace HideAndInk.Core.Perception
             if (animator != null)
             {
                 animator.speed = vfxSpeedMultiplier;
+            }
+        }
+
+        /// <summary>
+        /// 사운드 효과 호출 (인터페이스 우선, 폴백으로 SendMessage)
+        /// </summary>
+        private void PlaySound(Action<ISoundEffect> interfaceCall, string fallbackMessage)
+        {
+            if (_soundEffectInterface != null)
+            {
+                interfaceCall(_soundEffectInterface);
+            }
+            else if (soundEffect != null)
+            {
+                soundEffect.SendMessage(fallbackMessage, SendMessageOptions.DontRequireReceiver);
             }
         }
     }

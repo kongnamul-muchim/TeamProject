@@ -55,8 +55,8 @@ namespace HideAndInk.Core.Interfaces
         bool CanTransitionTo(GameState newState);
 
         /// <summary>
-        /// 상태 변경 이벤트
+        /// 상태 변경 이벤트 (이전상태, 새상태)
         /// </summary>
-        event Action<GameState> OnStateChanged;
+        event Action<GameState, GameState> OnStateChanged;
     }
 }
