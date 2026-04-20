@@ -49,7 +49,7 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private int endVFXSortingOrder = 10;
 
         [Tooltip("VFX Z값 미세 보정 (Player보다 약간 앞으로, Z-fighting 방지)")]
-        [SerializeField] private float vfxZOffset = 0.05f;
+        [SerializeField] private float vfxZOffset = 0.1f;
 
         [Header("VFX 재생 속도")]
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
@@ -61,6 +61,7 @@ namespace HideAndInk.Core.Perception
 
         private Transform _playerTransform;
         private GameObject _activeStartVFX;
+        private Transform _startVFXTarget; // Start VFX가 따라다닐 타겟 (Player 또는 타겟 오브젝트)
         private readonly List<GameObject> _activeEndVFXs = new List<GameObject>();
 
         private void Awake()
@@ -93,10 +94,10 @@ namespace HideAndInk.Core.Perception
 
         private void Update()
         {
-            // Start VFX: Player 위치를 따라다니되 Z값 보정
-            if (_activeStartVFX != null)
+            // Start VFX: 타겟 오브젝트 위치를 따라다니되 Z값 보정
+            if (_activeStartVFX != null && _startVFXTarget != null)
             {
-                Vector3 pos = _playerTransform.position;
+                Vector3 pos = _startVFXTarget.position;
                 pos.z += vfxZOffset;
                 _activeStartVFX.transform.position = pos;
             }
@@ -116,24 +117,20 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의태 상태 변화 처리 (Locked 상태 도달 시 Start VFX 삭제)
+        /// 의태 상태 변화 처리 (Perfect 상태 도달 시 Start VFX 삭제)
         /// </summary>
         private void HandleStateChanged(CamouflageState state)
         {
             Debug.Log($"[EventBridge] OnStateChanged: {state}");
 
-            // Locked 상태 도달 시 Start VFX 삭제
-            if (state == CamouflageState.Locked)
+            // Perfect 상태 도달 시 Start VFX 삭제
+            if (state == CamouflageState.Perfect)
             {
                 if (_activeStartVFX != null)
                 {
-                    Debug.Log("[EventBridge] State=Locked → Destroying Start VFX");
+                    Debug.Log("[EventBridge] State=Perfect → Destroying Start VFX");
                     Destroy(_activeStartVFX);
                     _activeStartVFX = null;
-                }
-                else
-                {
-                    Debug.LogWarning("[EventBridge] State=Locked but _activeStartVFX is already null!");
                 }
             }
         }
@@ -154,7 +151,7 @@ namespace HideAndInk.Core.Perception
                 Destroy(_activeStartVFX);
             }
 
-            // Start VFX 생성 (월드 공간, Player 위치 + Z값 보정)
+            // Start VFX 생성 (Player 위치에 고정)
             if (camouflageStartVFX != null)
             {
                 Vector3 spawnPos = _playerTransform.position;
@@ -179,6 +176,15 @@ namespace HideAndInk.Core.Perception
 
                 ApplyVFXSpeed(vfx);
                 _activeStartVFX = vfx;
+                _startVFXTarget = _playerTransform;
+
+                // Start VFX는 Perfect 상태까지 유지해야 하므로 VFXSelfDestruct 제거
+                VFXSelfDestruct startSelfDestruct = vfx.GetComponent<VFXSelfDestruct>();
+                if (startSelfDestruct != null)
+                {
+                    Destroy(startSelfDestruct);
+                    Debug.Log("[EventBridge] Removed VFXSelfDestruct from Start VFX");
+                }
 
                 Debug.Log($"[EventBridge] Start VFX created: {vfx.name}, _activeStartVFX set: {_activeStartVFX != null}");
             }

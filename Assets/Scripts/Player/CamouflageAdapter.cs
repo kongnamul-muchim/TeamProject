@@ -317,6 +317,9 @@ namespace HideAndInk.Player
                 _originalZ = transform.position.z;  // 원래 Z값 저장
                 _stateMachine.StartAttach(nearest);
 
+                // [이벤트] 의태 시작 (StartAttach 직후 호출 - 상태 변화 감지보다 안정적)
+                CamouflageEvents.InvokeCamouflageStart(nearest);
+
                 // Outline 설정 (앞면/뒷면 감지)
                 SetupOutlineForTarget(nearest);
 
