@@ -82,7 +82,9 @@ namespace HideAndInk.Player
             if (defaultSprite != null)
             {
                 _spriteRenderer.sprite = defaultSprite;
+#if UNITY_EDITOR
                 Debug.Log("[SpriteDirector] Changed sprite to default Player");
+#endif
             }
             else
             {

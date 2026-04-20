@@ -40,7 +40,9 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void OnSuspicionMax()
         {
+#if UNITY_EDITOR
             Debug.Log("[SuspicionGameLink] Suspicion reached MAX! Player detected!");
+#endif
 
             // 이벤트 발생 - 코어 시스템이 구독해서 처리
             OnPlayerDetected?.Invoke();

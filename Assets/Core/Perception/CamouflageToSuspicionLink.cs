@@ -37,7 +37,9 @@ namespace HideAndInk.Core.Perception
                 _wasCamouflaging = isCamouflaging;
                 _wasPerfect = isPerfect;
                 suspicionMeter.SetCamouflageState(isCamouflaging, isPerfect);
+#if UNITY_EDITOR
                 Debug.Log($"[CamouflageSuspicion] Camouflage state changed: isCamouflaging={isCamouflaging}, isPerfect={isPerfect}");
+#endif
             }
         }
 

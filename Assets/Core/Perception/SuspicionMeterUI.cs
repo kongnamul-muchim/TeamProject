@@ -78,12 +78,16 @@ namespace HideAndInk.Core.Perception
                 suspicionFillImage.color = GetColorForLevel(level);
             }
 
+#if UNITY_EDITOR
             Debug.Log($"[SuspicionUI] Level changed: {level}");
+#endif
         }
 
         private void OnDetected()
         {
+#if UNITY_EDITOR
             Debug.Log("[SuspicionUI] DETECTED!");
+#endif
             if (suspicionLevelText != null)
             {
                 suspicionLevelText.text = "DETECTED!";
@@ -93,7 +97,9 @@ namespace HideAndInk.Core.Perception
 
         private void OnClear()
         {
+#if UNITY_EDITOR
             Debug.Log("[SuspicionUI] Suspicion cleared!");
+#endif
             if (suspicionLevelText != null)
             {
                 suspicionLevelText.text = "Safe";

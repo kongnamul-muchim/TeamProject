@@ -43,5 +43,11 @@ namespace HideAndInk.Core.Interfaces
         /// 이동 중인지 여부
         /// </summary>
         bool IsMoving { get; }
+
+        /// <summary>
+        /// 상태 업데이트 (매 프레임 호출)
+        /// </summary>
+        /// <param name="deltaTime">경과 시간</param>
+        void Update(float deltaTime);
     }
 }
