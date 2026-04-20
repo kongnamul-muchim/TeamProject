@@ -49,7 +49,7 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private int endVFXSortingOrder = 10;
 
         [Tooltip("VFX Z값 미세 보정 (Player보다 약간 앞으로, Z-fighting 방지)")]
-        [SerializeField] private float vfxZOffset = -0.05f;
+        [SerializeField] private float vfxZOffset = 0.05f;
 
         [Header("VFX 재생 속도")]
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
@@ -75,6 +75,11 @@ namespace HideAndInk.Core.Perception
             CamouflageEvents.OnCamouflageComplete += HandleCamouflageComplete;
             CamouflageEvents.OnCamouflageEnd += HandleCamouflageEnd;
             CamouflageEvents.OnStateChanged += HandleStateChanged;
+
+            Debug.Log("[EventBridge] Events subscribed.");
+            Debug.Log($"[EventBridge] camouflageStartVFX assigned: {camouflageStartVFX != null}");
+            Debug.Log($"[EventBridge] camouflageEndVFX assigned: {camouflageEndVFX != null}");
+            Debug.Log($"[EventBridge] inkMarkVFXs count: {inkMarkVFXs?.Length ?? 0}");
         }
 
         private void OnDisable()
@@ -115,11 +120,21 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleStateChanged(CamouflageState state)
         {
+            Debug.Log($"[EventBridge] OnStateChanged: {state}");
+
             // Locked 상태 도달 시 Start VFX 삭제
-            if (state == CamouflageState.Locked && _activeStartVFX != null)
+            if (state == CamouflageState.Locked)
             {
-                Destroy(_activeStartVFX);
-                _activeStartVFX = null;
+                if (_activeStartVFX != null)
+                {
+                    Debug.Log("[EventBridge] State=Locked → Destroying Start VFX");
+                    Destroy(_activeStartVFX);
+                    _activeStartVFX = null;
+                }
+                else
+                {
+                    Debug.LogWarning("[EventBridge] State=Locked but _activeStartVFX is already null!");
+                }
             }
         }
 
@@ -128,9 +143,14 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageStart(GameObject target)
         {
+            Debug.Log($"[EventBridge] OnCamouflageStart called. target={target?.name ?? "null"}");
+            Debug.Log($"[EventBridge] _activeStartVFX before: {_activeStartVFX != null}");
+            Debug.Log($"[EventBridge] camouflageStartVFX prefab: {camouflageStartVFX != null}");
+
             // 기존 Start VFX가 있으면 삭제
             if (_activeStartVFX != null)
             {
+                Debug.Log("[EventBridge] Destroying existing Start VFX");
                 Destroy(_activeStartVFX);
             }
 
@@ -140,6 +160,8 @@ namespace HideAndInk.Core.Perception
                 Vector3 spawnPos = _playerTransform.position;
                 spawnPos.z += vfxZOffset;
 
+                Debug.Log($"[EventBridge] Instantiating Start VFX at {spawnPos}, scale={camouflageStartScale}");
+
                 GameObject vfx = Instantiate(camouflageStartVFX, spawnPos, Quaternion.identity);
                 vfx.transform.localScale = camouflageStartScale;
 
@@ -148,10 +170,21 @@ namespace HideAndInk.Core.Perception
                 if (sr != null)
                 {
                     sr.sortingOrder = startVFXSortingOrder;
+                    Debug.Log($"[EventBridge] Start VFX sortingOrder set to {startVFXSortingOrder}");
+                }
+                else
+                {
+                    Debug.LogWarning("[EventBridge] Start VFX has no SpriteRenderer!");
                 }
 
                 ApplyVFXSpeed(vfx);
                 _activeStartVFX = vfx;
+
+                Debug.Log($"[EventBridge] Start VFX created: {vfx.name}, _activeStartVFX set: {_activeStartVFX != null}");
+            }
+            else
+            {
+                Debug.LogError("[EventBridge] camouflageStartVFX is NULL! Cannot create Start VFX.");
             }
 
             // Member C의 사운드 시스템 호출
@@ -166,6 +199,8 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageComplete(GameObject target)
         {
+            Debug.Log("[EventBridge] OnCamouflageComplete called.");
+
             // Perfect에서는 InkMark 생성 안 함 (의태 해제 시에만 생성)
 
             if (soundEffect != null)
@@ -179,9 +214,12 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageEnd(GameObject target)
         {
+            Debug.Log($"[EventBridge] OnCamouflageEnd called. target={target?.name ?? "null"}");
+
             // Start VFX 정리
             if (_activeStartVFX != null)
             {
+                Debug.Log("[EventBridge] OnCamouflageEnd → Destroying Start VFX");
                 Destroy(_activeStartVFX);
                 _activeStartVFX = null;
             }
@@ -192,6 +230,8 @@ namespace HideAndInk.Core.Perception
                 Vector3 spawnPos = _playerTransform.position;
                 spawnPos.z += vfxZOffset;
 
+                Debug.Log($"[EventBridge] Instantiating End VFX at {spawnPos}");
+
                 GameObject vfx = Instantiate(camouflageEndVFX, spawnPos, Quaternion.identity);
                 vfx.transform.localScale = camouflageEndScale;
 
@@ -200,6 +240,7 @@ namespace HideAndInk.Core.Perception
                 if (sr != null)
                 {
                     sr.sortingOrder = endVFXSortingOrder;
+                    Debug.Log($"[EventBridge] End VFX sortingOrder set to {endVFXSortingOrder}");
                 }
 
                 ApplyVFXSpeed(vfx);
@@ -209,14 +250,21 @@ namespace HideAndInk.Core.Perception
                 if (selfDestruct == null)
                 {
                     selfDestruct = vfx.AddComponent<VFXSelfDestruct>();
+                    Debug.Log("[EventBridge] Added VFXSelfDestruct to End VFX");
                 }
                 selfDestruct.OnAnimationComplete += () =>
                 {
+                    Debug.Log("[EventBridge] End VFX animation complete → Spawning InkMark");
                     SpawnInkMark();
                     _activeEndVFXs.Remove(vfx);
                 };
 
                 _activeEndVFXs.Add(vfx);
+                Debug.Log($"[EventBridge] End VFX created: {vfx.name}");
+            }
+            else
+            {
+                Debug.LogError("[EventBridge] camouflageEndVFX is NULL! Cannot create End VFX.");
             }
 
             if (soundEffect != null)
@@ -230,7 +278,11 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void SpawnInkMark()
         {
-            if (inkMarkVFXs == null || inkMarkVFXs.Length == 0) return;
+            if (inkMarkVFXs == null || inkMarkVFXs.Length == 0)
+            {
+                Debug.LogWarning("[EventBridge] inkMarkVFXs is empty! Cannot spawn InkMark.");
+                return;
+            }
 
             GameObject selectedMark = inkMarkVFXs[Random.Range(0, inkMarkVFXs.Length)];
 
@@ -250,6 +302,8 @@ namespace HideAndInk.Core.Perception
             {
                 sr.sortingOrder = inkMarkSortingOrder;
             }
+
+            Debug.Log($"[EventBridge] InkMark spawned: {selectedMark.name} at {spawnPos}");
         }
 
         /// <summary>

@@ -25,6 +25,7 @@ namespace HideAndInk.Core.VFX
         {
             _animator = GetComponent<Animator>();
             _elapsedTime = 0f;
+            Debug.Log($"[VFXSelfDestruct] Awake on {gameObject.name}, animator={_animator != null}, minPlayTime={minPlayTime}");
         }
 
         private void Update()
@@ -41,10 +42,13 @@ namespace HideAndInk.Core.VFX
 
             AnimatorStateInfo stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
 
+            Debug.Log($"[VFXSelfDestruct] {gameObject.name}: normalizedTime={stateInfo.normalizedTime:F2}, loop={stateInfo.loop}, elapsed={_elapsedTime:F2}");
+
             // 애니메이션이 끝났으면 콜백 호출 후 삭제
             if (stateInfo.normalizedTime >= 1.0f && !stateInfo.loop && !_hasNotifiedCompletion)
             {
                 _hasNotifiedCompletion = true;
+                Debug.Log($"[VFXSelfDestruct] {gameObject.name}: Animation complete, invoking callback");
                 OnAnimationComplete?.Invoke();
                 Destroy(gameObject);
             }
