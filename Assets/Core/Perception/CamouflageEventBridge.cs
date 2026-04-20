@@ -1,5 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.VFX;
 using System.Collections.Generic;
 
@@ -47,6 +48,9 @@ namespace HideAndInk.Core.Perception
         [Tooltip("End VFX Sorting Order (Player보다 우선 표시)")]
         [SerializeField] private int endVFXSortingOrder = 10;
 
+        [Tooltip("VFX Z값 미세 보정 (Player보다 약간 앞으로, Z-fighting 방지)")]
+        [SerializeField] private float vfxZOffset = -0.05f;
+
         [Header("VFX 재생 속도")]
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
         [SerializeField] private float vfxSpeedMultiplier = 1f;
@@ -70,6 +74,7 @@ namespace HideAndInk.Core.Perception
             CamouflageEvents.OnCamouflageStart += HandleCamouflageStart;
             CamouflageEvents.OnCamouflageComplete += HandleCamouflageComplete;
             CamouflageEvents.OnCamouflageEnd += HandleCamouflageEnd;
+            CamouflageEvents.OnStateChanged += HandleStateChanged;
         }
 
         private void OnDisable()
@@ -78,6 +83,44 @@ namespace HideAndInk.Core.Perception
             CamouflageEvents.OnCamouflageStart -= HandleCamouflageStart;
             CamouflageEvents.OnCamouflageComplete -= HandleCamouflageComplete;
             CamouflageEvents.OnCamouflageEnd -= HandleCamouflageEnd;
+            CamouflageEvents.OnStateChanged -= HandleStateChanged;
+        }
+
+        private void Update()
+        {
+            // Start VFX: Player 위치를 따라다니되 Z값 보정
+            if (_activeStartVFX != null)
+            {
+                Vector3 pos = _playerTransform.position;
+                pos.z += vfxZOffset;
+                _activeStartVFX.transform.position = pos;
+            }
+
+            // End VFX: Player 위치를 따라다니되 Z값 보정
+            for (int i = _activeEndVFXs.Count - 1; i >= 0; i--)
+            {
+                if (_activeEndVFXs[i] == null)
+                {
+                    _activeEndVFXs.RemoveAt(i);
+                    continue;
+                }
+                Vector3 pos = _playerTransform.position;
+                pos.z += vfxZOffset;
+                _activeEndVFXs[i].transform.position = pos;
+            }
+        }
+
+        /// <summary>
+        /// 의태 상태 변화 처리 (Locked 상태 도달 시 Start VFX 삭제)
+        /// </summary>
+        private void HandleStateChanged(CamouflageState state)
+        {
+            // Locked 상태 도달 시 Start VFX 삭제
+            if (state == CamouflageState.Locked && _activeStartVFX != null)
+            {
+                Destroy(_activeStartVFX);
+                _activeStartVFX = null;
+            }
         }
 
         /// <summary>
@@ -91,12 +134,14 @@ namespace HideAndInk.Core.Perception
                 Destroy(_activeStartVFX);
             }
 
-            // Start VFX 생성 (Player 자식으로 부착하여 위치 동기화)
+            // Start VFX 생성 (월드 공간, Player 위치 + Z값 보정)
             if (camouflageStartVFX != null)
             {
-                GameObject vfx = Instantiate(camouflageStartVFX, _playerTransform.position, Quaternion.identity, _playerTransform);
+                Vector3 spawnPos = _playerTransform.position;
+                spawnPos.z += vfxZOffset;
+
+                GameObject vfx = Instantiate(camouflageStartVFX, spawnPos, Quaternion.identity);
                 vfx.transform.localScale = camouflageStartScale;
-                vfx.transform.localPosition = Vector3.zero;
 
                 // Sorting Order 설정 (Player보다 우선 표시)
                 SpriteRenderer sr = vfx.GetComponent<SpriteRenderer>();
@@ -141,12 +186,14 @@ namespace HideAndInk.Core.Perception
                 _activeStartVFX = null;
             }
 
-            // End VFX 생성 (Player 자식으로 부착하여 위치 동기화)
+            // End VFX 생성 (월드 공간, Player 위치 + Z값 보정)
             if (camouflageEndVFX != null)
             {
-                GameObject vfx = Instantiate(camouflageEndVFX, _playerTransform.position, Quaternion.identity, _playerTransform);
+                Vector3 spawnPos = _playerTransform.position;
+                spawnPos.z += vfxZOffset;
+
+                GameObject vfx = Instantiate(camouflageEndVFX, spawnPos, Quaternion.identity);
                 vfx.transform.localScale = camouflageEndScale;
-                vfx.transform.localPosition = Vector3.zero;
 
                 // Sorting Order 설정 (Player보다 우선 표시)
                 SpriteRenderer sr = vfx.GetComponent<SpriteRenderer>();
@@ -163,7 +210,11 @@ namespace HideAndInk.Core.Perception
                 {
                     selfDestruct = vfx.AddComponent<VFXSelfDestruct>();
                 }
-                selfDestruct.OnAnimationComplete += () => SpawnInkMark();
+                selfDestruct.OnAnimationComplete += () =>
+                {
+                    SpawnInkMark();
+                    _activeEndVFXs.Remove(vfx);
+                };
 
                 _activeEndVFXs.Add(vfx);
             }
