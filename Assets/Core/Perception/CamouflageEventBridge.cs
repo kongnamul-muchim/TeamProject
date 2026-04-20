@@ -1,7 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.VFX;
-using HideAndInk.Player;
 using System.Collections.Generic;
 
 namespace HideAndInk.Core.Perception
@@ -32,6 +31,9 @@ namespace HideAndInk.Core.Perception
         [Tooltip("InkMark 생성 시 Y축 오프셋 (바닥에 깔리도록)")]
         [SerializeField] private float inkMarkYOffset = -0.5f;
 
+        [Tooltip("InkMark Y축 미세 보정 (Z-fighting 방지)")]
+        [SerializeField] private float inkMarkYMicroOffset = 0.01f;
+
         [Tooltip("InkMark Sorting Order (바닥보다 위에 표시)")]
         [SerializeField] private int inkMarkSortingOrder = -1;
 
@@ -39,6 +41,9 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private Vector3 inkMarkScale = Vector3.one;
 
         [Header("VFX 렌더링 설정")]
+        [Tooltip("Start VFX Sorting Order (Player보다 우선 표시)")]
+        [SerializeField] private int startVFXSortingOrder = 10;
+
         [Tooltip("End VFX Sorting Order (Player보다 우선 표시)")]
         [SerializeField] private int endVFXSortingOrder = 10;
 
@@ -75,21 +80,6 @@ namespace HideAndInk.Core.Perception
             CamouflageEvents.OnCamouflageEnd -= HandleCamouflageEnd;
         }
 
-        private void Update()
-        {
-            // Start VFX: Player가 움직이면 즉시 삭제
-            if (_activeStartVFX != null)
-            {
-                // PlayerMovementAdapter를 통해 이동 상태 확인
-                PlayerMovementAdapter movement = GetComponent<PlayerMovementAdapter>();
-                if (movement != null && movement.IsMoving)
-                {
-                    Destroy(_activeStartVFX);
-                    _activeStartVFX = null;
-                }
-            }
-        }
-
         /// <summary>
         /// 의태 시작 시 호출 (None → Attached)
         /// </summary>
@@ -101,11 +91,20 @@ namespace HideAndInk.Core.Perception
                 Destroy(_activeStartVFX);
             }
 
-            // Start VFX 생성
+            // Start VFX 생성 (Player 자식으로 부착하여 위치 동기화)
             if (camouflageStartVFX != null)
             {
-                GameObject vfx = Instantiate(camouflageStartVFX, _playerTransform.position, Quaternion.identity);
+                GameObject vfx = Instantiate(camouflageStartVFX, _playerTransform.position, Quaternion.identity, _playerTransform);
                 vfx.transform.localScale = camouflageStartScale;
+                vfx.transform.localPosition = Vector3.zero;
+
+                // Sorting Order 설정 (Player보다 우선 표시)
+                SpriteRenderer sr = vfx.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.sortingOrder = startVFXSortingOrder;
+                }
+
                 ApplyVFXSpeed(vfx);
                 _activeStartVFX = vfx;
             }
@@ -122,7 +121,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageComplete(GameObject target)
         {
-            SpawnInkMark();
+            // Perfect에서는 InkMark 생성 안 함 (의태 해제 시에만 생성)
 
             if (soundEffect != null)
             {
@@ -135,6 +134,13 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void HandleCamouflageEnd(GameObject target)
         {
+            // Start VFX 정리
+            if (_activeStartVFX != null)
+            {
+                Destroy(_activeStartVFX);
+                _activeStartVFX = null;
+            }
+
             // End VFX 생성 (Player 자식으로 부착하여 위치 동기화)
             if (camouflageEndVFX != null)
             {
@@ -179,6 +185,7 @@ namespace HideAndInk.Core.Perception
 
             Vector3 spawnPos = _playerTransform.position;
             spawnPos.y += inkMarkYOffset;
+            spawnPos.y += inkMarkYMicroOffset; // Z-fighting 방지 미세 보정
 
             // X축 -90°로 명시적 회전 (바닥에 눕힘)
             Quaternion spawnRotation = Quaternion.Euler(-90f, 0f, 0f);

@@ -274,6 +274,8 @@ namespace HideAndInk.Player
             {
                 Debug.Log("[CamouflageAdapter] Perfect state, C Down → cancelling camouflage");
                 _stateMachine.CancelCamouflage(true);
+                _isRestoringRate = true;
+                _rateRestoreProgress = 0f;
                 StartRestoreOutline();
                 _justTransitionedFromPerfect = false;
                 _transitionTimer = 0f;
