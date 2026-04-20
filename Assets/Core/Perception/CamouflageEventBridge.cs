@@ -14,8 +14,14 @@ namespace HideAndInk.Core.Perception
         [Tooltip("의태 시작 시 재생할 VFX 프리팹")]
         [SerializeField] private GameObject camouflageStartVFX;
 
+        [Tooltip("의태 시작 VFX 스케일")]
+        [SerializeField] private Vector3 camouflageStartScale = Vector3.one;
+
         [Tooltip("의태 해제 시 재생할 VFX 프리팹")]
         [SerializeField] private GameObject camouflageEndVFX;
+
+        [Tooltip("의태 해제 VFX 스케일")]
+        [SerializeField] private Vector3 camouflageEndScale = Vector3.one;
 
         [Tooltip("의태 완료 시 바닥에 생성할 InkMark VFX 프리팹들 (랜덤 선택)")]
         [SerializeField] private GameObject[] inkMarkVFXs;
@@ -26,6 +32,9 @@ namespace HideAndInk.Core.Perception
 
         [Tooltip("InkMark Sorting Order (바닥보다 위에 표시)")]
         [SerializeField] private int inkMarkSortingOrder = -1;
+
+        [Tooltip("InkMark 스케일")]
+        [SerializeField] private Vector3 inkMarkScale = Vector3.one;
 
         [Header("VFX 재생 속도")]
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
@@ -67,6 +76,7 @@ namespace HideAndInk.Core.Perception
             if (camouflageStartVFX != null)
             {
                 GameObject vfx = Instantiate(camouflageStartVFX, _playerTransform.position, Quaternion.identity);
+                vfx.transform.localScale = camouflageStartScale;
                 ApplyVFXSpeed(vfx);
             }
 
@@ -91,6 +101,7 @@ namespace HideAndInk.Core.Perception
                 spawnPos.y += inkMarkYOffset;
 
                 GameObject inkMark = Instantiate(selectedMark, spawnPos, Quaternion.identity);
+                inkMark.transform.localScale = inkMarkScale;
 
                 // Sorting Order 설정 (바닥보다 위에 표시)
                 SpriteRenderer sr = inkMark.GetComponent<SpriteRenderer>();
@@ -115,6 +126,7 @@ namespace HideAndInk.Core.Perception
             if (camouflageEndVFX != null)
             {
                 GameObject vfx = Instantiate(camouflageEndVFX, _playerTransform.position, Quaternion.identity);
+                vfx.transform.localScale = camouflageEndScale;
                 ApplyVFXSpeed(vfx);
             }
 
