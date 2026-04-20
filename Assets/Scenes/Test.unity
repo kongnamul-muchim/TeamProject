@@ -865,7 +865,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18518cace53cb284c8868d47039e85a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageEventBridge
-  inkParticleEffect: {fileID: 0}
+  camouflageStartVFX: {fileID: 0}
+  camouflageStartScale: {x: 1, y: 1, z: 1}
+  camouflageEndVFX: {fileID: 0}
+  camouflageEndScale: {x: 1, y: 1, z: 1}
+  inkMarkVFXs: []
+  inkMarkYOffset: -0.5
+  inkMarkYMicroOffset: 0.01
+  inkMarkSortingOrder: -1
+  inkMarkScale: {x: 1, y: 1, z: 1}
+  startVFXSortingOrder: 10
+  endVFXSortingOrder: 10
+  vfxZOffset: -0.05
+  vfxSpeedMultiplier: 1
   soundEffect: {fileID: 0}
 --- !u!1 &1540738556
 GameObject:
@@ -883,6 +895,7 @@ GameObject:
   - component: {fileID: 1540738566}
   - component: {fileID: 1540738567}
   - component: {fileID: 1540738568}
+  - component: {fileID: 1540738569}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -1049,6 +1062,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageToSuspicionLink
   suspicionMeter: {fileID: 1540738567}
+--- !u!114 &1540738569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1540738556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18518cace53cb284c8868d47039e85a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageEventBridge
+  camouflageStartVFX: {fileID: 1486556164930593084, guid: a4bc52495f305114a875807894764471, type: 3}
+  camouflageStartScale: {x: 0.2, y: 0.2, z: 0.2}
+  camouflageEndVFX: {fileID: 8696265744763694249, guid: 56eb73f1f297c564bb10119ee3848fc9, type: 3}
+  camouflageEndScale: {x: 0.2, y: 0.2, z: 0.2}
+  inkMarkVFXs:
+  - {fileID: 2208645742656046503, guid: 0c24982ac28380e46a71ee274037e12b, type: 3}
+  - {fileID: 1694595508668843548, guid: 36d4a4e4eb60cbd4f8337484bef80a61, type: 3}
+  - {fileID: 7052383418403472834, guid: 2acc90951562f6f4bba84f68e7daafaa, type: 3}
+  - {fileID: 7434583648830536641, guid: 3f52760b68794424086712e4f9ca7a2c, type: 3}
+  inkMarkYOffset: -0.5
+  inkMarkYMicroOffset: 0.01
+  inkMarkSortingOrder: -1
+  inkMarkScale: {x: 0.2, y: 0.2, z: 0.2}
+  startVFXSortingOrder: 10
+  endVFXSortingOrder: 10
+  vfxZOffset: 0.1
+  vfxSpeedMultiplier: 1
+  soundEffect: {fileID: 0}
 --- !u!1 &1556155324
 GameObject:
   m_ObjectHideFlags: 0
@@ -1553,6 +1596,7 @@ GameObject:
   - component: {fileID: 2126032563}
   - component: {fileID: 2126032562}
   - component: {fileID: 2126032561}
+  - component: {fileID: 2126032564}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1634,6 +1678,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1540738561}
   m_LocalEulerAnglesHint: {x: 5, y: 0, z: 0}
+--- !u!114 &2126032564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2126032560}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1001 &1108171689868646754
 PrefabInstance:
   m_ObjectHideFlags: 0
