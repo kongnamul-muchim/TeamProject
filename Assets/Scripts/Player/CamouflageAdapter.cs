@@ -283,6 +283,8 @@ namespace HideAndInk.Player
             if (_stateMachine.CurrentState == CamouflageState.Perfect)
             {
                 _stateMachine.CancelCamouflage(true);
+                _isRestoringRate = true;
+                _rateRestoreProgress = 0f;
                 StartRestoreOutline();
                 _justTransitionedFromPerfect = false;
                 _transitionTimer = 0f;
@@ -310,6 +312,10 @@ namespace HideAndInk.Player
                 _originalZ = transform.position.z;
                 _stateMachine.StartAttach(nearest);
 
+                // [이벤트] 의태 시작 (StartAttach 직후 호출 - 상태 변화 감지보다 안정적)
+                CamouflageEvents.InvokeCamouflageStart(nearest);
+
+                // Outline 설정 (앞면/뒷면 감지)
                 SetupOutlineForTarget(nearest);
                 _ignoreMovementTimer = IGNORE_MOVEMENT_AFTER_ATTACH;
                 _isRestoringOutline = false;
