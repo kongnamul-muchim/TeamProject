@@ -47,33 +47,3 @@ namespace HideAndInk.Core.Perception
         }
     }
 }
-
-        private void Update()
-        {
-            if (suspicionMeter == null) return;
-
-            CamouflageState currentState = _camouflageAdapter.CurrentState;
-            bool isCamouflaging = currentState != CamouflageState.None;
-            bool isPerfect = currentState == CamouflageState.Perfect;
-
-            // 의태 상태 또는 Perfect 상태가 변경되면 SuspicionMeter에 알림
-            if (isCamouflaging != _wasCamouflaging || isPerfect != _wasPerfect)
-            {
-                _wasCamouflaging = isCamouflaging;
-                _wasPerfect = isPerfect;
-                suspicionMeter.SetCamouflageState(isCamouflaging, isPerfect);
-#if UNITY_EDITOR
-                Debug.Log($"[CamouflageSuspicion] Camouflage state changed: isCamouflaging={isCamouflaging}, isPerfect={isPerfect}");
-#endif
-            }
-        }
-
-        /// <summary>
-        /// 의심도 계량기 설정 (외부에서 호출)
-        /// </summary>
-        public void SetSuspicionMeter(SuspicionMeter meter)
-        {
-            suspicionMeter = meter;
-        }
-    }
-}

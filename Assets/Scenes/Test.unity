@@ -148,7 +148,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c65f0e55f9ecad49af10d62a57554cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Managers.GameManager
-  suspicionToGameStateLink: {fileID: 0}
 --- !u!4 &70273540
 Transform:
   m_ObjectHideFlags: 0
@@ -284,6 +283,7 @@ GameObject:
   m_Component:
   - component: {fileID: 400642632}
   - component: {fileID: 400642631}
+  - component: {fileID: 400642633}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -371,6 +371,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 130, y: 0, z: 0}
+--- !u!114 &400642633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400642630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &402308811
 GameObject:
   m_ObjectHideFlags: 0
@@ -479,7 +508,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1333761911}
   - {fileID: 1296253349}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -821,64 +849,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 516912067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1333761910
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1333761911}
-  - component: {fileID: 1333761912}
-  m_Layer: 0
-  m_Name: EventBridge
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1333761911
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1333761910}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 516912067}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1333761912
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1333761910}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18518cace53cb284c8868d47039e85a0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageEventBridge
-  camouflageStartVFX: {fileID: 0}
-  camouflageStartScale: {x: 1, y: 1, z: 1}
-  camouflageEndVFX: {fileID: 0}
-  camouflageEndScale: {x: 1, y: 1, z: 1}
-  inkMarkVFXs: []
-  inkMarkYOffset: -0.5
-  inkMarkYMicroOffset: 0.01
-  inkMarkSortingOrder: -1
-  inkMarkScale: {x: 1, y: 1, z: 1}
-  startVFXSortingOrder: 10
-  endVFXSortingOrder: 10
-  vfxZOffset: -0.05
-  vfxSpeedMultiplier: 1
-  soundEffect: {fileID: 0}
 --- !u!1 &1540738556
 GameObject:
   m_ObjectHideFlags: 0
@@ -990,6 +960,7 @@ MonoBehaviour:
   perfectTime: 2
   camouflageKey: 99
   spriteDirector: {fileID: 1540738566}
+  camouflageCooldownTime: 1
   attachMoveSpeed: 0.3
 --- !u!114 &1540738565
 MonoBehaviour:
@@ -1090,7 +1061,8 @@ MonoBehaviour:
   startVFXSortingOrder: 10
   endVFXSortingOrder: 10
   vfxZOffset: 0.1
-  vfxSpeedMultiplier: 1
+  endVFXMinDelay: 0.35
+  vfxSpeedMultiplier: 0.7
   soundEffect: {fileID: 0}
 --- !u!1 &1556155324
 GameObject:

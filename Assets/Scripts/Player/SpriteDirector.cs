@@ -72,6 +72,14 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
+        /// 방향별 스프라이트로 변경 (ISpriteDirector 구현)
+        /// </summary>
+        public void ChangeSprite(MoveDirection direction)
+        {
+            UpdateDirection(direction);
+        }
+
+        /// <summary>
         /// 기본 스프라이트로 변경 (의태 시 사용)
         /// </summary>
         public void ChangeToDefaultSprite()

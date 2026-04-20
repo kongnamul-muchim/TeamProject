@@ -29,4 +29,3 @@ namespace HideAndInk.Core.Interfaces
         void UpdateColorPart(MoveDirection direction);
     }
 }
-}
