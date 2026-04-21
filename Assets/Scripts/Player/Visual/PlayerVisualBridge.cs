@@ -82,22 +82,23 @@ namespace HideAndInk.Player.Visual
         }
 
         /// <summary>
-        /// 마스크 스프라이트의 텍스처를 머티리얼에 동기화하여 적용합니다.
+        /// 마스크 스프라이트의 텍스처를 진행 중인 머티리얼에 동기화하여 적용합니다.
         /// </summary>
         private void SyncMaskWithMainSprite()
         {
-            if (_spriteRenderer == null || _material == null || maskSprites == null || maskSprites.Length == 0) return;
+            if (_spriteRenderer == null || maskSprites == null || maskSprites.Length == 0) return;
 
-            // 복잡한 UV 계산을 제거하고, 마스크 시트 전체 텍스처를 머티리얼에 한 번 할당합니다.
-            // 셰이더 내부에서 메인 UV를 공유하므로 시트 레이아웃(Full Rect 등)이 같다면 자동으로 맞게 됩니다.
-            if (maskSprites[0] != null)
+            // 의태 시 MaterialCloner가 _spriteRenderer.material을 교체하므로 항상 활성화된 현재 매테리얼을 가져옵니다!
+            Material activeMat = _spriteRenderer.material;
+
+            if (maskSprites[0] != null && activeMat != null && activeMat.HasProperty("_ColorPart"))
             {
-                Texture currentMaskTexture = _material.GetTexture("_ColorPart");
+                Texture currentMaskTexture = activeMat.GetTexture("_ColorPart");
                 Texture targetMaskTexture = maskSprites[0].texture;
 
                 if (currentMaskTexture != targetMaskTexture)
                 {
-                    _material.SetTexture("_ColorPart", targetMaskTexture);
+                    activeMat.SetTexture("_ColorPart", targetMaskTexture);
                 }
             }
         }

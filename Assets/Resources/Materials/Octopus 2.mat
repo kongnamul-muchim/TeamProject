@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Octopus 2
-  m_Shader: {fileID: -6465566751694194690, guid: f742ae67cda3f5a4c8aa87464dc84499, type: 3}
+  m_Shader: {fileID: 4800000, guid: de90088e9acbb514b97c1ee613d60a6a, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -37,6 +37,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _AlphaTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _ColorPart:
         m_Texture: {fileID: 2800000, guid: 8e5f37a58cbf6dc418a24f40bd1eb63f, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -71,6 +75,7 @@ Material:
     - _BUILTIN_ZWrite: 0
     - _BUILTIN_ZWriteControl: 0
     - _ColorMask: 15
+    - _EnableExternalAlpha: 0
     - _OriginalRate: 1
     - _OutlineAlpha: 0.4
     - _QueueControl: 0
@@ -85,9 +90,12 @@ Material:
     - _UIMaskSoftnessX: 1
     - _UIMaskSoftnessY: 1
     m_Colors:
+    - White: {r: 1, g: 1, b: 1, a: 1}
     - _ClipRect: {r: 0, g: 0, b: 0, a: 0}
-    - _Color: {r: 0, g: 0, b: 0, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &1962361378646620616

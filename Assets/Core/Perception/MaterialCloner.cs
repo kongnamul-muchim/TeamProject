@@ -109,12 +109,18 @@ namespace HideAndInk.Core.Perception
             {
                 return targetBlock.GetColor(COLOR_PROPERTY);
             }
+            else if (targetBlock.HasProperty("_BaseColor"))
+            {
+                return targetBlock.GetColor("_BaseColor");
+            }
 
             // 메테리얼에서 직접 색상 가져오기
-            if (targetRenderer.sharedMaterial != null && 
-                targetRenderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
+            if (targetRenderer.sharedMaterial != null)
             {
-                return targetRenderer.sharedMaterial.GetColor(COLOR_PROPERTY);
+                if (targetRenderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
+                    return targetRenderer.sharedMaterial.GetColor(COLOR_PROPERTY);
+                if (targetRenderer.sharedMaterial.HasProperty("_BaseColor"))
+                    return targetRenderer.sharedMaterial.GetColor("_BaseColor");
             }
 
             return Color.white;
