@@ -8,6 +8,7 @@ public class ChichiFollower : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private ChichiStateMachine stateMachine;
+    [SerializeField] private SpriteRenderer spriteRenderer;
 
     [Header("Guide Position")]
     [SerializeField] private float behindDistance = 7f;
@@ -27,6 +28,7 @@ public class ChichiFollower : MonoBehaviour
     private Vector3 _currentTarget;
     private Vector3 _moveVelocity;
     private Vector3 _targetVelocity;
+    private bool _facingRight = true;
 
     private void Start()
     {
@@ -36,6 +38,12 @@ public class ChichiFollower : MonoBehaviour
         _lastTargetPosition = stateMachine.Target.position;
         _currentTarget = GetFollowTargetPosition();
         stateMachine.OnStateChanged += HandleStateChanged;
+
+        // SpriteRenderer 자동 탐색
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
     }
 
     private void OnDestroy()
@@ -54,6 +62,7 @@ public class ChichiFollower : MonoBehaviour
         UpdateMoveDirection(stateMachine.Target.position - _lastTargetPosition);
         UpdateCurrentTarget(stateMachine.CurrentState);
         UpdateMovement();
+        UpdateSpriteDirection();
         _lastTargetPosition = stateMachine.Target.position;
     }
 
@@ -96,11 +105,39 @@ public class ChichiFollower : MonoBehaviour
 
     private void UpdateMovement()
     {
+        // Follow 상태에서는 움직이지 않음
+        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
+            return;
+
         float smoothTime = stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging ? chargeSmoothTime : catchUpSmoothTime;
         Vector3 nextPosition = Vector3.SmoothDamp(transform.position, _currentTarget, ref _moveVelocity, smoothTime);
         nextPosition.y = _currentTarget.y;
         nextPosition.z = stateMachine.Target.position.z;
         transform.position = nextPosition;
+    }
+
+    /// <summary>
+    /// 이동 방향에 따라 스프라이트 Y Rotation을 0(오른쪽) 또는 180(왼쪽)으로 전환
+    /// </summary>
+    private void UpdateSpriteDirection()
+    {
+        if (spriteRenderer == null)
+            return;
+
+        // X축 이동 방향 확인
+        float moveX = _smoothedMoveDirection.x;
+        if (Mathf.Abs(moveX) < 0.1f)
+            return; // 이동량이 작으면 방향 전환 안 함
+
+        bool shouldFaceRight = moveX > 0f;
+
+        if (shouldFaceRight != _facingRight)
+        {
+            _facingRight = shouldFaceRight;
+            Vector3 rotation = spriteRenderer.transform.localEulerAngles;
+            rotation.y = shouldFaceRight ? 0f : 180f;
+            spriteRenderer.transform.localEulerAngles = rotation;
+        }
     }
 
     private Vector3 GetFollowTargetPosition()

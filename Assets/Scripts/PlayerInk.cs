@@ -5,11 +5,11 @@ using UnityEngine;
 /// </summary>
 public class PlayerInk : MonoBehaviour
 {
-    [Header("Ink")]
-    [SerializeField] private float currentInk = 0f;
-    [SerializeField] private float maxInk = 100f;
-    [SerializeField] private float passiveRechargeAmount = 10f;
-    [SerializeField] private float passiveRechargeInterval = 10f;
+        [Header("Ink")]
+        [SerializeField] private float currentInk = 0f;
+        [SerializeField] private float maxInk = 100f;
+        [Tooltip("자연 회복으로 0→최대까지 차오르는 데 걸리는 시간(초)")]
+        [SerializeField] private float passiveRechargeDuration = 10f;
 
     [Header("State")]
     [SerializeField] private bool isUnderThreat = false;
@@ -23,7 +23,6 @@ public class PlayerInk : MonoBehaviour
     [SerializeField] private float smokeReadyTolerance = 0.5f;
     [SerializeField] private ParticleSystem smokeEffect;
 
-    private float _passiveRechargeTimer;
     private float _smokeTimer;
 
     public float CurrentInk => currentInk;
@@ -41,7 +40,6 @@ public class PlayerInk : MonoBehaviour
     private void Awake()
     {
         currentInk = Mathf.Clamp(currentInk, 0f, maxInk);
-        _passiveRechargeTimer = passiveRechargeInterval;
     }
 
     private void Update()
@@ -138,12 +136,9 @@ public class PlayerInk : MonoBehaviour
         if (isUsingSmoke || isUsingBossMimic || isContactCharging)
             return;
 
-        _passiveRechargeTimer -= Time.deltaTime;
-        if (_passiveRechargeTimer > 0f)
-            return;
-
-        SetInkDirect(currentInk + passiveRechargeAmount);
-        _passiveRechargeTimer = passiveRechargeInterval;
+        // 자연 회복: 0→maxInk까지 passiveRechargeDuration 초 동안 선형 회복
+        float rechargeRate = maxInk / Mathf.Max(0.01f, passiveRechargeDuration);
+        SetInkDirect(currentInk + rechargeRate * Time.deltaTime);
     }
 
     private void SetInkDirect(float value)
