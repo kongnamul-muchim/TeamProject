@@ -167,47 +167,51 @@ public class ChichiFollower : MonoBehaviour
     }
 
     /// <summary>
-    /// 이동 방향에 따라 스프라이트 변경 + Side는 Y Rotation 반전
-    /// - Z+ (앞/위) → Back 스프라이트
-    /// - Z- (뒤/아래) → Front 스프라이트
-    /// - X+ (오른쪽) → Side 스프라이트 + Y Rotation 0
-    /// - X- (왼쪽) → Side 스프라이트 + Y Rotation 180
+    /// 플레이어 상대 위치에 따라 스프라이트 변경 + Side는 Y Rotation 반전
+    /// 카메라가 반대편이므로 상하 반전 적용
+    /// - Player가 치치의 오른쪽 → Side (Y: 0)
+    /// - Player가 치치의 왼쪽 → Side (Y: 180)
+    /// - Player가 치치의 위 → Front
+    /// - Player가 치치의 아래 → Back
     /// </summary>
     private void UpdateSpriteDirection()
     {
-        if (spriteRenderer == null)
+        if (spriteRenderer == null || stateMachine.Target == null)
             return;
 
-        // 치치의 실제 이동 delta 사용 (X-Z 평면, Y는 높이축이므로 무시)
-        float moveX = _actualMoveDelta.x;
-        float moveZ = _actualMoveDelta.z;
+        // 플레이어와 치치의 상대 위치 (치치 기준)
+        Vector3 toPlayer = stateMachine.Target.position - transform.position;
+        float relX = toPlayer.x;
+        float relZ = toPlayer.z;
 
-        // Deadzone: 이동량이 너무 작으면 변경 안 함 (흔들림 방지)
-        const float deadzone = 0.001f;
-        if (Mathf.Abs(moveX) < deadzone && Mathf.Abs(moveZ) < deadzone)
+        // Deadzone: 너무 가까우면 방향 전환 안 함 (흔들림 방지)
+        const float deadzone = 0.5f;
+        if (Mathf.Abs(relX) < deadzone && Mathf.Abs(relZ) < deadzone)
             return;
 
-        // 방향 판별: |X| > |Z| → 좌/우, |Z| > |X| → 앞/뒤
+        // 방향 판별: |X| > |Z| → 좌/우, |Z| > |X| → 상하
         Sprite newSprite;
         bool flipY = false;
 
-        if (Mathf.Abs(moveX) > Mathf.Abs(moveZ))
+        if (Mathf.Abs(relX) > Mathf.Abs(relZ))
         {
-            // 좌/우 이동 → Side 스프라이트
+            // Player가 좌/우에 있음 → Side 스프라이트
             newSprite = spriteSide;
-            bool shouldFaceRight = moveX > 0f;
-            flipY = !shouldFaceRight; // 오른쪽: 0, 왼쪽: 180
+            bool playerIsRight = relX > 0f;
+            flipY = !playerIsRight; // Player가 오른쪽: Y 0, 왼쪽: Y 180
         }
         else
         {
-            // 앞/뒤 이동
-            if (moveZ > 0f)
+            // Player가 상하에 있음
+            if (relZ > 0f)
             {
-                newSprite = spriteBack; // 앞(위)
+                // Player가 치치의 위쪽 → Front
+                newSprite = spriteFront;
             }
             else
             {
-                newSprite = spriteFront; // 뒤(아래)
+                // Player가 치치의 아래쪽 → Back
+                newSprite = spriteBack;
             }
             flipY = false; // Front/Back은 반전 없음
         }
