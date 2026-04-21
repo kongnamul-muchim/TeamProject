@@ -247,32 +247,34 @@ namespace HideAndInk.Core.Enemy
         }
 
         /// <summary>
-        /// Player 찾기 (Tag "Player")
+        /// Player 찾기 (Tag "Player" 우선, 실패 시 레이어 기반 탐색)
         /// </summary>
         protected virtual void FindPlayer()
         {
+            // 1순위: Tag 기반 탐색 (효율적)
             GameObject playerObj = GameObject.FindWithTag("Player");
             if (playerObj != null)
             {
                 _playerTransform = playerObj.transform;
+                return;
             }
-            else
+
+            // 2순위: 레이어 기반 탐색 (FindObjectsByType으로 최적화)
+            int playerLayer = LayerMask.NameToLayer("Player");
+            if (playerLayer >= 0)
             {
-                // Layer "Player"로도 한 번 더 시도
-                int playerLayer = LayerMask.NameToLayer("Player");
-                if (playerLayer >= 0)
+                var transforms = FindObjectsByType<Transform>(FindObjectsSortMode.None);
+                foreach (var t in transforms)
                 {
-                    var allObjects = FindObjectsOfType<GameObject>();
-                    foreach (var go in allObjects)
+                    if (t.gameObject.layer == playerLayer)
                     {
-                        if (go.layer == playerLayer)
-                        {
-                            _playerTransform = go.transform;
-                            break;
-                        }
+                        _playerTransform = t;
+                        return;
                     }
                 }
             }
+
+            Debug.LogWarning($"[EnemyAIController] Player not found. Ensure Player has Tag 'Player' or Layer 'Player'.");
         }
 
         /// <summary>
