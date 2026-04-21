@@ -2,11 +2,11 @@ using UnityEngine;
 
 /// <summary>
 /// [이동] 치치의 이동만 담당한다.
-/// - Follow 상태: 움직이지 않음 (두두 근처에서 대기)
+/// - Follow 상태: 움직이지 않음 (두두 근처에서 대기, Z축만 부드럽게 따라감)
 /// - CatchUp 상태: 두두 뒤로 부드럽게 따라감
 /// - Charging 상태: 제자리 유지
 /// - 이동 방향에 따라 스프라이트 변경 (Front/Back/Side)
-/// - Side 스프라이트는 좌/우에 따라 Y Rotation 0/180 반전
+/// - Side 스프라이트는 좌/우에 따라 SpriteRenderer.flipX 반전
 /// </summary>
 public class ChichiFollower : MonoBehaviour
 {
@@ -48,14 +48,13 @@ public class ChichiFollower : MonoBehaviour
     private Vector3 _currentTarget;
     private Vector3 _moveVelocity;
     private Vector3 _targetVelocity;
-    private bool _facingRight = true;
     private Sprite _lastSprite;
 
-    // 스프라이트 방향 전환용 실제 이동 delta
+    // 스프라이트 방향 전환용 실제 이동 delta (CatchUp 상태일 때만 계산)
     private Vector3 _actualMoveDelta;
 
-    // 마지막 주요 이동 축 (true=수직, false=수평)
-    private bool _lastDominantWasVertical;
+    // Follow 상태에서의 X,Y 고정 위치 (상태 전환 시 스냅용)
+    private Vector3 _followFixedPosition;
 
     private void Awake()
     {
@@ -78,7 +77,18 @@ public class ChichiFollower : MonoBehaviour
             return;
 
         _lastTargetPosition = stateMachine.Target.position;
+
+        // 시작 시 두두 방향으로 _smoothedMoveDirection 초기화
+        Vector3 initialDelta = stateMachine.Target.position - transform.position;
+        if (initialDelta.sqrMagnitude > 0.00001f)
+        {
+            _smoothedMoveDirection = initialDelta.normalized;
+            _lastMoveDirection = _smoothedMoveDirection;
+        }
+
         _currentTarget = GetFollowTargetPosition();
+        _followFixedPosition = transform.position;
+        _followFixedPosition.z = stateMachine.Target.position.z;
         stateMachine.OnStateChanged += HandleStateChanged;
     }
 
@@ -101,13 +111,11 @@ public class ChichiFollower : MonoBehaviour
         UpdateCurrentTarget(stateMachine.CurrentState);
         UpdateMovement();
 
-        // 치치의 실제 이동 delta 기록 (스프라이트 방향 판별용)
-        _actualMoveDelta = transform.position - prevPosition;
-        _actualMoveDelta.y = 0f;
-
-        // CatchUp 상태: 이동 방향에 따라 스프라이트 변경
+        // CatchUp 상태일 때만 실제 이동 delta 기록 (스프라이트 방향 판별용)
         if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp)
         {
+            _actualMoveDelta = transform.position - prevPosition;
+            _actualMoveDelta.y = 0f;
             UpdateSpriteDirectionByMovement();
         }
         // Follow/Charging 상태: 마지막 스프라이트 유지 (변경 안 함)
@@ -117,7 +125,22 @@ public class ChichiFollower : MonoBehaviour
 
     private void HandleStateChanged(ChichiStateMachine.ChichiState state)
     {
-        UpdateCurrentTarget(state);
+        // 상태 전환 시 SmoothDamp velocity 리셋 (위치 튀김 방지)
+        _moveVelocity = Vector3.zero;
+        _targetVelocity = Vector3.zero;
+
+        if (state == ChichiStateMachine.ChichiState.Follow)
+        {
+            // Follow 진입 시 현재 X,Y 고정
+            _followFixedPosition = transform.position;
+            _followFixedPosition.z = stateMachine.Target.position.z;
+            _currentTarget = _followFixedPosition;
+        }
+        else if (state == ChichiStateMachine.ChichiState.CatchUp)
+        {
+            _currentTarget = GetFollowTargetPosition();
+        }
+        // Charging: 제자리 유지 (_currentTarget 변경 안 함)
     }
 
     private void UpdateMoveDirection(Vector3 delta)
@@ -137,24 +160,22 @@ public class ChichiFollower : MonoBehaviour
 
     private void UpdateCurrentTarget(ChichiStateMachine.ChichiState state)
     {
-        Vector3 desiredTarget = transform.position;
-
         if (state == ChichiStateMachine.ChichiState.CatchUp)
         {
-            desiredTarget = GetFollowTargetPosition();
+            Vector3 desiredTarget = GetFollowTargetPosition();
+            _currentTarget = Vector3.SmoothDamp(_currentTarget, desiredTarget, ref _targetVelocity, targetSmoothTime);
         }
-        else if (state == ChichiStateMachine.ChichiState.Charging)
+        else if (state == ChichiStateMachine.ChichiState.Follow)
         {
-            desiredTarget = transform.position;
+            // Follow 상태: Z만 두두 위치로 부드럽게 이동 (X,Y는 _followFixedPosition 고정)
+            if (stateMachine.Target != null)
+            {
+                Vector3 followZTarget = _followFixedPosition;
+                followZTarget.z = stateMachine.Target.position.z;
+                _currentTarget = Vector3.SmoothDamp(_currentTarget, followZTarget, ref _targetVelocity, targetSmoothTime);
+            }
         }
-
-        // Follow 상태에서도 Z는 두두 위치로 설정 (부드러운 Z축 이동용)
-        if (stateMachine.Target != null)
-        {
-            desiredTarget.z = stateMachine.Target.position.z;
-        }
-
-        _currentTarget = Vector3.SmoothDamp(_currentTarget, desiredTarget, ref _targetVelocity, targetSmoothTime);
+        // Charging 상태: _currentTarget 변경 안 함 (제자리 유지)
     }
 
     private void UpdateMovement()
@@ -168,6 +189,7 @@ public class ChichiFollower : MonoBehaviour
             return;
         }
 
+        // CatchUp / Charging 상태: SmoothDamp로 위치 이동
         float smoothTime = stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging ? chargeSmoothTime : catchUpSmoothTime;
         Vector3 nextPosition = Vector3.SmoothDamp(transform.position, _currentTarget, ref _moveVelocity, smoothTime);
         nextPosition.y = _currentTarget.y;
@@ -177,8 +199,9 @@ public class ChichiFollower : MonoBehaviour
 
     /// <summary>
     /// CatchUp 상태: 치치의 실제 이동 방향에 따라 스프라이트 변경
-    /// - X+ → Side (Y: 180), X- → Side (Y: 0)
+    /// - X+ → Side (flipX: true), X- → Side (flipX: false)
     /// - Z+ → Back, Z- → Front
+    /// - SpriteRenderer.flipX 사용 (transform 회전 아님)
     /// </summary>
     private void UpdateSpriteDirectionByMovement()
     {
@@ -194,13 +217,13 @@ public class ChichiFollower : MonoBehaviour
             return;
 
         Sprite newSprite;
-        bool flipY = false;
+        bool flipX = false;
 
         if (Mathf.Abs(moveX) > Mathf.Abs(moveZ))
         {
             newSprite = spriteSide;
             bool movingRight = moveX > 0f;
-            flipY = !movingRight; // 오른쪽: Y 180, 왼쪽: Y 0
+            flipX = !movingRight; // 오른쪽: flipX true, 왼쪽: flipX false
         }
         else
         {
@@ -212,7 +235,7 @@ public class ChichiFollower : MonoBehaviour
             {
                 newSprite = spriteFront;
             }
-            flipY = false;
+            flipX = false; // Front/Back은 flipX 사용 안 함
         }
 
         if (newSprite != null && newSprite != _lastSprite)
@@ -221,11 +244,10 @@ public class ChichiFollower : MonoBehaviour
             _lastSprite = newSprite;
         }
 
+        // Side 스프라이트일 때만 flipX 적용
         if (newSprite == spriteSide)
         {
-            Vector3 rotation = spriteRenderer.transform.localEulerAngles;
-            rotation.y = flipY ? 180f : 0f;
-            spriteRenderer.transform.localEulerAngles = rotation;
+            spriteRenderer.flipX = flipX;
         }
     }
 
@@ -249,6 +271,6 @@ public class ChichiFollower : MonoBehaviour
         return new Vector3(
             targetPosition.x + planarOffset.x,
             targetPosition.y + liftOffset.y + guideOffset.y,
-            targetPosition.z);
+            targetPosition.z + planarOffset.z);
     }
 }
