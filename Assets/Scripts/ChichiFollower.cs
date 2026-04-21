@@ -51,6 +51,9 @@ public class ChichiFollower : MonoBehaviour
     private bool _facingRight = true;
     private Sprite _lastSprite;
 
+    // 스프라이트 방향 전환용 실제 이동 delta
+    private Vector3 _actualMoveDelta;
+
     private void Awake()
     {
         // ChichiStateMachine 자동 탐색
@@ -89,9 +92,16 @@ public class ChichiFollower : MonoBehaviour
         if (stateMachine == null || stateMachine.Target == null)
             return;
 
+        Vector3 prevPosition = transform.position;
+
         UpdateMoveDirection(stateMachine.Target.position - _lastTargetPosition);
         UpdateCurrentTarget(stateMachine.CurrentState);
         UpdateMovement();
+
+        // 치치의 실제 이동 delta 기록 (스프라이트 방향 판별용)
+        _actualMoveDelta = transform.position - prevPosition;
+        _actualMoveDelta.y = 0f; // Y축(화면 위아래) 이동은 스프라이트 방향에 영향 없음
+
         UpdateSpriteDirection();
         _lastTargetPosition = stateMachine.Target.position;
     }
@@ -158,28 +168,30 @@ public class ChichiFollower : MonoBehaviour
 
     /// <summary>
     /// 이동 방향에 따라 스프라이트 변경 + Side는 Y Rotation 반전
-    /// - 위 (Y+) → Back 스프라이트
-    /// - 아래 (Y-) → Front 스프라이트
-    /// - 좌/우 (X) → Side 스프라이트 + Y Rotation 0(오른쪽) / 180(왼쪽)
+    /// - Z+ (앞/위) → Back 스프라이트
+    /// - Z- (뒤/아래) → Front 스프라이트
+    /// - X+ (오른쪽) → Side 스프라이트 + Y Rotation 0
+    /// - X- (왼쪽) → Side 스프라이트 + Y Rotation 180
     /// </summary>
     private void UpdateSpriteDirection()
     {
         if (spriteRenderer == null)
             return;
 
-        // 이동 방향의 X, Y 성분만 사용 (Z는 무시)
-        float moveX = _smoothedMoveDirection.x;
-        float moveY = _smoothedMoveDirection.y;
+        // 치치의 실제 이동 delta 사용 (X-Z 평면, Y는 높이축이므로 무시)
+        float moveX = _actualMoveDelta.x;
+        float moveZ = _actualMoveDelta.z;
 
-        // 이동량이 너무 작으면 변경 안 함
-        if (Mathf.Abs(moveX) < 0.1f && Mathf.Abs(moveY) < 0.1f)
+        // Deadzone: 이동량이 너무 작으면 변경 안 함 (흔들림 방지)
+        const float deadzone = 0.001f;
+        if (Mathf.Abs(moveX) < deadzone && Mathf.Abs(moveZ) < deadzone)
             return;
 
-        // 방향 판별: |X| > |Y| → 좌/우, |Y| > |X| → 위/아래
+        // 방향 판별: |X| > |Z| → 좌/우, |Z| > |X| → 앞/뒤
         Sprite newSprite;
         bool flipY = false;
 
-        if (Mathf.Abs(moveX) > Mathf.Abs(moveY))
+        if (Mathf.Abs(moveX) > Mathf.Abs(moveZ))
         {
             // 좌/우 이동 → Side 스프라이트
             newSprite = spriteSide;
@@ -188,14 +200,14 @@ public class ChichiFollower : MonoBehaviour
         }
         else
         {
-            // 위/아래 이동
-            if (moveY > 0f)
+            // 앞/뒤 이동
+            if (moveZ > 0f)
             {
-                newSprite = spriteBack; // 위
+                newSprite = spriteBack; // 앞(위)
             }
             else
             {
-                newSprite = spriteFront; // 아래
+                newSprite = spriteFront; // 뒤(아래)
             }
             flipY = false; // Front/Back은 반전 없음
         }
