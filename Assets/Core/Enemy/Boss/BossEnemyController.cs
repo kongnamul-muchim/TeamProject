@@ -46,6 +46,9 @@ namespace HideAndInk.Core.Enemy.Boss
         // 기믹 시스템
         private IEnemyGimmick _activeGimmick;
 
+        // Player 의태 상태 캐싱 (매 프레임 FindObjectOfType 방지)
+        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+
         protected override void Awake()
         {
             base.Awake();
@@ -54,6 +57,7 @@ namespace HideAndInk.Core.Enemy.Boss
         protected override void Start()
         {
             base.Start();
+            CacheCamouflageAdapter();
             InitializeBehaviors();
             InitializeGimmick();
             InitializeStateMachine();
@@ -306,17 +310,19 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
+        /// CamouflageAdapter 캐싱 (Start에서 한 번만 호출)
+        /// </summary>
+        private void CacheCamouflageAdapter()
+        {
+            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+        }
+
+        /// <summary>
         /// Player가 의태 중인지 확인
         /// </summary>
         private bool IsPlayerCamouflaging()
         {
-            // CamouflageAdapter 찾기
-            var camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
-            if (camouflageAdapter != null)
-            {
-                return camouflageAdapter.IsCamouflaging;
-            }
-            return false;
+            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
         }
 
         /// <summary>
