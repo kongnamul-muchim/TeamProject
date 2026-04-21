@@ -109,11 +109,30 @@ namespace HideAndInk.Core.Enemy.Boss
 
         /// <summary>
         /// Player가 시야 내에 있는지 확인
+        /// 의태 중이면 감지되지 않음
         /// </summary>
         private bool CanSeePlayer()
         {
             if (visionSensor == null || _playerTransform == null) return false;
+
+            // Player가 의태 중이면 감지 안 됨
+            if (IsPlayerCamouflaging()) return false;
+
             return visionSensor.CanSee(_playerTransform.gameObject);
+        }
+
+        /// <summary>
+        /// Player가 의태 중인지 확인
+        /// </summary>
+        private bool IsPlayerCamouflaging()
+        {
+            // CamouflageAdapter 찾기
+            var camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+            if (camouflageAdapter != null)
+            {
+                return camouflageAdapter.IsCamouflaging;
+            }
+            return false;
         }
 
         /// <summary>

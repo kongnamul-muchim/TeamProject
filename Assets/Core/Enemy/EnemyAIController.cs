@@ -22,6 +22,7 @@ namespace HideAndInk.Core.Enemy
         [Header("시야 설정")]
         [SerializeField] protected Transform enemyForward; // Enemy_Forward 자식 Transform
         [SerializeField] protected float viewRotationSpeed = 5f;
+        [SerializeField] protected float directionChangeCooldown = 0.5f; // 방향 전환 쿨타임
 
         // 컴포넌트 참조
         protected IEnemyMovement _movement;
@@ -30,6 +31,7 @@ namespace HideAndInk.Core.Enemy
         // 상태
         protected bool _isInitialized;
         protected bool _isActive = true;
+        protected float _directionChangeTimer; // 방향 전환 쿨타임 타이머
 
         #region IEnemy 구현
 
@@ -127,11 +129,15 @@ namespace HideAndInk.Core.Enemy
 
         /// <summary>
         /// 시야 방향 업데이트
-        /// Enemy 본체의 Y축 회전: 왼쪽(0) 또는 오른쪽(180)으로 즉시 전환
+        /// Enemy 본체의 Y축 회전: 왼쪽(0) 또는 오른쪽(180)으로 전환
+        /// 방향 전환 쿨타임 적용
         /// </summary>
         protected virtual void UpdateViewDirection()
         {
             if (_movement == null || !_movement.IsMoving) return;
+
+            // 쿨타임 감소
+            _directionChangeTimer -= Time.deltaTime;
 
             // 이동 방향에 따라 좌우 회전
             MoveDirection dir = _movement.Direction;
@@ -139,7 +145,15 @@ namespace HideAndInk.Core.Enemy
 
             // Y값 고정: 왼쪽=0, 오른쪽=180
             float targetY = shouldFaceRight ? 180f : 0f;
-            transform.localEulerAngles = new Vector3(0f, targetY, 0f);
+            float currentY = transform.localEulerAngles.y;
+
+            // 현재 방향과 목표 방향이 다르고 쿨타임이 지났을 때만 전환
+            bool isCurrentlyFacingRight = Mathf.Abs(currentY - 180f) < 90f;
+            if (isCurrentlyFacingRight != shouldFaceRight && _directionChangeTimer <= 0f)
+            {
+                transform.localEulerAngles = new Vector3(0f, targetY, 0f);
+                _directionChangeTimer = directionChangeCooldown; // 쿨타임 설정
+            }
         }
 
         /// <summary>
