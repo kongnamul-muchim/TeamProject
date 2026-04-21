@@ -93,6 +93,7 @@ public class ChichiFollower : MonoBehaviour
             return;
 
         Vector3 prevPosition = transform.position;
+        Vector3 prevTargetPosition = stateMachine.Target.position;
 
         UpdateMoveDirection(stateMachine.Target.position - _lastTargetPosition);
         UpdateCurrentTarget(stateMachine.CurrentState);
@@ -101,6 +102,17 @@ public class ChichiFollower : MonoBehaviour
         // 치치의 실제 이동 delta 기록 (스프라이트 방향 판별용)
         _actualMoveDelta = transform.position - prevPosition;
         _actualMoveDelta.y = 0f; // Y축(화면 위아래) 이동은 스프라이트 방향에 영향 없음
+
+        // Follow 상태에서는 치치가 Z축으로만 움직이므로,
+        // 두두의 Z 이동 방향도 스프라이트 판별에 반영
+        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
+        {
+            float targetDeltaZ = stateMachine.Target.position.z - prevTargetPosition.z;
+            if (Mathf.Abs(targetDeltaZ) > Mathf.Abs(_actualMoveDelta.z))
+            {
+                _actualMoveDelta.z = targetDeltaZ;
+            }
+        }
 
         UpdateSpriteDirection();
         _lastTargetPosition = stateMachine.Target.position;

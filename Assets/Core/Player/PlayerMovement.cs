@@ -75,7 +75,7 @@ namespace HideAndInk.Core.Player
         }
 
         /// <summary>
-        /// 방향 업데이트 (입력 기반으로)
+        /// 방향 업데이트 (입력 기반으로, 카메라 반대편이므로 Y 반전)
         /// </summary>
         private void UpdateDirection(Vector2 direction)
         {
@@ -89,8 +89,8 @@ namespace HideAndInk.Core.Player
             }
             else if (absY > absX)
             {
-                // 상하 방향
-                _direction = direction.y > 0 ? MoveDirection.Up : MoveDirection.Down;
+                // 상하 방향 (카메라 반대편이므로 반전)
+                _direction = direction.y > 0 ? MoveDirection.Down : MoveDirection.Up;
             }
             // absX == absY (대각선) 때는 기존 방향 유지
         }
