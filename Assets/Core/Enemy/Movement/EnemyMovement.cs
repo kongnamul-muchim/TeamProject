@@ -8,6 +8,7 @@ namespace HideAndInk.Core.Enemy.Movement
     /// Enemy 이동 구현체
     /// 3D 환경 (X-Z 평면 이동, Y축 고정)
     /// 가속도 기반 부드러운 이동
+    /// Ground 검증 기능 포함
     /// </summary>
     public sealed class EnemyMovement : IEnemyMovement
     {
@@ -15,6 +16,11 @@ namespace HideAndInk.Core.Enemy.Movement
         private readonly float _acceleration;
         private readonly float _friction;
         private readonly float _maxSpeed;
+
+        // Ground 검증 설정
+        private readonly LayerMask _groundLayer;
+        private readonly float _groundCheckDistance;
+        private readonly float _groundCheckRadius;
 
         private Vector3 _velocity;
         private Vector3? _targetPosition;
@@ -54,13 +60,19 @@ namespace HideAndInk.Core.Enemy.Movement
             float speed = 3f,
             float acceleration = 8f,
             float friction = 0.9f,
-            float maxSpeed = 5f)
+            float maxSpeed = 5f,
+            LayerMask groundLayer = default,
+            float groundCheckDistance = 0.5f,
+            float groundCheckRadius = 0.3f)
         {
             _enemy = enemy ?? throw new System.ArgumentNullException(nameof(enemy));
             _speed = speed;
             _acceleration = acceleration;
             _friction = friction;
             _maxSpeed = maxSpeed;
+            _groundLayer = groundLayer;
+            _groundCheckDistance = groundCheckDistance;
+            _groundCheckRadius = groundCheckRadius;
 
             _velocity = Vector3.zero;
             _targetPosition = null;
@@ -183,5 +195,129 @@ namespace HideAndInk.Core.Enemy.Movement
                 _direction = direction.z > 0 ? MoveDirection.Up : MoveDirection.Down;
             }
         }
+
+        #region Ground 검증
+
+        /// <summary>
+        /// 지정 위치가 Ground 위에 있는지 확인
+        /// </summary>
+        public bool IsPositionOnGround(Vector3 position)
+        {
+            if (_groundLayer == 0) return true; // Ground 레이어 미설정 시 항상 true
+
+            // 해당 위치 아래로 Raycast
+            Vector3 checkPoint = new Vector3(position.x, position.y + 0.1f, position.z);
+            if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+            {
+                return true;
+            }
+
+            // SphereCast로 넓은 영역 체크
+            if (Physics.CheckSphere(checkPoint, _groundCheckRadius, _groundLayer))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 이동 방향 앞쪽에 Ground가 있는지 확인
+        /// </summary>
+        public bool IsGroundAhead()
+        {
+            if (_groundLayer == 0) return true; // Ground 레이어 미설정 시 항상 true
+            if (_velocity.sqrMagnitude < 0.01f) return true; // 정지 상태면 통과
+
+            Vector3 moveDirection = _velocity.normalized;
+            Vector3 checkPoint = _enemy.Position + moveDirection * _groundCheckDistance;
+
+            // 아래로 Raycast
+            if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+            {
+                return true;
+            }
+
+            // SphereCast
+            if (Physics.CheckSphere(checkPoint, _groundCheckRadius, _groundLayer))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Ground 경계 스캔 (시작 시 호출)
+        /// 현재 위치에서 좌우로 Raycast를 쏴서 Ground 끝 지점 찾기
+        /// </summary>
+        public GroundBounds ScanGroundBounds(float maxScanDistance = 50f, float scanStep = 1f)
+        {
+            Vector3 startPos = _enemy.Position;
+
+            // X축 경계 스캔
+            float minX = ScanBoundaryX(startPos, -1f, maxScanDistance, scanStep);
+            float maxX = ScanBoundaryX(startPos, 1f, maxScanDistance, scanStep);
+
+            // Z축 경계 스캔
+            float minZ = ScanBoundaryZ(startPos, -1f, maxScanDistance, scanStep);
+            float maxZ = ScanBoundaryZ(startPos, 1f, maxScanDistance, scanStep);
+
+            return new GroundBounds(minX, maxX, minZ, maxZ);
+        }
+
+        /// <summary>
+        /// X축 경계 스캔 (방향: -1=왼쪽, 1=오른쪽)
+        /// </summary>
+        private float ScanBoundaryX(Vector3 startPos, float direction, float maxDistance, float step)
+        {
+            float lastValidX = startPos.x;
+            int steps = Mathf.FloorToInt(maxDistance / step);
+
+            for (int i = 1; i <= steps; i++)
+            {
+                float checkX = startPos.x + direction * step * i;
+                Vector3 checkPoint = new Vector3(checkX, startPos.y + 0.1f, startPos.z);
+
+                if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+                {
+                    lastValidX = checkX;
+                }
+                else
+                {
+                    break; // Ground 없음
+                }
+            }
+
+            return lastValidX;
+        }
+
+        /// <summary>
+        /// Z축 경계 스캔 (방향: -1=앞쪽, 1=뒤쪽)
+        /// </summary>
+        private float ScanBoundaryZ(Vector3 startPos, float direction, float maxDistance, float step)
+        {
+            float lastValidZ = startPos.z;
+            int steps = Mathf.FloorToInt(maxDistance / step);
+
+            for (int i = 1; i <= steps; i++)
+            {
+                float checkZ = startPos.z + direction * step * i;
+                Vector3 checkPoint = new Vector3(startPos.x, startPos.y + 0.1f, checkZ);
+
+                if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+                {
+                    lastValidZ = checkZ;
+                }
+                else
+                {
+                    break; // Ground 없음
+                }
+            }
+
+            return lastValidZ;
+        }
+
+        #endregion
     }
 }

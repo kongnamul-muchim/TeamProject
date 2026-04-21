@@ -11,6 +11,7 @@ namespace HideAndInk.Core.Enemy.Boss
     /// 보스 몬스터 컨트롤러
     /// AI 상태 머신 (Patrol → Chase → Search) + 의심도 연동
     /// X-Z 평면 이동
+    /// Ground 경계 검증 + 일반 몬스터 알림 연동 포함
     /// </summary>
     public class BossEnemyController : EnemyAIController
     {
@@ -67,6 +68,14 @@ namespace HideAndInk.Core.Enemy.Boss
                 movement: _movement,
                 searchDuration: searchDuration,
                 searchDistance: searchDistance);
+
+            // Ground 경계 전달
+            if (_isGroundBoundsScanned)
+            {
+                _patrolBehavior.SetGroundBounds(_groundBounds);
+                _chaseBehavior.SetGroundBounds(_groundBounds);
+                _searchBehavior.SetGroundBounds(_groundBounds);
+            }
         }
 
         /// <summary>
@@ -211,6 +220,36 @@ namespace HideAndInk.Core.Enemy.Boss
                     break;
             }
         }
+
+        #region 일반 몬스터 알림 연동
+
+        /// <summary>
+        /// 일반 몬스터가 Player 위치를 알림
+        /// Player 위치가 Ground 위에 있으면 Chase 상태로 전환
+        /// </summary>
+        public void AlertPlayerPosition(Vector3 playerPosition)
+        {
+            // Player 위치가 Ground 위에 있는지 검증
+            if (_movement.IsPositionOnGround(playerPosition))
+            {
+                // 탐색 상태에 마지막 위치 전달
+                _searchBehavior.SetLastKnownPosition(playerPosition);
+
+                // Chase 상태로 전환
+                if (_stateMachine != null)
+                {
+                    _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                }
+
+                Debug.Log($"[BossEnemy] Player position alerted: {playerPosition}");
+            }
+            else
+            {
+                Debug.Log($"[BossEnemy] Alert ignored - Player position not on Ground: {playerPosition}");
+            }
+        }
+
+        #endregion
 
         protected virtual void OnDestroy()
         {

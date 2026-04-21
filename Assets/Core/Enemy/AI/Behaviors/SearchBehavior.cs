@@ -6,7 +6,8 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
     /// <summary>
     /// 탐색 행동
     /// 마지막 Player 위치 기반으로 주변을 계속 수색 (멈추지 않음)
-    /// X축만 이동 (Z축 고정), Chase 상태에서만 Z축 이동 허용
+    /// X축만 이동 (Z축 고정), Ground 범위 내 탐색
+    /// Ground 경계를 벗어나지 않도록 목표 제한
     /// </summary>
     public sealed class SearchBehavior : IEnemyAIState
     {
@@ -16,6 +17,10 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         // 탐색 설정
         private readonly float _searchDuration;     // 탐색 최대 지속 시간
         private readonly float _searchDistance;     // 탐색 이동 거리
+
+        // Ground 경계 (Controller에서 전달)
+        private GroundBounds _groundBounds;
+        private bool _hasGroundBounds;
 
         // 상태
         private Vector3 _lastKnownPosition;
@@ -44,6 +49,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             _searchDuration = searchDuration;
             _searchDistance = searchDistance;
             _directionTimer = directionChangeCooldown;
+        }
+
+        /// <summary>
+        /// Ground 경계 설정 (Controller에서 호출)
+        /// </summary>
+        public void SetGroundBounds(GroundBounds bounds)
+        {
+            _groundBounds = bounds;
+            _hasGroundBounds = true;
         }
 
         public EnemyAIState StateType => EnemyAIState.Search;
@@ -112,20 +126,38 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         /// <summary>
         /// 새로운 탐색 목표 지점 선택 (X축만)
+        /// Ground 범위 내에서만 목표 설정
         /// </summary>
         private void PickNewTarget()
         {
+            Vector3 currentPos = _enemy.Position;
+
             // X축: 랜덤 방향
             float xDir = Random.value > 0.5f ? 1f : -1f;
             float xDistance = Random.Range(1f, _searchDistance);
 
-            Vector3 currentPos = _enemy.Position;
+            float targetX = currentPos.x + xDir * xDistance;
+
+            // Ground 범위 내로 제한
+            if (_hasGroundBounds)
+            {
+                targetX = _groundBounds.ClampX(targetX);
+
+                // 현재 위치와 너무 가까우면 반대 방향으로
+                if (Mathf.Abs(targetX - currentPos.x) < 0.5f)
+                {
+                    xDir = -xDir;
+                    targetX = currentPos.x + xDir * _searchDistance;
+                    targetX = _groundBounds.ClampX(targetX);
+                }
+            }
+
             _currentDirection = new Vector3(xDir, 0f, 0f);
 
             _currentTarget = new Vector3(
-                currentPos.x + xDir * xDistance,
+                targetX,
                 currentPos.y, // Y축 고정
-                _lastKnownPosition.z // Z축은 마지막 Player 위치로 고정
+                currentPos.z  // Z축 고정 (Search에서는 X축만 이동)
             );
 
             _directionTimer = 1f; // 방향 전환 쿨타임
@@ -133,10 +165,21 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         /// <summary>
         /// 목표 지점을 현재 방향으로 연장
+        /// Ground 범위 내로 제한
         /// </summary>
         private void ExtendTarget()
         {
-            _currentTarget = _enemy.Position + _currentDirection * _searchDistance;
+            Vector3 currentPos = _enemy.Position;
+            Vector3 extendedTarget = currentPos + _currentDirection * _searchDistance;
+
+            // Ground 범위 내로 제한
+            if (_hasGroundBounds)
+            {
+                extendedTarget.x = _groundBounds.ClampX(extendedTarget.x);
+                extendedTarget.z = currentPos.z; // Z축 고정 유지
+            }
+
+            _currentTarget = extendedTarget;
         }
 
         /// <summary>

@@ -32,7 +32,10 @@ namespace HideAndInk.Core.Enemy.Normal
                 speed: moveSpeed,
                 acceleration: 5f,
                 friction: 0.8f,
-                maxSpeed: moveSpeed);
+                maxSpeed: moveSpeed,
+                groundLayer: groundLayer,
+                groundCheckDistance: groundCheckDistance,
+                groundCheckRadius: groundCheckRadius);
         }
 
         protected override void UpdateAI(float deltaTime)
@@ -65,15 +68,19 @@ namespace HideAndInk.Core.Enemy.Normal
 
         /// <summary>
         /// 새로운 이동 목표 지점 선택 (X-Z 평면)
+        /// Ground 범위 내에서만 목표 설정
         /// </summary>
         private void PickNewTarget()
         {
             Vector2 randomDirection = Random.insideUnitCircle.normalized;
             Vector3 currentPos = transform.position;
-            _targetPosition = new Vector3(
+            Vector3 target = new Vector3(
                 currentPos.x + randomDirection.x * moveDistance,
                 currentPos.y, // Y축 고정
                 currentPos.z + randomDirection.y * moveDistance);
+
+            // Ground 범위 내로 제한
+            _targetPosition = ClampToGroundBounds(target);
         }
 
         /// <summary>
@@ -102,8 +109,7 @@ namespace HideAndInk.Core.Enemy.Normal
             if (boss != null)
             {
                 // 보스의 AI 상태를 Chase로 전환하고 위치 전달
-                // TODO: 보스 기믹 구현 시 추가
-                Debug.Log($"[NormalEnemy] 보스에게 Player 위치 알림: {playerPosition}");
+                boss.AlertPlayerPosition(playerPosition);
             }
 
             // 알림 후 일정 시간 후 재활성화
