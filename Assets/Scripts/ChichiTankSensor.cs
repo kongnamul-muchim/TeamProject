@@ -1,0 +1,125 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// 치치 탱크 트리거에 두두 몸/촉수가 닿았는지만 검사한다.
+/// </summary>
+public class ChichiTankSensor : MonoBehaviour
+{
+    [Header("References")]
+    [SerializeField] private ChichiStateMachine stateMachine;
+    [SerializeField] private Collider[] targetColliders;
+
+    private Collider _sensorCollider;
+    private readonly HashSet<Collider> _touchingTargets = new HashSet<Collider>();
+
+    private void Awake()
+    {
+        _sensorCollider = GetComponent<Collider>();
+    }
+
+    private void Update()
+    {
+        RefreshTouchState();
+    }
+
+    private void OnDisable()
+    {
+        _touchingTargets.Clear();
+        if (stateMachine != null)
+        {
+            stateMachine.SetTouchingTank(false);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!IsTrackedTarget(other))
+            return;
+
+        _touchingTargets.Add(other);
+        UpdateTouchState();
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (!IsTrackedTarget(other))
+            return;
+
+        if (_touchingTargets.Add(other))
+        {
+            UpdateTouchState();
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!IsTrackedTarget(other))
+            return;
+
+        _touchingTargets.Remove(other);
+        UpdateTouchState();
+    }
+
+    private bool IsTrackedTarget(Collider other)
+    {
+        if (other == null || targetColliders == null)
+            return false;
+
+        for (int i = 0; i < targetColliders.Length; i++)
+        {
+            Collider trackedCollider = targetColliders[i];
+            if (trackedCollider == null)
+                continue;
+
+            if (trackedCollider == other)
+                return true;
+
+            if (other.transform.IsChildOf(trackedCollider.transform) || trackedCollider.transform.IsChildOf(other.transform))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void UpdateTouchState()
+    {
+        if (stateMachine != null)
+        {
+            stateMachine.SetTouchingTank(_touchingTargets.Count > 0);
+        }
+    }
+
+    private void RefreshTouchState()
+    {
+        if (_sensorCollider == null || targetColliders == null)
+            return;
+
+        _touchingTargets.Clear();
+
+        for (int i = 0; i < targetColliders.Length; i++)
+        {
+            Collider trackedCollider = targetColliders[i];
+            if (trackedCollider == null)
+                continue;
+
+            if (IsBoundsTouching(trackedCollider))
+            {
+                _touchingTargets.Add(trackedCollider);
+            }
+        }
+
+        UpdateTouchState();
+    }
+
+    private bool IsBoundsTouching(Collider trackedCollider)
+    {
+        Bounds sensorBounds = _sensorCollider.bounds;
+        Bounds targetBounds = trackedCollider.bounds;
+
+        sensorBounds.Expand(0.05f);
+        targetBounds.Expand(0.05f);
+
+        return sensorBounds.Intersects(targetBounds);
+    }
+}
