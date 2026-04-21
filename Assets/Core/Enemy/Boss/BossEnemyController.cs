@@ -10,6 +10,7 @@ namespace HideAndInk.Core.Enemy.Boss
     /// <summary>
     /// 보스 몬스터 컨트롤러
     /// AI 상태 머신 (Patrol → Chase → Search) + 의심도 연동
+    /// X-Z 평면 이동
     /// </summary>
     public class BossEnemyController : EnemyAIController
     {
