@@ -117,7 +117,12 @@ public class ChichiFollower : MonoBehaviour
             }
         }
 
-        UpdateSpriteDirection();
+        // 스프라이트 변경은 Follow 상태에서만 (CatchUp/Charging은 마지막 방향 유지)
+        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
+        {
+            UpdateSpriteDirection();
+        }
+
         _lastTargetPosition = stateMachine.Target.position;
     }
 
@@ -184,8 +189,8 @@ public class ChichiFollower : MonoBehaviour
     /// <summary>
     /// 플레이어 상대 위치에 따라 스프라이트 변경 + Side는 Y Rotation 반전
     /// 카메라 반대편 기준이므로 기존 로직 반전 적용
-    /// - Player가 치치의 오른쪽 → Side (Y: 0)
-    /// - Player가 치치의 왼쪽 → Side (Y: 180)
+    /// - Player가 치치의 오른쪽 → Side (Y: 180)
+    /// - Player가 치치의 왼쪽 → Side (Y: 0)
     /// - Player가 치치의 위 → Back
     /// - Player가 치치의 아래 → Front
     /// - deadzone 내에서 흔들리면 이전 스프라이트 유지
@@ -214,7 +219,7 @@ public class ChichiFollower : MonoBehaviour
             // 수평이 더 큼 → Side 스프라이트
             newSprite = spriteSide;
             bool playerIsRight = relX > 0f;
-            flipY = playerIsRight; // Player가 오른쪽: Y 0, 왼쪽: Y 180
+            flipY = !playerIsRight; // Player가 오른쪽: Y 180, 왼쪽: Y 0
         }
         else
         {
