@@ -5,7 +5,8 @@ using UnityEngine;
 /// - Follow 상태: 움직이지 않음 (두두 근처에서 대기)
 /// - CatchUp 상태: 두두 뒤로 부드럽게 따라감
 /// - Charging 상태: 제자리 유지
-/// - 이동 방향에 따라 스프라이트 좌/우 반전
+/// - 이동 방향에 따라 스프라이트 변경 (Front/Back/Side)
+/// - Side 스프라이트는 좌/우에 따라 Y Rotation 0/180 반전
 /// </summary>
 public class ChichiFollower : MonoBehaviour
 {
@@ -14,6 +15,14 @@ public class ChichiFollower : MonoBehaviour
     [SerializeField] private ChichiStateMachine stateMachine;
     [Tooltip("치치 SpriteRenderer (비워두면 자동 탐색)")]
     [SerializeField] private SpriteRenderer spriteRenderer;
+
+    [Header("🎨 Sprites - 방향별 스프라이트")]
+    [Tooltip("아래 방향 (Front) 스프라이트")]
+    [SerializeField] private Sprite spriteFront;
+    [Tooltip("위 방향 (Back) 스프라이트")]
+    [SerializeField] private Sprite spriteBack;
+    [Tooltip("좌/우 방향 (Side) 스프라이트")]
+    [SerializeField] private Sprite spriteSide;
 
     [Header("📍 Guide Position - 따라가기 위치 설정")]
     [Tooltip("측면으로 벗어난 거리")]
@@ -40,6 +49,7 @@ public class ChichiFollower : MonoBehaviour
     private Vector3 _moveVelocity;
     private Vector3 _targetVelocity;
     private bool _facingRight = true;
+    private Sprite _lastSprite;
 
     private void Awake()
     {
@@ -93,8 +103,7 @@ public class ChichiFollower : MonoBehaviour
 
     private void UpdateMoveDirection(Vector3 delta)
     {
-        delta.y = 0f;
-
+        // Y축도 포함 (스프라이트 방향 판별용)
         if (delta.sqrMagnitude > 0.00001f)
         {
             _lastMoveDirection = delta.normalized;
@@ -148,25 +157,61 @@ public class ChichiFollower : MonoBehaviour
     }
 
     /// <summary>
-    /// 이동 방향에 따라 스프라이트 Y Rotation을 0(오른쪽) 또는 180(왼쪽)으로 전환
+    /// 이동 방향에 따라 스프라이트 변경 + Side는 Y Rotation 반전
+    /// - 위 (Y+) → Back 스프라이트
+    /// - 아래 (Y-) → Front 스프라이트
+    /// - 좌/우 (X) → Side 스프라이트 + Y Rotation 0(오른쪽) / 180(왼쪽)
     /// </summary>
     private void UpdateSpriteDirection()
     {
         if (spriteRenderer == null)
             return;
 
-        // X축 이동 방향 확인
+        // 이동 방향의 X, Y 성분만 사용 (Z는 무시)
         float moveX = _smoothedMoveDirection.x;
-        if (Mathf.Abs(moveX) < 0.1f)
-            return; // 이동량이 작으면 방향 전환 안 함
+        float moveY = _smoothedMoveDirection.y;
 
-        bool shouldFaceRight = moveX > 0f;
+        // 이동량이 너무 작으면 변경 안 함
+        if (Mathf.Abs(moveX) < 0.1f && Mathf.Abs(moveY) < 0.1f)
+            return;
 
-        if (shouldFaceRight != _facingRight)
+        // 방향 판별: |X| > |Y| → 좌/우, |Y| > |X| → 위/아래
+        Sprite newSprite;
+        bool flipY = false;
+
+        if (Mathf.Abs(moveX) > Mathf.Abs(moveY))
         {
-            _facingRight = shouldFaceRight;
+            // 좌/우 이동 → Side 스프라이트
+            newSprite = spriteSide;
+            bool shouldFaceRight = moveX > 0f;
+            flipY = !shouldFaceRight; // 오른쪽: 0, 왼쪽: 180
+        }
+        else
+        {
+            // 위/아래 이동
+            if (moveY > 0f)
+            {
+                newSprite = spriteBack; // 위
+            }
+            else
+            {
+                newSprite = spriteFront; // 아래
+            }
+            flipY = false; // Front/Back은 반전 없음
+        }
+
+        // 스프라이트 변경
+        if (newSprite != null && newSprite != _lastSprite)
+        {
+            spriteRenderer.sprite = newSprite;
+            _lastSprite = newSprite;
+        }
+
+        // Side일 때만 Y Rotation 반전
+        if (newSprite == spriteSide)
+        {
             Vector3 rotation = spriteRenderer.transform.localEulerAngles;
-            rotation.y = shouldFaceRight ? 0f : 180f;
+            rotation.y = flipY ? 180f : 0f;
             spriteRenderer.transform.localEulerAngles = rotation;
         }
     }
