@@ -168,11 +168,10 @@ public class ChichiFollower : MonoBehaviour
 
     /// <summary>
     /// 플레이어 상대 위치에 따라 스프라이트 변경 + Side는 Y Rotation 반전
-    /// 카메라가 반대편이므로 상하 반전 적용
-    /// - Player가 치치의 오른쪽 → Side (Y: 180)
-    /// - Player가 치치의 왼쪽 → Side (Y: 0)
-    /// - Player가 치치의 위 → Back
-    /// - Player가 치치의 아래 → Front
+    /// - Player가 치치의 오른쪽 → Side (Y: 0)
+    /// - Player가 치치의 왼쪽 → Side (Y: 180)
+    /// - Player가 치치의 위 → Front
+    /// - Player가 치치의 아래 → Back
     /// </summary>
     private void UpdateSpriteDirection()
     {
@@ -198,20 +197,20 @@ public class ChichiFollower : MonoBehaviour
             // Player가 좌/우에 있음 → Side 스프라이트
             newSprite = spriteSide;
             bool playerIsRight = relX > 0f;
-            flipY = playerIsRight; // Player가 오른쪽: Y 180, 왼쪽: Y 0
+            flipY = !playerIsRight; // Player가 오른쪽: Y 0, 왼쪽: Y 180
         }
         else
         {
             // Player가 상하에 있음
             if (relZ > 0f)
             {
-                // Player가 치치의 위쪽 → Back
-                newSprite = spriteBack;
+                // Player가 치치의 위쪽 → Front
+                newSprite = spriteFront;
             }
             else
             {
-                // Player가 치치의 아래쪽 → Front
-                newSprite = spriteFront;
+                // Player가 치치의 아래쪽 → Back
+                newSprite = spriteBack;
             }
             flipY = false; // Front/Back은 반전 없음
         }

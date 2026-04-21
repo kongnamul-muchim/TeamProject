@@ -64,9 +64,9 @@ namespace HideAndInk.Player
 
         private void Update()
         {
-            // Unity 기본 Input으로 이동 입력 처리 (카메라 반대편이므로 반전)
-            float h = -Input.GetAxisRaw(horizontalAxis);
-            float v = -Input.GetAxisRaw(verticalAxis);
+            // Unity 기본 Input으로 이동 입력 처리
+            float h = Input.GetAxisRaw(horizontalAxis);
+            float v = Input.GetAxisRaw(verticalAxis);
             _moveInput = new Vector2(h, v);
 
             // 이동 입력 전달
