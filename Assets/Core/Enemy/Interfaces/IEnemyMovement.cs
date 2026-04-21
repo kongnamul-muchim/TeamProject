@@ -5,17 +5,17 @@ namespace HideAndInk.Core.Enemy.Interfaces
 {
     /// <summary>
     /// Enemy 이동 시스템 인터페이스
-    /// IPlayerMovement와 유사한 구조로 일관성 유지
+    /// 3D 환경 (X-Z 평면 이동, Y축 고정)
     /// </summary>
     public interface IEnemyMovement
     {
         /// <summary>
-        /// 현재 속도 벡터 (2D 평면)
+        /// 현재 속도 벡터 (X-Z 평면)
         /// </summary>
-        Vector2 Velocity { get; }
+        Vector3 Velocity { get; }
 
         /// <summary>
-        /// 현재 이동 방향
+        /// 현재 이동 방향 (2D 기준: Left/Right/Up/Down)
         /// </summary>
         MoveDirection Direction { get; }
 
@@ -30,10 +30,10 @@ namespace HideAndInk.Core.Enemy.Interfaces
         float Speed { get; set; }
 
         /// <summary>
-        /// 목표 위치로 이동
+        /// 목표 위치로 이동 (X-Z 평면)
         /// </summary>
-        /// <param name="targetPosition">목표 위치 (월드 좌표)</param>
-        void MoveTo(Vector2 targetPosition);
+        /// <param name="targetPosition">목표 위치 (월드 좌표, X-Z 사용)</param>
+        void MoveTo(Vector3 targetPosition);
 
         /// <summary>
         /// 이동 즉시 중지

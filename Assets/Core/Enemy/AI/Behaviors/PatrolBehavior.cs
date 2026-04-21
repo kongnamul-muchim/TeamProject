@@ -5,7 +5,8 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 {
     /// <summary>
     /// 순찰 행동
-    /// 랜덤한 위치를 이동하며 순찰
+    /// 랜덤한 위치를 계속 이동하며 순찰 (멈추지 않음)
+    /// X-Z 평면 이동
     /// </summary>
     public sealed class PatrolBehavior : IEnemyAIState
     {
@@ -14,14 +15,11 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         // 순찰 설정
         private readonly float _patrolRadius;
-        private readonly float _waitTimeMin;
-        private readonly float _waitTimeMax;
+        private readonly float _minDistance; // 최소 이동 거리 (이보다 가까우면 새 목표)
 
         // 상태
         private Vector3 _patrolCenter;
         private Vector3 _currentTarget;
-        private float _waitTimer;
-        private bool _isWaiting;
         private bool _isInitialized;
 
         /// <summary>
@@ -31,14 +29,12 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             IEnemy enemy,
             IEnemyMovement movement,
             float patrolRadius = 5f,
-            float waitTimeMin = 1f,
-            float waitTimeMax = 3f)
+            float minDistance = 1f)
         {
             _enemy = enemy;
             _movement = movement;
             _patrolRadius = patrolRadius;
-            _waitTimeMin = waitTimeMin;
-            _waitTimeMax = waitTimeMax;
+            _minDistance = minDistance;
         }
 
         public EnemyAIState StateType => EnemyAIState.Patrol;
@@ -51,40 +47,26 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
                 _isInitialized = true;
             }
 
-            _isWaiting = false;
             PickNewTarget();
         }
 
         public void OnUpdate(float deltaTime)
         {
-            if (_isWaiting)
-            {
-                _waitTimer -= deltaTime;
-                if (_waitTimer <= 0f)
-                {
-                    _isWaiting = false;
-                    PickNewTarget();
-                }
-                return;
-            }
+            // 현재 위치 (X-Z 평면)
+            Vector3 currentPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
+            Vector3 targetPos = new Vector3(_currentTarget.x, 0f, _currentTarget.z);
 
             // 목표 지점에 도달했는지 확인
-            float distanceToTarget = Vector2.Distance(
-                new Vector2(_enemy.Position.x, _enemy.Position.y),
-                new Vector2(_currentTarget.x, _currentTarget.y));
+            float distanceToTarget = Vector3.Distance(currentPos, targetPos);
 
-            if (distanceToTarget < 0.3f)
+            if (distanceToTarget < _minDistance)
             {
-                // 도달 → 대기
-                _movement.Stop();
-                _isWaiting = true;
-                _waitTimer = Random.Range(_waitTimeMin, _waitTimeMax);
+                // 도달 → 즉시 새 목표 설정 (멈추지 않음)
+                PickNewTarget();
             }
-            else
-            {
-                // 이동
-                _movement.MoveTo(new Vector2(_currentTarget.x, _currentTarget.y));
-            }
+
+            // 계속 이동
+            _movement.MoveTo(_currentTarget);
         }
 
         public void OnExit()
@@ -104,13 +86,13 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         private void PickNewTarget()
         {
             Vector2 randomDirection = Random.insideUnitCircle;
-            float randomDistance = Random.Range(1f, _patrolRadius);
+            float randomDistance = Random.Range(_minDistance, _patrolRadius);
             Vector2 offset = randomDirection * randomDistance;
 
             _currentTarget = new Vector3(
                 _patrolCenter.x + offset.x,
-                _patrolCenter.y + offset.y,
-                _enemy.Position.z);
+                _enemy.Position.y, // Y축 고정
+                _patrolCenter.z + offset.y);
         }
 
         /// <summary>

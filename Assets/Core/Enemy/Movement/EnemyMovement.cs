@@ -6,8 +6,8 @@ namespace HideAndInk.Core.Enemy.Movement
 {
     /// <summary>
     /// Enemy 이동 구현체
-    /// 가속도/마찰력 기반 부드러운 이동
-    /// PlayerMovement와 유사한 구조
+    /// 3D 환경 (X-Z 평면 이동, Y축 고정)
+    /// 가속도 기반 부드러운 이동
     /// </summary>
     public sealed class EnemyMovement : IEnemyMovement
     {
@@ -16,16 +16,16 @@ namespace HideAndInk.Core.Enemy.Movement
         private readonly float _friction;
         private readonly float _maxSpeed;
 
-        private Vector2 _velocity;
-        private Vector2? _targetPosition;
+        private Vector3 _velocity;
+        private Vector3? _targetPosition;
         private bool _isMoving;
         private MoveDirection _direction;
         private float _speed;
 
         /// <summary>
-        /// 현재 속도 벡터
+        /// 현재 속도 벡터 (X-Z 평면)
         /// </summary>
-        public Vector2 Velocity => _velocity;
+        public Vector3 Velocity => _velocity;
 
         /// <summary>
         /// 현재 이동 방향
@@ -49,11 +49,6 @@ namespace HideAndInk.Core.Enemy.Movement
         /// <summary>
         /// 생성자 (DI 주입)
         /// </summary>
-        /// <param name="enemy">Enemy 인터페이스 (위치 참조용)</param>
-        /// <param name="speed">기본 이동 속도</param>
-        /// <param name="acceleration">가속도</param>
-        /// <param name="friction">마찰력 (0~1, 1이면 즉시 정지)</param>
-        /// <param name="maxSpeed">최대 속도</param>
         public EnemyMovement(
             IEnemy enemy,
             float speed = 3f,
@@ -67,7 +62,7 @@ namespace HideAndInk.Core.Enemy.Movement
             _friction = friction;
             _maxSpeed = maxSpeed;
 
-            _velocity = Vector2.zero;
+            _velocity = Vector3.zero;
             _targetPosition = null;
             _isMoving = false;
             _direction = MoveDirection.Left;
@@ -76,7 +71,7 @@ namespace HideAndInk.Core.Enemy.Movement
         /// <summary>
         /// 목표 위치로 이동
         /// </summary>
-        public void MoveTo(Vector2 targetPosition)
+        public void MoveTo(Vector3 targetPosition)
         {
             _targetPosition = targetPosition;
         }
@@ -86,7 +81,7 @@ namespace HideAndInk.Core.Enemy.Movement
         /// </summary>
         public void Stop()
         {
-            _velocity = Vector2.zero;
+            _velocity = Vector3.zero;
             _targetPosition = null;
             _isMoving = false;
         }
@@ -107,24 +102,40 @@ namespace HideAndInk.Core.Enemy.Movement
         }
 
         /// <summary>
-        /// 목표 지점으로 부드럽게 이동
+        /// 목표 지점으로 부드럽게 이동 (X-Z 평면)
         /// </summary>
         private void MoveTowardsTarget(float deltaTime)
         {
-            Vector2 currentPos = new Vector2(_enemy.Position.x, _enemy.Position.y);
-            Vector2 direction = (_targetPosition.Value - currentPos).normalized;
+            Vector3 currentPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
+            Vector3 targetPos = new Vector3(_targetPosition.Value.x, 0f, _targetPosition.Value.z);
+            Vector3 direction = (targetPos - currentPos);
+            float distance = direction.magnitude;
+
+            // 목표 지점 도달 판정 (매우 가까우면 새 목표 설정)
+            if (distance < 0.3f)
+            {
+                // 목표 지점에 도달했지만 멈추지 않고 계속 이동
+                // Behavior에서 새 목표를 설정할 때까지 현재 방향 유지
+                _isMoving = _velocity.sqrMagnitude > 0.01f;
+                return;
+            }
+
+            direction.Normalize();
 
             // 목표 속도 계산
-            Vector2 targetVelocity = direction * _speed;
+            Vector3 targetVelocity = direction * _speed;
 
             // 가속도로 현재 속도→목표 속도 보간
-            _velocity = Vector2.Lerp(_velocity, targetVelocity, _acceleration * deltaTime);
+            _velocity = Vector3.Lerp(_velocity, targetVelocity, _acceleration * deltaTime);
 
             // 최대 속도 제한
             if (_velocity.magnitude > _maxSpeed)
             {
                 _velocity = _velocity.normalized * _maxSpeed;
             }
+
+            // Y축 속도 제거 (고정)
+            _velocity.y = 0f;
 
             _isMoving = _velocity.sqrMagnitude > 0.01f;
 
@@ -143,26 +154,26 @@ namespace HideAndInk.Core.Enemy.Movement
 
             if (_velocity.sqrMagnitude < 0.01f)
             {
-                _velocity = Vector2.zero;
+                _velocity = Vector3.zero;
                 _isMoving = false;
             }
         }
 
         /// <summary>
-        /// 방향 업데이트
+        /// 방향 업데이트 (X-Z 평면 기준 2D 방향 매핑)
         /// </summary>
-        private void UpdateDirection(Vector2 direction)
+        private void UpdateDirection(Vector3 direction)
         {
             float absX = Mathf.Abs(direction.x);
-            float absY = Mathf.Abs(direction.y);
+            float absZ = Mathf.Abs(direction.z);
 
-            if (absX > absY)
+            if (absX > absZ)
             {
                 _direction = direction.x > 0 ? MoveDirection.Right : MoveDirection.Left;
             }
-            else if (absY > absX)
+            else if (absZ > absX)
             {
-                _direction = direction.y > 0 ? MoveDirection.Up : MoveDirection.Down;
+                _direction = direction.z > 0 ? MoveDirection.Up : MoveDirection.Down;
             }
         }
     }
