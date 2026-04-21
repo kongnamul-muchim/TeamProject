@@ -21,7 +21,7 @@ namespace HideAndInk.Player
             if (_isInitialized) return;
 
             string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-            string projectPath = Application.dataPath.Replace("/Assets", "");
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
             string logFolder = Path.Combine(projectPath, "Logs", dateString);
 
             if (!Directory.Exists(logFolder))

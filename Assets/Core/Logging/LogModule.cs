@@ -31,7 +31,7 @@ namespace HideAndInk.Core.Logging
         private void InitializeLogFolder()
         {
             string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-            string projectPath = Application.dataPath.Replace("/Assets", "");
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
             _logFolder = Path.Combine(projectPath, "Logs", dateString);
 
             // 같은 날 재실행 시 기존 로그 초기화
