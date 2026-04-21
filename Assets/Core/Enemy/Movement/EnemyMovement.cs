@@ -111,12 +111,17 @@ namespace HideAndInk.Core.Enemy.Movement
             Vector3 direction = (targetPos - currentPos);
             float distance = direction.magnitude;
 
-            // 목표 지점 도달 판정 (매우 가까우면 새 목표 설정)
-            if (distance < 0.3f)
+            // 목표 지점 도달 판정
+            if (distance < 0.5f)
             {
-                // 목표 지점에 도달했지만 멈추지 않고 계속 이동
-                // Behavior에서 새 목표를 설정할 때까지 현재 방향 유지
+                // Behavior에서 새 목표를 설정할 때까지 현재 속도 유지
+                // 갑자기 멈추지 않고 관성으로 계속 이동
+                _velocity *= _friction;
                 _isMoving = _velocity.sqrMagnitude > 0.01f;
+                if (_isMoving)
+                {
+                    UpdateDirection(_velocity);
+                }
                 return;
             }
 
@@ -125,8 +130,10 @@ namespace HideAndInk.Core.Enemy.Movement
             // 목표 속도 계산
             Vector3 targetVelocity = direction * _speed;
 
-            // 가속도로 현재 속도→목표 속도 보간
-            _velocity = Vector3.Lerp(_velocity, targetVelocity, _acceleration * deltaTime);
+            // 가속도로 현재 속도→목표 속도 보간 (부드럽게)
+            float accelFactor = _acceleration * deltaTime;
+            accelFactor = Mathf.Clamp01(accelFactor);
+            _velocity = Vector3.Lerp(_velocity, targetVelocity, accelFactor);
 
             // 최대 속도 제한
             if (_velocity.magnitude > _maxSpeed)
