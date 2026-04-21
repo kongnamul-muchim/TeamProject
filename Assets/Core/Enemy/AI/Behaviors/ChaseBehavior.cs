@@ -6,6 +6,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
     /// <summary>
     /// 추적 행동
     /// Player를 부드럽게 추적 (예측 이동)
+    /// X-Z 평면 이동
     /// </summary>
     public sealed class ChaseBehavior : IEnemyAIState
     {
@@ -60,21 +61,18 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             // Player 현재 위치
             Vector3 currentPlayerPos = _playerTransform.position;
 
-            // Player 속도 계산 (간단한 차분)
-            Vector3 playerVelocity = (currentPlayerPos - _lastKnownPlayerPosition) / deltaTime;
+            // Player 속도 계산 (간단한 차분, X-Z 평면)
+            Vector3 playerDelta = currentPlayerPos - _lastKnownPlayerPosition;
+            playerDelta.y = 0f; // Y축 무시
+            Vector3 playerVelocity = playerDelta / deltaTime;
             _lastPlayerVelocity = Vector3.Lerp(_lastPlayerVelocity, playerVelocity, 0.1f);
 
-            // 예측 위치 계산
+            // 예측 위치 계산 (X-Z 평면)
             Vector3 predictedPosition = currentPlayerPos + (_lastPlayerVelocity * _predictionTime);
-
-            // 2D 평면으로 투영
-            Vector2 targetPos = new Vector2(predictedPosition.x, predictedPosition.y);
+            predictedPosition.y = _enemy.Position.y; // Y축 고정
 
             // 이동
-            _movement.MoveTo(targetPos);
-
-            // 시야 방향 업데이트 (Player 방향으로 부드럽게 회전)
-            UpdateViewDirection(targetPos);
+            _movement.MoveTo(predictedPosition);
 
             // 마지막 위치 갱신
             _lastKnownPlayerPosition = currentPlayerPos;
@@ -92,30 +90,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         }
 
         /// <summary>
-        /// 시야 방향을 목표 지점으로 부드럽게 회전
-        /// </summary>
-        private void UpdateViewDirection(Vector2 targetPos)
-        {
-            Vector2 enemyPos = new Vector2(_enemy.Position.x, _enemy.Position.y);
-            Vector2 direction = (targetPos - enemyPos).normalized;
-
-            if (direction.sqrMagnitude > 0.01f)
-            {
-                // 왼쪽/오른쪽 판단
-                bool shouldFaceRight = direction.x > 0;
-                // Y축 회전으로 처리 (기본 왼쪽 = 0도, 오른쪽 = 180도)
-                // 실제 회전은 EnemyAIController에서 처리
-            }
-        }
-
-        /// <summary>
         /// Player가 추적 범위를 벗어났는지 확인
         /// </summary>
         public bool IsPlayerOutOfRange()
         {
             if (_playerTransform == null) return true;
 
-            float distance = Vector3.Distance(_enemy.Position, _playerTransform.position);
+            Vector3 enemyPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
+            Vector3 playerPos = new Vector3(_playerTransform.position.x, 0f, _playerTransform.position.z);
+            float distance = Vector3.Distance(enemyPos, playerPos);
             return distance > _loseDistance;
         }
     }
