@@ -25,9 +25,6 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private float chaseSpeed = 5f;
         [SerializeField] private float searchSpeed = 3f;
 
-        [Header("순찰 설정")]
-        [SerializeField] private float patrolRadius = 5f;
-
         [Header("탐색 설정")]
         [SerializeField] private float searchRadius = 3f;
         [SerializeField] private float searchDuration = 5f;
