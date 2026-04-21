@@ -8,6 +8,7 @@ namespace HideAndInk.Core.Enemy
 {
     /// <summary>
     /// Enemy AI 공통 베이스 컨트롤러
+    /// 3D 환경 (X-Z 평면 이동, Y축 고정)
     /// 보스/일반/정예 몬스터의 공통 기능 제공
     /// </summary>
     public abstract class EnemyAIController : MonoBehaviour, IEnemy
@@ -38,7 +39,7 @@ namespace HideAndInk.Core.Enemy
         public bool IsActive => _isActive && gameObject.activeInHierarchy;
 
         /// <summary>
-        /// 현재 바라보는 방향 (2D 평면)
+        /// 현재 바라보는 방향 (Enemy_Forward 기준)
         /// </summary>
         public Vector3 Forward
         {
@@ -48,7 +49,7 @@ namespace HideAndInk.Core.Enemy
                 {
                     return enemyForward.forward;
                 }
-                return transform.right * -1f; // 기본 왼쪽
+                return -transform.right; // 기본 왼쪽
             }
         }
 
@@ -105,7 +106,7 @@ namespace HideAndInk.Core.Enemy
         }
 
         /// <summary>
-        /// 이동 처리
+        /// 이동 처리 (X-Z 평면)
         /// </summary>
         protected virtual void UpdateMovement(float deltaTime)
         {
@@ -113,19 +114,21 @@ namespace HideAndInk.Core.Enemy
 
             _movement.Update(deltaTime);
 
-            // 속도를 실제 Transform에 적용
+            // 속도를 실제 Transform에 적용 (X-Z 평면, Y축 고정)
             if (_movement.IsMoving)
             {
                 Vector3 newPosition = transform.position;
                 newPosition.x += _movement.Velocity.x * deltaTime;
-                newPosition.y += _movement.Velocity.y * deltaTime;
+                newPosition.z += _movement.Velocity.z * deltaTime;
+                // Y축은 고정
                 transform.position = newPosition;
             }
         }
 
         /// <summary>
         /// 시야 방향 업데이트
-        /// 이동 방향을 바라볏록 Y축 회전 처리
+        /// 이동 방향을 바라보도록 Y축 회전 처리
+        /// Enemy_Forward의 Y축만 회전 (X, Z 고정)
         /// </summary>
         protected virtual void UpdateViewDirection()
         {
@@ -140,13 +143,13 @@ namespace HideAndInk.Core.Enemy
             float targetY = shouldFaceRight ? 180f : 0f;
             Vector3 currentEuler = enemyForward.localEulerAngles;
 
-            // 부드러운 회전
+            // 부드러운 회전 (Y축만)
             float newY = Mathf.LerpAngle(currentEuler.y, targetY, viewRotationSpeed * Time.deltaTime);
             enemyForward.localEulerAngles = new Vector3(0f, newY, 0f);
         }
 
         /// <summary>
-        /// Player 찾기 (Layer "Player")
+        /// Player 찾기 (Tag "Player")
         /// </summary>
         protected virtual void FindPlayer()
         {
@@ -161,8 +164,8 @@ namespace HideAndInk.Core.Enemy
                 int playerLayer = LayerMask.NameToLayer("Player");
                 if (playerLayer >= 0)
                 {
-                    var players = FindObjectsOfType<GameObject>();
-                    foreach (var go in players)
+                    var allObjects = FindObjectsOfType<GameObject>();
+                    foreach (var go in allObjects)
                     {
                         if (go.layer == playerLayer)
                         {
