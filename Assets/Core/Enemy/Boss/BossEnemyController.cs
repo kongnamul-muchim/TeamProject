@@ -26,7 +26,7 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private float searchSpeed = 3f;
 
         [Header("탐색 설정")]
-        [SerializeField] private float searchRadius = 3f;
+        [SerializeField] private float searchDistance = 3f;
         [SerializeField] private float searchDuration = 5f;
 
         // AI 상태 머신
@@ -65,8 +65,8 @@ namespace HideAndInk.Core.Enemy.Boss
             _searchBehavior = new SearchBehavior(
                 enemy: this,
                 movement: _movement,
-                searchRadius: searchRadius,
-                searchDuration: searchDuration);
+                searchDuration: searchDuration,
+                searchDistance: searchDistance);
         }
 
         /// <summary>
