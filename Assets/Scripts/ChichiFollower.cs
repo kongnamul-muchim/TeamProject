@@ -120,16 +120,22 @@ public class ChichiFollower : MonoBehaviour
             desiredTarget = transform.position;
         }
 
+        // Follow 상태에서도 Z는 두두 위치로 설정 (부드러운 Z축 이동용)
+        if (stateMachine.Target != null)
+        {
+            desiredTarget.z = stateMachine.Target.position.z;
+        }
+
         _currentTarget = Vector3.SmoothDamp(_currentTarget, desiredTarget, ref _targetVelocity, targetSmoothTime);
     }
 
     private void UpdateMovement()
     {
-        // Follow 상태에서는 X,Y는 고정, Z만 두두 따라감
+        // Follow 상태에서는 X,Y는 고정, Z만 부드럽게 따라감
         if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
         {
             Vector3 pos = transform.position;
-            pos.z = stateMachine.Target.position.z;
+            pos.z = _currentTarget.z;
             transform.position = pos;
             return;
         }
@@ -137,7 +143,7 @@ public class ChichiFollower : MonoBehaviour
         float smoothTime = stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging ? chargeSmoothTime : catchUpSmoothTime;
         Vector3 nextPosition = Vector3.SmoothDamp(transform.position, _currentTarget, ref _moveVelocity, smoothTime);
         nextPosition.y = _currentTarget.y;
-        nextPosition.z = stateMachine.Target.position.z;
+        nextPosition.z = _currentTarget.z;
         transform.position = nextPosition;
     }
 
