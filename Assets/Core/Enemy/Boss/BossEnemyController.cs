@@ -57,8 +57,7 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             _patrolBehavior = new PatrolBehavior(
                 enemy: this,
-                movement: _movement,
-                patrolRadius: patrolRadius);
+                movement: _movement);
 
             _chaseBehavior = new ChaseBehavior(
                 enemy: this,
