@@ -12,7 +12,7 @@ namespace HideAndInk.Player
     /// 실제 작업은 전용 컴포넌트에 위임
     /// </summary>
     [RequireComponent(typeof(PlayerMovementAdapter))]
-    public sealed class CamouflageAdapter : MonoBehaviour
+    public sealed class CamouflageAdapter : MonoBehaviour, ICamouflageStateProvider
     {
         [Header("의태 탐지 설정")]
         [SerializeField] private float detectionRadius = 1.0f;
@@ -44,6 +44,13 @@ namespace HideAndInk.Player
         private bool _isRestoringRate;
         private float _rateRestoreProgress;
         private const float RATE_RESTORE_DURATION = 1.4f;
+
+        // C 키 쿨타임: 연타 방지
+        private float _camouflageCooldown;
+        [SerializeField] private float camouflageCooldownTime = 0.5f;
+
+        // 의태 취소 시 InvokeCamouflageEnd 중복 호출 방지
+        private bool _hasInvokedEndEvent;
 
         private const float IGNORE_MOVEMENT_AFTER_ATTACH = 0.35f;
         private float _ignoreMovementTimer;
@@ -138,7 +145,7 @@ namespace HideAndInk.Player
             // 이동 상태 확인 (의태 시작 후 잠시 무시)
             bool isMoving = _ignoreMovementTimer <= 0f && _playerMovement != null && _playerMovement.IsMoving;
 
-            // Perfect에서 전환直後에는 잠시 이동 무시
+            // Perfect에서 전환 직후에는 잠시 이동 무시
             // (Partial/Perfect 도달하거나 0.5초 경과하면 해제)
             if (_justTransitionedFromPerfect)
             {
@@ -146,7 +153,6 @@ namespace HideAndInk.Player
                 _transitionTimer += Time.deltaTime;
                 if (_transitionTimer >= 0.5f)
                 {
-                    Debug.Log("[CamouflageAdapter] Transition timeout, allowing movement cancel");
                     _justTransitionedFromPerfect = false;
                     _transitionTimer = 0f;
                 }
@@ -161,10 +167,13 @@ namespace HideAndInk.Player
             // 상태가 None으로 변화 → 취소됨 → OriginalRate 복원 시작 + Outline 복원 + Z값 복원
             if (wasNotNone && _stateMachine.CurrentState == CamouflageState.None)
             {
-                Debug.Log($"[CamouflageAdapter] State returned to None. wasNotNone={wasNotNone}, _isRestoringRate will be set to true");
-                
-                // [이벤트] 의태 해제
-                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                // OnKeyReleased에서 이미 호출했다면 중복 방지
+                if (!_hasInvokedEndEvent)
+                {
+                    // [이벤트] 의태 해제
+                    CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                }
+                _hasInvokedEndEvent = false;
                 
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
@@ -180,26 +189,20 @@ namespace HideAndInk.Player
                 {
                     _materialCloner?.RestoreTargetMaterial(_stateMachine.TargetObject);
                 }
-
-                Debug.Log($"[CamouflageAdapter] After setting: _isRestoringRate={_isRestoringRate}, _rateRestoreProgress={_rateRestoreProgress}");
+                
                 // Note: SpriteRenderer.color은 변경하지 않음 - OriginalRate만으로 색상 조절
             }
 
-            // 상태 변화 로그
+            // 상태 변화 처리
             if (prevState != _stateMachine.CurrentState)
             {
-                Debug.Log($"[CamouflageAdapter] State changed: {prevState} -> {_stateMachine.CurrentState}");
-
                 // None → 의태 상태로 전환 시 Octopus Material 적용
                 if (prevState == CamouflageState.None && _stateMachine.CurrentState != CamouflageState.None)
                 {
-                    Debug.Log($"[CamouflageAdapter] State changed from None! Current state: {_stateMachine.CurrentState}. Applying Octopus Material...");
-                    Debug.Log($"[CamouflageAdapter] _materialCloner is null: {_materialCloner == null}");
                     _materialCloner?.ApplyOctopusMaterial();
                     
-                    // [이벤트] 의태 상태 변경 + 의태 시작
+                    // [이벤트] 의태 상태 변경 (Start는 TryStartAttach에서 이미 호출)
                     CamouflageEvents.InvokeStateChanged(_stateMachine.CurrentState);
-                    CamouflageEvents.InvokeCamouflageStart(_stateMachine.TargetObject);
                 }
 
                 // Partial 또는 Perfect에 도달하면 플래그 해제
@@ -212,6 +215,8 @@ namespace HideAndInk.Player
                 // Perfect 도달 시 이벤트 발생
                 if (_stateMachine.CurrentState == CamouflageState.Perfect && prevState != CamouflageState.Perfect)
                 {
+                    // Perfect 도달 시 쿨타임 초기화 (다시 C 입력 가능)
+                    _camouflageCooldown = 0f;
                     CamouflageEvents.InvokeCamouflageComplete(_stateMachine.TargetObject);
                 }
             }
@@ -247,10 +252,15 @@ namespace HideAndInk.Player
         /// </summary>
         private void HandleKeyInput()
         {
+            // 쿨타임 감소
+            if (_camouflageCooldown > 0f)
+            {
+                _camouflageCooldown -= Time.deltaTime;
+            }
+
             // C Down 감지
             if (Input.GetKeyDown(camouflageKey))
             {
-                Debug.Log("[CamouflageAdapter] C keyDown detected");
                 TryHandleKeyDown();
             }
 
@@ -266,13 +276,20 @@ namespace HideAndInk.Player
         /// </summary>
         private void TryHandleKeyDown()
         {
-            Debug.Log($"[CamouflageAdapter] TryHandleKeyDown. Current state: {_stateMachine.CurrentState}");
+            // Perfect 상태에서는 쿨타임 무시 (즉시 해제 가능)
+            if (_stateMachine.CurrentState != CamouflageState.Perfect && _camouflageCooldown > 0f)
+            {
+                return;
+            }
 
             // Perfect 상태에서 C Down → 즉시 취소 (의태 해제)
-            // 색상은 Update에서 천천히 복원됨
             if (_stateMachine.CurrentState == CamouflageState.Perfect)
             {
-                Debug.Log("[CamouflageAdapter] Perfect state, C Down → cancelling camouflage");
+                
+                // End VFX 생성 (Perfect 해제 시에도 End VFX 필요)
+                _hasInvokedEndEvent = true;
+                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                
                 _stateMachine.CancelCamouflage(true);
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
@@ -285,7 +302,6 @@ namespace HideAndInk.Player
             // None 상태에서만 Attached 시작
             if (_stateMachine.CurrentState != CamouflageState.None)
             {
-                Debug.Log("[CamouflageAdapter] State is not None, skipping attach");
                 return;
             }
 
@@ -297,27 +313,29 @@ namespace HideAndInk.Player
         /// </summary>
         private void TryStartAttach()
         {
-            Debug.Log("[CamouflageAdapter] TryStartAttach called");
-
             // OriginalRate 복원 중이면 취소 (새로운 의태 시작)
             if (_isRestoringRate)
             {
-                Debug.Log("[CamouflageAdapter] Cancelling rate restore for new camouflage");
                 _isRestoringRate = false;
                 _rateRestoreProgress = 0f;
             }
+
+            // End 이벤트 플래그 리셋 (이전 사이클 잔여 방지)
+            _hasInvokedEndEvent = false;
 
             // 반경 내 가장 가까운 오브젝트 탐지
             GameObject nearest = _detector.FindNearestCandidate(transform.position);
 
             if (nearest != null)
             {
-                Debug.Log($"[CamouflageAdapter] Found target: {nearest.name}");
                 _originalPosition = transform.position;
                 _originalZ = transform.position.z;  // 원래 Z값 저장
                 _stateMachine.StartAttach(nearest);
 
-                // [이벤트] 의태 시작 (StartAttach 직후 호출 - 상태 변화 감지보다 안정적)
+                // 쿨타임 설정 (연타 방지)
+                _camouflageCooldown = camouflageCooldownTime;
+
+                // [이벤트] 의태 시작
                 CamouflageEvents.InvokeCamouflageStart(nearest);
 
                 // Outline 설정 (앞면/뒷면 감지)
@@ -339,7 +357,7 @@ namespace HideAndInk.Player
             }
             else
             {
-                Debug.LogWarning("[CamouflageAdapter] No target found nearby!");
+                Debug.LogWarning("[CamouflageAdapter] No camouflageable target found nearby!");
             }
         }
 
@@ -348,8 +366,6 @@ namespace HideAndInk.Player
         /// </summary>
         private void OnKeyReleased()
         {
-            Debug.Log($"[CamouflageAdapter] C key released. State: {_stateMachine.CurrentState}");
-
             if (_stateMachine.CurrentState == CamouflageState.None)
             {
                 return;
@@ -359,14 +375,22 @@ namespace HideAndInk.Player
             // 색상은 Update에서 천천히 복원됨
             if (!_stateMachine.IsPerfectReached)
             {
-                Debug.Log("[CamouflageAdapter] Not perfect yet, cancelling...");
+                
+                // Start VFX 즉시 삭제 (Update에서 상태 변화 감지 전에 미리 삭제)
+                _hasInvokedEndEvent = true;
+                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                
                 _stateMachine.CancelCamouflage(true);
+                
+                // 색상 복원 시작 (Update에서 wasNotNone 체크가 실패하므로 여기서 직접 설정)
+                _isRestoringRate = true;
+                _rateRestoreProgress = 0f;
+                
                 StartRestoreOutline();
             }
             else
             {
                 // Perfect 도달했으면 유지 (Outline도 유지, 복원 안 함)
-                Debug.Log("[CamouflageAdapter] Perfect reached, maintaining camouflage...");
             }
         }
 
@@ -390,7 +414,6 @@ namespace HideAndInk.Player
                 {
                     _isRestoringRate = false;
                     _rateRestoreProgress = 0f;
-                    Debug.Log("[CamouflageAdapter] OriginalRate restore complete");
                 }
                 return;
             }
@@ -555,7 +578,7 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// Outline 색상 업데이트 (blendTime과同期)
+        /// Outline 색상 업데이트 (blendTime과 동기화)
         /// </summary>
         private void UpdateOutlineColor()
         {
@@ -570,7 +593,6 @@ namespace HideAndInk.Player
                 _outlineChangeProgress = Mathf.Clamp01(_outlineChangeProgress);
                 Color lerpColor = Color.Lerp(_darkOutlineColor, Color.white, _outlineChangeProgress);
                 _targetOutline.OutlineColor = lerpColor;
-                Debug.Log($"[Outline] Restoring: progress={_outlineChangeProgress}, lerpColor={lerpColor}");
 
                 // 복원 완료
                 if (_outlineChangeProgress >= 1f)
@@ -615,9 +637,19 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 현재 의태 상태 확인 (외부 참조용)
+        /// 현재 의태 상태 확인 (외부 참조용) - ICamouflageStateProvider 구현
         /// </summary>
         public CamouflageState CurrentState => _stateMachine.CurrentState;
+
+        /// <summary>
+        /// 의태 중인지 여부 - ICamouflageStateProvider 구현
+        /// </summary>
+        public bool IsCamouflaging => _stateMachine.CurrentState != CamouflageState.None;
+
+        /// <summary>
+        /// 완벽 의태 여부 - ICamouflageStateProvider 구현
+        /// </summary>
+        public bool IsPerfect => _stateMachine.CurrentState == CamouflageState.Perfect;
 
         /// <summary>
         /// 의태 가능한 오브젝트 탐지 (디버그/UI용)

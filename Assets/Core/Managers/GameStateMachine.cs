@@ -1,13 +1,12 @@
-using UnityEngine;
 using System;
 using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
-using HideAndInk.Core.Events;
 
 namespace HideAndInk.Core.Managers
 {
     /// <summary>
     /// 게임 상태 시스템 구현체
+    /// 순수 상태 관리만 담당 (GameEvents 의존 제거)
     /// </summary>
     public sealed class GameStateMachine : IGameStateMachine
     {
@@ -31,7 +30,7 @@ namespace HideAndInk.Core.Managers
         /// <summary>
         /// 상태 변경 이벤트
         /// </summary>
-        public event Action<GameState> OnStateChanged;
+        public event Action<GameState, GameState> OnStateChanged; // (이전상태, 새상태)
 
         /// <summary>
         /// 생성자
@@ -40,7 +39,6 @@ namespace HideAndInk.Core.Managers
         public GameStateMachine(GameState initialState = GameState.Playing)
         {
             _currentState = initialState;
-            Debug.Log($"[GameStateMachine] Initialized with state: {_currentState}");
         }
 
         /// <summary>
@@ -50,26 +48,13 @@ namespace HideAndInk.Core.Managers
         {
             if (!CanTransitionTo(newState))
             {
-                Debug.LogWarning($"[GameStateMachine] Invalid transition from {_currentState} to {newState}");
                 return;
             }
 
             GameState previousState = _currentState;
             _currentState = newState;
 
-            Debug.Log($"[GameStateMachine] State transition: {previousState} → {_currentState}");
-
-            // [이벤트] 게임 상태 전환에 따른 전역 이벤트 발생
-            if (newState == GameState.Detected)
-            {
-                GameEvents.InvokePlayerDetected();
-            }
-            else if (newState == GameState.Dead)
-            {
-                GameEvents.InvokePlayerDeath();
-            }
-
-            OnStateChanged?.Invoke(_currentState);
+            OnStateChanged?.Invoke(previousState, _currentState);
         }
 
         /// <summary>
@@ -114,7 +99,7 @@ namespace HideAndInk.Core.Managers
         }
 
         /// <summary>
-        ///逃脱 시도
+        /// 탈출 시도
         /// </summary>
         public void TryEscape()
         {

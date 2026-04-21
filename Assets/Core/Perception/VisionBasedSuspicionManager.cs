@@ -12,42 +12,59 @@ namespace HideAndInk.Core.Perception
     public sealed class VisionBasedSuspicionManager : MonoBehaviour
     {
         [Header("시야 감지")]
+        [Tooltip("시야 감지에 사용할 ConeVisionSensor 컴포넌트")]
         [SerializeField] private ConeVisionSensor visionSensor;
 
         [Header("의심도 설정")]
-        [SerializeField] private float baseDetectionIntensity = 1f;  // 기본 감지 강도
-        [SerializeField] private float patrolDetectionMultiplier = 1.5f;  // 순찰형 감지 배율
-        [SerializeField] private float observeDetectionMultiplier = 1.0f;  // 관찰형 감지 배율
-        [SerializeField] private float guardDetectionMultiplier = 1.2f;  // 경계형 감지 배율
+        [Tooltip("의심도 상승의 기본 강도 (1 = 표준)")]
+        [SerializeField] private float baseDetectionIntensity = 1f;
+        [Tooltip("순찰(Patrol) 패턴일 때 감지 강도 배율")]
+        [SerializeField] private float patrolDetectionMultiplier = 1.5f;
+        [Tooltip("관찰(Observe) 패턴일 때 감지 강도 배율")]
+        [SerializeField] private float observeDetectionMultiplier = 1.0f;
+        [Tooltip("경계(Guard) 패턴일 때 감지 강도 배율")]
+        [SerializeField] private float guardDetectionMultiplier = 1.2f;
 
-        [Header("거리 기반 감지 배율")]
-        [SerializeField] private float closeRangeDistance = 2f;   // 가까이 범위 (2m 이내)
-        [SerializeField] private float closeRangeMultiplier = 2f;   // 가까이 배율
-        [SerializeField] private float midRangeDistance = 4f;      // 중간 범위 (4m 이내)
-        [SerializeField] private float midRangeMultiplier = 1.5f; // 중간 배율
-        [SerializeField] private float farRangeMultiplier = 1f;    // 먼 거리 배율
-        [SerializeField] private float veryFarRangeMultiplier = 0.75f; // 매우 먼 거리 배율
+        [Header("그라데이션 기반 감지 배율")]
+        [Tooltip("시야 중심(가까운 거리)에서의 감지 강도 배율")]
+        [SerializeField] private float centerDetectionMultiplier = 1.2f;
+        [Tooltip("시야 가장자리(먼 거리)에서의 감지 강도 배율")]
+        [SerializeField] private float edgeDetectionMultiplier = 0.2f;
+        [Tooltip("거리별 감지 강도 곡선 (0=중심, 1=가장자리). 커브로 세밀 조절 가능")]
+        [SerializeField] private AnimationCurve distanceGradient = AnimationCurve.Linear(0f, 1f, 1f, 0.15f);
 
         [Header("의태 감지 배율")]
-        [SerializeField] private float normalDetectionMultiplier = 1f;    // 미의태
-        [SerializeField] private float partialCamouflageMultiplier = 0.6f; // Partial 의태
-        [SerializeField] private float perfectCamouflageMultiplier = 0.3f; // Perfect 의태
+        [Tooltip("의태하지 않은 상태일 때 감지 강도 배율")]
+        [SerializeField] private float normalDetectionMultiplier = 1f;
+        [Tooltip("Partial 의태 상태일 때 감지 강도 배율 (낮을수록 덜 들킴)")]
+        [SerializeField] private float partialCamouflageMultiplier = 0.6f;
+        [Tooltip("Perfect 의태 상태일 때 감지 강도 배율 (낮을수록 덜 들킴)")]
+        [SerializeField] private float perfectCamouflageMultiplier = 0.3f;
 
         [Header("근접 감지 설정")]
-        [SerializeField] private float nearbyDistanceMultiplier = 1.5f; // 시야 반경의 1.5배
-        [SerializeField] [Range(0f, 1f)] private float nearbyDetectionIntensity = 0.2f;  // 근접 시 증가량 (너무 강하면 하락이 따라잡지 못함)
-        [SerializeField] [Range(0f, 1f)] private float nearbyMinIntensityFactor = 0.3f; // 근접 시 최소 강도 배율
+        [Tooltip("근접 감지 범위 (시야 반경 × 이 값). 예: 1.5 = 시야의 1.5배 거리까지 감지")]
+        [SerializeField] private float nearbyDistanceMultiplier = 1.5f;
+        [Tooltip("근접 감지 시 의심도 증가량 (너무 높으면 의심도 하락이 따라잡지 못함)")]
+        [SerializeField] [Range(0f, 1f)] private float nearbyDetectionIntensity = 0.2f;
+        [Tooltip("근접 감지 시 최소 강도 배율 (거리가 멀어도 이 비율 이상은 유지)")]
+        [SerializeField] [Range(0f, 1f)] private float nearbyMinIntensityFactor = 0.3f;
 
         [Header("AI 기억 설정")]
-        [SerializeField] private float memoryDuration = 3f;  // 마지막으로 보고 나서 기억하는 시간
-        [SerializeField] [Range(0f, 1f)] private float memoryDetectionMultiplier = 0.4f;  // 기억 중일 때 감지 강도 배율
+        [Tooltip("플레이어를 마지막으로 본 후 기억하는 시간 (초). 이 시간 동안은 기억 기반 감지 유지")]
+        [SerializeField] private float memoryDuration = 3f;
+        [Tooltip("기억 중일 때 감지 강도 배율 (직접 볼 때보다 낮음)")]
+        [SerializeField] [Range(0f, 1f)] private float memoryDetectionMultiplier = 0.4f;
 
         [Header("추적 설정")]
-        [SerializeField] private float trackingThreshold = 0.5f;  // 추적 모드 진입 의심도 임계값 (0~1, 50%)
-        [SerializeField] private float trackingMemoryMultiplier = 1.5f;  // 추적 모드 시 기억 시간 배율
-        [SerializeField] private float lostTargetThreshold = 0.2f;  // 추적 포기 의심도 임계값
+        [Tooltip("추적 모드 진입 의심도 임계값 (0~1). 예: 0.5 = 50% 이상이면 추적 시작")]
+        [SerializeField] private float trackingThreshold = 0.5f;
+        [Tooltip("추적 모드일 때 기억 시간 배율 (예: 1.5 = 기억 시간 1.5배 연장)")]
+        [SerializeField] private float trackingMemoryMultiplier = 1.5f;
+        [Tooltip("추적 포기 의심도 임계값 (이 값 아래로 떨어지면 추적 중단)")]
+        [SerializeField] private float lostTargetThreshold = 0.2f;
 
-        [Header("연동할 의심도 계량기 (Player의 SuspicionMeter)")]
+        [Header("의심도 계량기")]
+        [Tooltip("Player에 붙은 SuspicionMeter 컴포넌트 (의심도 상승/하락 담당)")]
         [SerializeField] private SuspicionMeter suspicionMeter;
 
         // 상태
@@ -55,6 +72,7 @@ namespace HideAndInk.Core.Perception
         private bool _wasInVision;  // 이전 프레임에서 시야에 있었는지
         private float _nearbyCooldown;  // 근처 감지 쿨다운
         private const float NEARBY_COOLDOWN_TIME = 0.5f;  // 0.5초 쿨다운
+        private bool _currentFrameInVision; // 현재 프레임 시야 상태 (UpdateAlertState에서 사용)
 
         // AI 기억 시스템
         private Vector3 _lastKnownTargetPosition;  // 마지막으로 본 플레이어 위치
@@ -111,12 +129,13 @@ namespace HideAndInk.Core.Perception
             // 0. 경계 상태 업데이트
             UpdateAlertState();
 
-            // 시야 내 감지된 대상 확인
+            // 시야 내 감지된 대상 확인 (한 번만 호출)
             var visibleTargets = visionSensor.GetAllVisibleTargets();
-            bool isInVision = visibleTargets.Count > 0;
+            _currentFrameInVision = visibleTargets.Count > 0;
+            bool isInVision = _currentFrameInVision;
 
             // 1. 시야 내 감지 → 의심도 증가
-            if (visibleTargets.Count > 0)
+            if (isInVision)
             {
                 // 가장 가까운 대상 기준 거리 계산
                 GameObject nearestTarget = GetNearestTarget(visibleTargets);
@@ -126,7 +145,6 @@ namespace HideAndInk.Core.Perception
                 float intensity = CalculateDetectionIntensity(distance, isInVision);
 
                 suspicionMeter.OnDetectedTarget(intensity);
-                LogModule.Instance.Log($"Target in view, distance={distance:F1}, intensity={intensity:F2}", "INFO");
 
                 // 마지막으로 본 위치 기억 업데이트
                 _lastKnownTargetPosition = nearestTarget.transform.position;
@@ -147,7 +165,6 @@ namespace HideAndInk.Core.Perception
                 if (suspicionMeter.IsCamouflaging)
                 {
                     // 의태 중에는 근처 감지 무시 → 자연 하락 ↑
-                    LogModule.Instance.Log("Target camouflaged and out of vision, allowing suspicion decay", "INFO");
                     _currentlyDetectedTargets.Clear();
                 }
                 // 의태가 아닌 경우
@@ -167,7 +184,6 @@ namespace HideAndInk.Core.Perception
                             if (intensity > 0f)
                             {
                                 suspicionMeter.OnDetectedTarget(intensity);
-                                LogModule.Instance.Log($"Target in memory, distance={Vector3.Distance(transform.position, _lastKnownTargetPosition):F1}, intensity={intensity:F2}", "INFO");
                                 _nearbyCooldown = NEARBY_COOLDOWN_TIME;
                             }
                         }
@@ -182,7 +198,6 @@ namespace HideAndInk.Core.Perception
                             if (intensity > 0f)
                             {
                                 suspicionMeter.OnDetectedTarget(intensity);
-                                LogModule.Instance.Log($"Target left vision but nearby, intensity={intensity:F2}", "INFO");
                                 _nearbyCooldown = NEARBY_COOLDOWN_TIME;
                             }
                         }
@@ -223,17 +238,21 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 거리 기반 배율 계산
+        /// 그라데이션 기반 거리 배율 계산 (중심=강함, 가장자리=약함)
         /// </summary>
         private float GetDistanceMultiplier(float distance)
         {
-            if (distance <= closeRangeDistance)
-                return closeRangeMultiplier;
-            if (distance <= midRangeDistance)
-                return midRangeMultiplier;
-            if (distance <= visionSensor.ViewRadius)
-                return farRangeMultiplier;
-            return veryFarRangeMultiplier;
+            float viewRadius = visionSensor.ViewRadius;
+            if (viewRadius <= 0f) return edgeDetectionMultiplier;
+
+            // 거리 비율 (0=중심, 1=가장자리)
+            float distanceRatio = Mathf.Clamp01(distance / viewRadius);
+
+            // 그라데이션 곡선에서 값 읽기
+            float gradientValue = distanceGradient.Evaluate(distanceRatio);
+
+            // 중심과 가장자리 배율 사이 보간
+            return Mathf.Lerp(centerDetectionMultiplier, edgeDetectionMultiplier, 1f - gradientValue);
         }
 
         /// <summary>
@@ -341,8 +360,7 @@ namespace HideAndInk.Core.Perception
         private void UpdateAlertState()
         {
             float suspicionNormalized = suspicionMeter.CurrentValue / 100f;  // 0~1로 정규화
-            var visibleTargets = visionSensor.GetAllVisibleTargets();
-            bool isInVision = visibleTargets.Count > 0;
+            bool isInVision = _currentFrameInVision;
             float timeSinceLastSeen = _hasLastKnownPosition ? Time.time - _lastSeenTime : float.MaxValue;
             bool isInMemoryDuration = _hasLastKnownPosition && timeSinceLastSeen < _trackingMemoryDuration;
 
@@ -356,12 +374,12 @@ namespace HideAndInk.Core.Perception
             }
             else if (isInVision)
             {
-                // 시야内有 → 즉시 추적
+                // 시야 내 → 즉시 추적
                 newState = EnemyAlertState.Tracking;
             }
             else if (suspicionNormalized >= trackingThreshold)
             {
-                // 의심도가 높음 + 시야外 → 추적 모드
+                // 의심도가 높음 + 시야 밖 → 추적 모드
                 newState = EnemyAlertState.Tracking;
             }
             else if (suspicionNormalized > 0f && suspicionNormalized < trackingThreshold)
@@ -397,7 +415,6 @@ namespace HideAndInk.Core.Perception
                     BroadcastAlertToOthers();
                 }
 
-                LogModule.Instance.Log($"AlertState changed: {_previousAlertState} -> {_currentAlertState}", "INFO");
                 OnAlertStateChanged?.Invoke(_currentAlertState);
             }
         }
@@ -493,7 +510,6 @@ namespace HideAndInk.Core.Perception
             {
                 _currentAlertState = EnemyAlertState.Tracking;
                 _trackingMemoryDuration = memoryDuration * trackingMemoryMultiplier;
-                LogModule.Instance.Log($"{name} switched to Tracking due to shared alert", "INFO");
                 OnAlertStateChanged?.Invoke(_currentAlertState);
             }
         }

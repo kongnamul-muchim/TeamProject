@@ -27,7 +27,6 @@ namespace HideAndInk.Player
         [SerializeField] private MovementLogger movementLogger;
 
         private IPlayerMovement _playerMovement;
-        private bool _ignoreWallCollision;
         private Rigidbody _rigidbody;
         private Vector2 _moveInput;
         private bool _isMovementLocked;
@@ -74,10 +73,7 @@ namespace HideAndInk.Player
             _playerMovement.Move(_moveInput);
 
             // 이동 시스템 업데이트
-            if (_playerMovement is PlayerMovement movement)
-            {
-                movement.Update(Time.deltaTime);
-            }
+            _playerMovement?.Update(Time.deltaTime);
         }
 
         private void FixedUpdate()
@@ -121,7 +117,7 @@ namespace HideAndInk.Player
         public Rigidbody Rigidbody => _rigidbody;
 
         /// <summary>
-        /// 이동 잠금 설정 (의태系统中使用)
+        /// 이동 잠금 설정 (의태 시스템에서 사용)
         /// </summary>
         /// <param name="locked">잠금 여부</param>
         public void SetMovementLocked(bool locked)
@@ -130,12 +126,13 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
-        /// 벽 충돌 무시 설정 (의태系统中使用)
+        /// 벽 충돌 무시 설정 (의태 시스템에서 사용)
         /// </summary>
         /// <param name="ignore">무시 여부</param>
         public void SetIgnoreWallCollision(bool ignore)
         {
-            _ignoreWallCollision = ignore;
+            // TODO: 실제 벽 충돌 무시 로직 구현 필요
+            // 현재는 인터페이스만 제공
         }
 
         // 충돌 감지용 레이어

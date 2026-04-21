@@ -2,11 +2,13 @@ using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Logging;
 
 namespace HideAndInk.Core.Managers
 {
     /// <summary>
     /// 게임 매니저 - DI 컨테이너와 게임 상태를 관리
+    /// GameEvents 발생을 담당 (GameStateMachine은 순수 상태 관리만)
     /// </summary>
     public sealed class GameManager : MonoBehaviour
     {
@@ -32,11 +34,8 @@ namespace HideAndInk.Core.Managers
         private IDIContainer _rootContainer;
         public static IDIContainer Container => Instance._rootContainer;
 
-        // 게임 상태 머신 (Singleton으로 유지)
+        // 게임 상태 머신
         private IGameStateMachine _gameStateMachine;
-
-        [Header("연동할 스크립트")]
-        [SerializeField] private SuspicionToGameStateLink suspicionToGameStateLink;
 
         private void Awake()
         {
@@ -49,7 +48,7 @@ namespace HideAndInk.Core.Managers
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // LogModule 초기화 (자동으로 LogModule GameObject 생성)
+            // LogModule 초기화
             _ = LogModule.Instance;
 
             InitializeContainer();
@@ -62,7 +61,6 @@ namespace HideAndInk.Core.Managers
         private void InitializeContainer()
         {
             _rootContainer = new DIContainer();
-
             RegisterCoreServices();
         }
 
@@ -74,53 +72,49 @@ namespace HideAndInk.Core.Managers
             // 게임 상태 머신 (Singleton)
             _gameStateMachine = new GameStateMachine(GameState.Playing);
             _rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLifetime.Singleton);
-
-            Debug.Log("[GameManager] Core services registered.");
         }
 
         /// <summary>
-        /// 외부 이벤트 구독 (이벤트 기반 통신)
+        /// 이벤트 구독
         /// </summary>
         private void SubscribeToEvents()
         {
-            if (suspicionToGameStateLink != null)
-            {
-                suspicionToGameStateLink.OnPlayerDetected += OnPlayerDetected;
-            }
+            // GameStateMachine 상태 변경 구독 → GameEvents 발생
+            _gameStateMachine.OnStateChanged += OnGameStateChanged;
             
-            // [이벤트] GameEvents 구독 (발각/사망)
-            GameEvents.OnPlayerDetected += HandlePlayerDetected;
-            GameEvents.OnPlayerDeath += HandlePlayerDeath;
+            // SuspicionToGameStateLink에서 발각 이벤트 구독
+            var suspicionLink = FindObjectOfType<SuspicionToGameStateLink>();
+            if (suspicionLink != null)
+            {
+                suspicionLink.OnPlayerDetected += OnPlayerDetected;
+            }
         }
 
         /// <summary>
-        /// 플레이어 발각 시 호출 (이벤트 핸들러)
+        /// 게임 상태 변경 처리 (GameEvents 발생 담당)
+        /// </summary>
+        private void OnGameStateChanged(GameState previous, GameState current)
+        {
+            // 상태 전환에 따른 전역 이벤트 발생
+            if (current == GameState.Detected)
+            {
+                GameEvents.InvokePlayerDetected();
+            }
+            else if (current == GameState.Dead)
+            {
+                GameEvents.InvokePlayerDeath();
+            }
+        }
+
+        /// <summary>
+        /// 플레이어 발각 시 호출 (GameStateMachine.Detected 전환)
         /// </summary>
         private void OnPlayerDetected()
         {
             if (_gameStateMachine != null && _gameStateMachine.CanTransitionTo(GameState.Detected))
             {
                 _gameStateMachine.TransitionTo(GameState.Detected);
-                Debug.Log("[GameManager] Player detected - transitioned to Detected state.");
             }
-        }
-        
-        /// <summary>
-        /// GameEvents.OnPlayerDetected 핸들러 (GameStateMachine에서 직접 호출)
-        /// </summary>
-        private void HandlePlayerDetected()
-        {
-            Debug.Log("[GameManager] Received PlayerDetected event from GameEvents.");
-            // 추가 처리 (UI, 사운드 등) 가능
-        }
-        
-        /// <summary>
-        /// GameEvents.OnPlayerDeath 핸들러
-        /// </summary>
-        private void HandlePlayerDeath()
-        {
-            Debug.Log("[GameManager] Received PlayerDeath event from GameEvents.");
-            // 추가 처리 (게임 오버 화면, 사운드 등) 가능
         }
 
         /// <summary>
@@ -134,14 +128,16 @@ namespace HideAndInk.Core.Managers
         private void OnDestroy()
         {
             // 이벤트 구독 해제
-            if (suspicionToGameStateLink != null)
+            if (_gameStateMachine != null)
             {
-                suspicionToGameStateLink.OnPlayerDetected -= OnPlayerDetected;
+                _gameStateMachine.OnStateChanged -= OnGameStateChanged;
             }
             
-            // GameEvents 구독 해제
-            GameEvents.OnPlayerDetected -= HandlePlayerDetected;
-            GameEvents.OnPlayerDeath -= HandlePlayerDeath;
+            var suspicionLink = FindObjectOfType<SuspicionToGameStateLink>();
+            if (suspicionLink != null)
+            {
+                suspicionLink.OnPlayerDetected -= OnPlayerDetected;
+            }
 
             _rootContainer?.Dispose();
         }

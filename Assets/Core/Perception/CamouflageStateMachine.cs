@@ -84,8 +84,6 @@ namespace HideAndInk.Core.Perception
             _isLockComplete = false;
             _isPerfectReached = false;
             _wasKeyReleasedBeforePerfect = false;
-
-            Debug.Log($"[Camouflage] Attached to: {target.name}");
         }
 
         /// <summary>
@@ -96,7 +94,6 @@ namespace HideAndInk.Core.Perception
             if (_currentState != CamouflageState.None)
             {
                 _wasKeyReleasedBeforePerfect = !_isPerfectReached;
-                Debug.Log($"[Camouflage] Key released. WasPerfectBefore={_isPerfectReached}, WillCancel={_wasKeyReleasedBeforePerfect}");
             }
         }
 
@@ -106,10 +103,6 @@ namespace HideAndInk.Core.Perception
         /// <param name="force">강제 취소 (키 입력으로 인한 취소)</param>
         public void CancelCamouflage(bool force = false)
         {
-            if (_currentState != CamouflageState.None)
-            {
-                Debug.Log($"[Camouflage] Cancelled from State: {_currentState}, Force={force}");
-            }
             Reset();
         }
 
@@ -124,7 +117,7 @@ namespace HideAndInk.Core.Perception
                 return;
             }
 
-            // 이동하면 즉시 취소 (Perfect도関係없음)
+            // 이동하면 즉시 취소 (Perfect도 관계없음)
             if (isMoving)
             {
                 CancelCamouflage();
@@ -144,7 +137,10 @@ namespace HideAndInk.Core.Perception
                     break;
 
                 case CamouflageState.Approaching:
-                    UpdateApproachingState();
+                    // Approaching은 Locked → Partial 전환을 위한 과도기 상태
+                    // 즉시 Partial로 전환
+                    _currentState = CamouflageState.Partial;
+                    _stateTimer = 0f;
                     break;
 
                 case CamouflageState.Partial:
@@ -167,7 +163,6 @@ namespace HideAndInk.Core.Perception
                 _isAttachedComplete = true;
                 _currentState = CamouflageState.Locked;
                 _stateTimer = 0f;
-                Debug.Log("[Camouflage] Attached complete, moving to Locked");
             }
         }
 
@@ -181,19 +176,7 @@ namespace HideAndInk.Core.Perception
                 _isLockComplete = true;
                 _currentState = CamouflageState.Approaching;
                 _stateTimer = 0f;
-                Debug.Log("[Camouflage] Lock complete, moving to Approaching");
             }
-        }
-
-        /// <summary>
-        /// Approaching 상태 업데이트
-        /// </summary>
-        private void UpdateApproachingState()
-        {
-            // Approaching에서 Partial로 바로 전환 (스냅 위치에서 색상 보간 시작)
-            _currentState = CamouflageState.Partial;
-            _stateTimer = 0f;
-            Debug.Log("[Camouflage] Moving to Partial");
         }
 
         /// <summary>
@@ -209,7 +192,6 @@ namespace HideAndInk.Core.Perception
                 _isPerfectReached = true;
                 _currentState = CamouflageState.Perfect;
                 _stateTimer = 0f;
-                Debug.Log("[Camouflage] Perfect reached!");
             }
         }
 

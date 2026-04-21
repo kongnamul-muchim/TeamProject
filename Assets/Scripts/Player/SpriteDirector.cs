@@ -72,6 +72,14 @@ namespace HideAndInk.Player
         }
 
         /// <summary>
+        /// 방향별 스프라이트로 변경 (ISpriteDirector 구현)
+        /// </summary>
+        public void ChangeSprite(MoveDirection direction)
+        {
+            UpdateDirection(direction);
+        }
+
+        /// <summary>
         /// 기본 스프라이트로 변경 (의태 시 사용)
         /// </summary>
         public void ChangeToDefaultSprite()
@@ -82,7 +90,9 @@ namespace HideAndInk.Player
             if (defaultSprite != null)
             {
                 _spriteRenderer.sprite = defaultSprite;
+#if UNITY_EDITOR
                 Debug.Log("[SpriteDirector] Changed sprite to default Player");
+#endif
             }
             else
             {
@@ -163,8 +173,16 @@ namespace HideAndInk.Player
         private Sprite LoadSprite(string path)
         {
 #if UNITY_EDITOR
-            return AssetDatabase.LoadAssetAtPath<Sprite>(path + ".png");
+            // 에디터: AssetDatabase로 직접 로드 (Resources 폴더 불필요)
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path + ".png");
+            if (sprite == null)
+            {
+                // 폴백: Resources.Load 시도
+                sprite = Resources.Load<Sprite>(path);
+            }
+            return sprite;
 #else
+            // 빌드: Resources.Load만 사용
             return Resources.Load<Sprite>(path);
 #endif
         }

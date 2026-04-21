@@ -59,7 +59,6 @@ namespace HideAndInk.Core.Perception
             float nearestDistance = float.MaxValue;
 
             var candidates = DetectCandidates(position);
-            Debug.Log($"[Detector] Found {candidates.Count} candidates in radius {_detectionRadius}");
 
             foreach (var candidate in candidates)
             {
@@ -69,15 +68,6 @@ namespace HideAndInk.Core.Perception
                     nearestDistance = distance;
                     nearest = candidate;
                 }
-            }
-
-            if (nearest != null)
-            {
-                Debug.Log($"[Detector] Nearest: {nearest.name} at distance {nearestDistance}");
-            }
-            else
-            {
-                Debug.LogWarning("[Detector] No camouflageable object found!");
             }
 
             return nearest;
@@ -96,11 +86,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private bool IsCamouflageable(GameObject obj)
         {
-            // Tag로 구분하거나, 인터페이스/컴포넌트로 구분
-            // 예: "Camouflageable" 태그를 가진 오브젝트만 의태 가능
-            bool isCamouflageable = obj.CompareTag(CAMOUFLAGEABLE_TAG);
-            Debug.Log($"[Detector] Checking {obj.name}: Camouflageable={isCamouflageable}, Tag={obj.tag}");
-            return isCamouflageable;
+            return obj.CompareTag(CAMOUFLAGEABLE_TAG);
         }
     }
 }
