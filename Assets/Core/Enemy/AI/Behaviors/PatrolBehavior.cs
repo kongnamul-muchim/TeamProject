@@ -82,17 +82,19 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         /// <summary>
         /// 새로운 순찰 목표 지점 선택
+        /// X축 중심 이동 (Z축은 약간의 변동만)
         /// </summary>
         private void PickNewTarget()
         {
-            Vector2 randomDirection = Random.insideUnitCircle;
-            float randomDistance = Random.Range(_minDistance, _patrolRadius);
-            Vector2 offset = randomDirection * randomDistance;
+            // X축: 주요 이동 방향 (-1 ~ 1)
+            float xMove = Random.Range(-1f, 1f);
+            // Z축: 약간의 변동만 (-0.3 ~ 0.3)
+            float zMove = Random.Range(-0.3f, 0.3f);
 
             _currentTarget = new Vector3(
-                _patrolCenter.x + offset.x,
+                _patrolCenter.x + xMove * _patrolRadius,
                 _enemy.Position.y, // Y축 고정
-                _patrolCenter.z + offset.y);
+                _patrolCenter.z + zMove * _patrolRadius * 0.3f); // Z축 변동 최소화
         }
 
         /// <summary>

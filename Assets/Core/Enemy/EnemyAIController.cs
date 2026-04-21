@@ -127,14 +127,12 @@ namespace HideAndInk.Core.Enemy
 
         /// <summary>
         /// 시야 방향 업데이트
-        /// 이동 방향을 바라보도록 Y축 회전 처리
-        /// Enemy_Forward의 Y축만 회전 (X, Z 고정)
+        /// Enemy 본체의 Y축 회전으로 좌우 방향 전환
         /// 왼쪽: Y=0, 오른쪽: Y=180
         /// </summary>
         protected virtual void UpdateViewDirection()
         {
             if (_movement == null || !_movement.IsMoving) return;
-            if (enemyForward == null) return;
 
             // 이동 방향에 따라 좌우 회전
             MoveDirection dir = _movement.Direction;
@@ -143,14 +141,13 @@ namespace HideAndInk.Core.Enemy
             // 기본 왼쪽: Y=0, 오른쪽: Y=180
             float targetY = shouldFaceRight ? 180f : 0f;
 
-            // 현재 Y값 가져오기
-            float currentY = enemyForward.localEulerAngles.y;
-            // 180도 근처에서 360/0 경계 문제 방지
+            // 현재 Y값 가져오기 (360도 경계 문제 방지)
+            float currentY = transform.localEulerAngles.y;
             if (currentY > 270f) currentY -= 360f;
 
             // 부드러운 회전 (Y축만)
             float newY = Mathf.Lerp(currentY, targetY, viewRotationSpeed * Time.deltaTime);
-            enemyForward.localEulerAngles = new Vector3(0f, newY, 0f);
+            transform.localEulerAngles = new Vector3(0f, newY, 0f);
         }
 
         /// <summary>

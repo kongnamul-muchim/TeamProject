@@ -113,7 +113,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         }
 
         /// <summary>
-        /// 탐색 포인트 생성 (원형 패턴)
+        /// 탐색 포인트 생성 (X축 중심 원형 패턴, Z축은 좁게)
         /// </summary>
         private void GenerateSearchPoints()
         {
@@ -124,7 +124,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             {
                 float angle = angleStep * i * Mathf.Deg2Rad;
                 float x = Mathf.Cos(angle) * _searchRadius;
-                float z = Mathf.Sin(angle) * _searchRadius;
+                float z = Mathf.Sin(angle) * _searchRadius * 0.3f; // Z축 좁게
 
                 _searchPointsArray[i] = new Vector3(
                     _lastKnownPosition.x + x,
