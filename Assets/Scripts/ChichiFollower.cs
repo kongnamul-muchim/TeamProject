@@ -96,7 +96,6 @@ public class ChichiFollower : MonoBehaviour
             return;
 
         Vector3 prevPosition = transform.position;
-        Vector3 prevTargetPosition = stateMachine.Target.position;
 
         UpdateMoveDirection(stateMachine.Target.position - _lastTargetPosition);
         UpdateCurrentTarget(stateMachine.CurrentState);
@@ -104,24 +103,14 @@ public class ChichiFollower : MonoBehaviour
 
         // 치치의 실제 이동 delta 기록 (스프라이트 방향 판별용)
         _actualMoveDelta = transform.position - prevPosition;
-        _actualMoveDelta.y = 0f; // Y축(화면 위아래) 이동은 스프라이트 방향에 영향 없음
+        _actualMoveDelta.y = 0f;
 
-        // Follow 상태에서는 치치가 Z축으로만 움직이므로,
-        // 두두의 Z 이동 방향도 스프라이트 판별에 반영
-        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
+        // CatchUp 상태: 이동 방향에 따라 스프라이트 변경
+        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp)
         {
-            float targetDeltaZ = stateMachine.Target.position.z - prevTargetPosition.z;
-            if (Mathf.Abs(targetDeltaZ) > Mathf.Abs(_actualMoveDelta.z))
-            {
-                _actualMoveDelta.z = targetDeltaZ;
-            }
+            UpdateSpriteDirectionByMovement();
         }
-
-        // 스프라이트 변경은 Follow 상태에서만 (CatchUp/Charging은 마지막 방향 유지)
-        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
-        {
-            UpdateSpriteDirection();
-        }
+        // Follow/Charging 상태: 마지막 스프라이트 유지 (변경 안 함)
 
         _lastTargetPosition = stateMachine.Target.position;
     }
@@ -187,62 +176,51 @@ public class ChichiFollower : MonoBehaviour
     }
 
     /// <summary>
-    /// 플레이어 상대 위치에 따라 스프라이트 변경 + Side는 Y Rotation 반전
-    /// 카메라 반대편 기준이므로 기존 로직 반전 적용
-    /// - Player가 치치의 오른쪽 → Side (Y: 180)
-    /// - Player가 치치의 왼쪽 → Side (Y: 0)
-    /// - Player가 치치의 위 → Back
-    /// - Player가 치치의 아래 → Front
-    /// - deadzone 내에서 흔들리면 이전 스프라이트 유지
+    /// CatchUp 상태: 치치의 실제 이동 방향에 따라 스프라이트 변경
+    /// - X+ → Side (Y: 180), X- → Side (Y: 0)
+    /// - Z+ → Back, Z- → Front
     /// </summary>
-    private void UpdateSpriteDirection()
+    private void UpdateSpriteDirectionByMovement()
     {
-        if (spriteRenderer == null || stateMachine.Target == null)
+        if (spriteRenderer == null)
             return;
 
-        // 플레이어와 치치의 상대 위치 (치치 기준)
-        Vector3 toPlayer = stateMachine.Target.position - transform.position;
-        float relX = toPlayer.x;
-        float relZ = toPlayer.z;
+        float moveX = _actualMoveDelta.x;
+        float moveZ = _actualMoveDelta.z;
 
-        // Deadzone: 너무 가까우면 방향 전환 안 함 (흔들림 방지)
-        const float deadzone = 0.5f;
-        if (Mathf.Abs(relX) < deadzone && Mathf.Abs(relZ) < deadzone)
+        // Deadzone: 이동량이 너무 작으면 변경 안 함
+        const float deadzone = 0.01f;
+        if (Mathf.Abs(moveX) < deadzone && Mathf.Abs(moveZ) < deadzone)
             return;
 
-        // 순수하게 |X| vs |Z| 비교 (우선순위 없음)
         Sprite newSprite;
         bool flipY = false;
 
-        if (Mathf.Abs(relX) > Mathf.Abs(relZ))
+        if (Mathf.Abs(moveX) > Mathf.Abs(moveZ))
         {
-            // 수평이 더 큼 → Side 스프라이트
             newSprite = spriteSide;
-            bool playerIsRight = relX > 0f;
-            flipY = !playerIsRight; // Player가 오른쪽: Y 180, 왼쪽: Y 0
+            bool movingRight = moveX > 0f;
+            flipY = !movingRight; // 오른쪽: Y 180, 왼쪽: Y 0
         }
         else
         {
-            // 수직이 더 큼 → Front/Back 스프라이트
-            if (relZ > 0f)
+            if (moveZ > 0f)
             {
-                newSprite = spriteBack; // Player가 위쪽
+                newSprite = spriteBack;
             }
             else
             {
-                newSprite = spriteFront; // Player가 아래쪽
+                newSprite = spriteFront;
             }
             flipY = false;
         }
 
-        // 스프라이트 변경
         if (newSprite != null && newSprite != _lastSprite)
         {
             spriteRenderer.sprite = newSprite;
             _lastSprite = newSprite;
         }
 
-        // Side일 때만 Y Rotation 반전
         if (newSprite == spriteSide)
         {
             Vector3 rotation = spriteRenderer.transform.localEulerAngles;
