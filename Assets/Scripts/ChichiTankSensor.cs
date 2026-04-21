@@ -10,7 +10,7 @@ using UnityEngine;
 public class ChichiTankSensor : MonoBehaviour
 {
     [Header("🔗 References - 연결할 컴포넌트")]
-    [Tooltip("ChichiStateMachine 컴포넌트 참조")]
+    [Tooltip("ChichiStateMachine 컴포넌트 (비워두면 자동 탐색)")]
     [SerializeField] private ChichiStateMachine stateMachine;
     [Tooltip("감지할 두두의 Collider 배열 (몸, 촉수 등)")]
     [SerializeField] private Collider[] targetColliders;
@@ -21,6 +21,12 @@ public class ChichiTankSensor : MonoBehaviour
     private void Awake()
     {
         _sensorCollider = GetComponent<Collider>();
+
+        // ChichiStateMachine 자동 탐색
+        if (stateMachine == null)
+        {
+            stateMachine = GetComponent<ChichiStateMachine>();
+        }
     }
 
     private void Update()

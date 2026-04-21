@@ -16,13 +16,15 @@ public class ChichiStateMachine : MonoBehaviour
     [Header("🔗 References - 연결할 오브젝트")]
     [Tooltip("따라갈 대상 (두두) 의 Transform")]
     [SerializeField] private Transform target;
+    [Tooltip("두두의 PlayerInk 컴포넌트 (비워두면 자동 탐색)")]
+    [SerializeField] private PlayerInk playerInk;
     [Tooltip("충전 가능 여부 확인할 리스너 (자동 설정됨)")]
     [SerializeField] private MonoBehaviour listenerTarget;
 
     [Header("📏 Distance - 거리 설정")]
-    [Tooltip("이 거리 이상 멀어지면 CatchUp 상태로 전환")]
+    [Tooltip("이 거리 이상 멀어지면 CatchUp 상태로 전환. 따라갈 때 두두 뒤로 떨어지는 거리도 동일")]
     [SerializeField] private float maxFollowDistance = 7f;
-    [Tooltip("두두와 이 거리 이내면 Charging 상태 진입 가능")]
+    [Tooltip("두두와 이 거리 이내면 Charging 상태 진입 + 충전 시작")]
     [SerializeField] private float chargeDistance = 1.8f;
 
     [Header("📊 State - 현재 상태 (디버그용)")]
@@ -36,6 +38,7 @@ public class ChichiStateMachine : MonoBehaviour
     private ChichiState _previousState;
 
     public Transform Target => target;
+    public PlayerInk PlayerInk => playerInk;
     public ChichiState CurrentState => currentState;
     public bool IsTouchingTank => isTouchingTank;
     public bool IsUnderThreat => isUnderThreat;
@@ -49,6 +52,12 @@ public class ChichiStateMachine : MonoBehaviour
     private void Awake()
     {
         _previousState = currentState;
+
+        // PlayerInk 자동 탐색
+        if (playerInk == null)
+        {
+            playerInk = FindObjectOfType<PlayerInk>();
+        }
     }
 
     private void Update()

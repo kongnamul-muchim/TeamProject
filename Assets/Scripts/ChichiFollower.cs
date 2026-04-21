@@ -10,14 +10,12 @@ using UnityEngine;
 public class ChichiFollower : MonoBehaviour
 {
     [Header("🔗 References - 연결할 컴포넌트")]
-    [Tooltip("ChichiStateMachine 컴포넌트 참조")]
+    [Tooltip("ChichiStateMachine 컴포넌트 (비워두면 자동 탐색)")]
     [SerializeField] private ChichiStateMachine stateMachine;
     [Tooltip("치치 SpriteRenderer (비워두면 자동 탐색)")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
     [Header("📍 Guide Position - 따라가기 위치 설정")]
-    [Tooltip("두두 뒤로 떨어지는 거리")]
-    [SerializeField] private float behindDistance = 7f;
     [Tooltip("측면으로 벗어난 거리")]
     [SerializeField] private float sideOffset = 0.8f;
     [Tooltip("수직 (Y) 오프셋")]
@@ -43,6 +41,21 @@ public class ChichiFollower : MonoBehaviour
     private Vector3 _targetVelocity;
     private bool _facingRight = true;
 
+    private void Awake()
+    {
+        // ChichiStateMachine 자동 탐색
+        if (stateMachine == null)
+        {
+            stateMachine = GetComponent<ChichiStateMachine>();
+        }
+
+        // SpriteRenderer 자동 탐색
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+    }
+
     private void Start()
     {
         if (stateMachine == null || stateMachine.Target == null)
@@ -51,12 +64,6 @@ public class ChichiFollower : MonoBehaviour
         _lastTargetPosition = stateMachine.Target.position;
         _currentTarget = GetFollowTargetPosition();
         stateMachine.OnStateChanged += HandleStateChanged;
-
-        // SpriteRenderer 자동 탐색
-        if (spriteRenderer == null)
-        {
-            spriteRenderer = GetComponent<SpriteRenderer>();
-        }
     }
 
     private void OnDestroy()
@@ -118,9 +125,14 @@ public class ChichiFollower : MonoBehaviour
 
     private void UpdateMovement()
     {
-        // Follow 상태에서는 움직이지 않음
+        // Follow 상태에서는 X,Y는 고정, Z만 두두 따라감
         if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
+        {
+            Vector3 pos = transform.position;
+            pos.z = stateMachine.Target.position.z;
+            transform.position = pos;
             return;
+        }
 
         float smoothTime = stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging ? chargeSmoothTime : catchUpSmoothTime;
         Vector3 nextPosition = Vector3.SmoothDamp(transform.position, _currentTarget, ref _moveVelocity, smoothTime);
@@ -155,6 +167,9 @@ public class ChichiFollower : MonoBehaviour
 
     private Vector3 GetFollowTargetPosition()
     {
+        // 따라가기 거리는 StateMachine 의 maxFollowDistance 사용
+        float followDistance = stateMachine.MaxFollowDistance;
+
         Vector3 behindDirection = -_smoothedMoveDirection;
         Vector3 sideDirection = new Vector3(-behindDirection.z, 0f, behindDirection.x);
 
@@ -165,16 +180,11 @@ public class ChichiFollower : MonoBehaviour
         }
 
         Vector3 targetPosition = stateMachine.Target.position;
-        Vector3 planarOffset = behindDirection * behindDistance + sideDirection * sideOffset + new Vector3(guideOffset.x, 0f, guideOffset.z);
+        Vector3 planarOffset = behindDirection * followDistance + sideDirection * sideOffset + new Vector3(guideOffset.x, 0f, guideOffset.z);
 
         return new Vector3(
             targetPosition.x + planarOffset.x,
             targetPosition.y + liftOffset.y + guideOffset.y,
             targetPosition.z);
-    }
-
-    private Vector3 GetChargeTargetPosition()
-    {
-        return transform.position;
     }
 }

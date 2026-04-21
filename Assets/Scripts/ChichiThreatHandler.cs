@@ -9,10 +9,8 @@ using HideAndInk.Core.Interfaces;
 public class ChichiThreatHandler : MonoBehaviour, IThreatHandler
 {
     [Header("🔗 References - 연결할 컴포넌트")]
-    [Tooltip("ChichiStateMachine 컴포넌트 참조")]
+    [Tooltip("ChichiStateMachine 컴포넌트 (비워두면 자동 탐색)")]
     [SerializeField] private ChichiStateMachine stateMachine;
-    [Tooltip("두두의 PlayerInk 컴포넌트 참조")]
-    [SerializeField] private PlayerInk targetInk;
 
     [Header("⚠️ Threat - 위협 설정")]
     [Tooltip("위협 신호를 받은 후 자동으로 해제될 때까지 지연 시간(초)")]
@@ -20,6 +18,15 @@ public class ChichiThreatHandler : MonoBehaviour, IThreatHandler
 
     private bool _isThreatActive;
     private float _timer;
+
+    private void Awake()
+    {
+        // ChichiStateMachine 자동 탐색
+        if (stateMachine == null)
+        {
+            stateMachine = GetComponent<ChichiStateMachine>();
+        }
+    }
 
     private void Update()
     {
@@ -43,8 +50,8 @@ public class ChichiThreatHandler : MonoBehaviour, IThreatHandler
             if (stateMachine != null)
                 stateMachine.SetThreat(true);
 
-            if (targetInk != null)
-                targetInk.SetThreat(true);
+            if (stateMachine != null && stateMachine.PlayerInk != null)
+                stateMachine.PlayerInk.SetThreat(true);
         }
         else
         {
@@ -60,7 +67,7 @@ public class ChichiThreatHandler : MonoBehaviour, IThreatHandler
         if (stateMachine != null)
             stateMachine.SetThreat(false);
 
-        if (targetInk != null)
-            targetInk.SetThreat(false);
+        if (stateMachine != null && stateMachine.PlayerInk != null)
+            stateMachine.PlayerInk.SetThreat(false);
     }
 }
