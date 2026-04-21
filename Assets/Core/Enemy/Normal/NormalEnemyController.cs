@@ -84,9 +84,9 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// Player 접촉 감지
+        /// Player 접촉 감지 (3D)
         /// </summary>
-        private void OnTriggerEnter2D(Collider2D other)
+        private void OnTriggerEnter(Collider other)
         {
             if (_isAlerted) return;
 
