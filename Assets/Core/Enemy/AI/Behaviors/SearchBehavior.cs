@@ -6,7 +6,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
     /// <summary>
     /// 탐색 행동
     /// 마지막 Player 위치 기반으로 주변을 계속 수색 (멈추지 않음)
-    /// X-Z 평면 이동
+    /// X축만 이동 (Z축 고정), Chase 상태에서만 Z축 이동 허용
     /// </summary>
     public sealed class SearchBehavior : IEnemyAIState
     {
@@ -14,16 +14,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         private readonly IEnemyMovement _movement;
 
         // 탐색 설정
-        private readonly float _searchRadius;       // 탐색 반경
         private readonly float _searchDuration;     // 탐색 최대 지속 시간
-        private readonly int _searchPoints;         // 탐색 포인트 수
+        private readonly float _searchDistance;     // 탐색 이동 거리
 
         // 상태
         private Vector3 _lastKnownPosition;
-        private Vector3[] _searchPointsArray;
-        private int _currentPointIndex;
+        private Vector3 _currentTarget;
+        private Vector3 _currentDirection; // 현재 이동 방향
         private float _searchTimer;
-        private float _minDistance; // 최소 이동 거리
+        private float _directionTimer;
 
         /// <summary>
         /// 탐색 타이머 (0이 되면 Patrol로 복귀)
@@ -36,17 +35,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         public SearchBehavior(
             IEnemy enemy,
             IEnemyMovement movement,
-            float searchRadius = 3f,
             float searchDuration = 5f,
-            int searchPoints = 4,
-            float minDistance = 0.5f)
+            float searchDistance = 3f,
+            float directionChangeCooldown = 1f)
         {
             _enemy = enemy;
             _movement = movement;
-            _searchRadius = searchRadius;
             _searchDuration = searchDuration;
-            _searchPoints = searchPoints;
-            _minDistance = minDistance;
+            _searchDistance = searchDistance;
+            _directionTimer = directionChangeCooldown;
         }
 
         public EnemyAIState StateType => EnemyAIState.Search;
@@ -62,14 +59,14 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         public void OnEnter()
         {
             _searchTimer = _searchDuration;
-            _currentPointIndex = 0;
-            GenerateSearchPoints();
-            MoveToNextPoint();
+            _directionTimer = 0f; // 진입 시 즉시 이동
+            PickNewTarget();
         }
 
         public void OnUpdate(float deltaTime)
         {
             _searchTimer -= deltaTime;
+            _directionTimer -= deltaTime;
 
             // 탐색 시간 초과 체크
             if (_searchTimer <= 0f)
@@ -77,28 +74,29 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
                 return; // 상태 머신에서 Patrol로 전환 처리
             }
 
-            // 현재 탐색 포인트로 계속 이동
-            if (_searchPointsArray == null || _searchPointsArray.Length == 0)
-                return;
-
+            // 현재 위치 (X축만, Z축 고정)
             Vector3 currentPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
-            Vector3 targetPoint = _searchPointsArray[_currentPointIndex];
-            Vector3 targetPos = new Vector3(targetPoint.x, 0f, targetPoint.z);
+            Vector3 targetPos = new Vector3(_currentTarget.x, 0f, _currentTarget.z);
 
             float distanceToTarget = Vector3.Distance(currentPos, targetPos);
 
-            if (distanceToTarget < _minDistance)
+            if (distanceToTarget < 0.5f)
             {
-                // 도달 → 다음 포인트로 즉시 이동 (멈추지 않음)
-                _currentPointIndex++;
-                if (_currentPointIndex >= _searchPointsArray.Length)
+                // 도달
+                if (_directionTimer <= 0f)
                 {
-                    _currentPointIndex = 0; // 반복
-                    // 포인트 재생성 (새로운 패턴)
-                    GenerateSearchPoints();
+                    // 쿨타임 종료 → 새 방향
+                    PickNewTarget();
                 }
-                MoveToNextPoint();
+                else
+                {
+                    // 쿨타임 중 → 현재 방향 유지
+                    ExtendTarget();
+                }
             }
+
+            // 계속 이동
+            _movement.MoveTo(_currentTarget);
         }
 
         public void OnExit()
@@ -113,33 +111,32 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         }
 
         /// <summary>
-        /// 탐색 포인트 생성 (X축 중심 원형 패턴, Z축은 좁게)
+        /// 새로운 탐색 목표 지점 선택 (X축만)
         /// </summary>
-        private void GenerateSearchPoints()
+        private void PickNewTarget()
         {
-            _searchPointsArray = new Vector3[_searchPoints];
-            float angleStep = 360f / _searchPoints;
+            // X축: 랜덤 방향
+            float xDir = Random.value > 0.5f ? 1f : -1f;
+            float xDistance = Random.Range(1f, _searchDistance);
 
-            for (int i = 0; i < _searchPoints; i++)
-            {
-                float angle = angleStep * i * Mathf.Deg2Rad;
-                float x = Mathf.Cos(angle) * _searchRadius;
-                float z = Mathf.Sin(angle) * _searchRadius * 0.3f; // Z축 좁게
+            Vector3 currentPos = _enemy.Position;
+            _currentDirection = new Vector3(xDir, 0f, 0f);
 
-                _searchPointsArray[i] = new Vector3(
-                    _lastKnownPosition.x + x,
-                    _lastKnownPosition.y, // Y축 고정
-                    _lastKnownPosition.z + z);
-            }
+            _currentTarget = new Vector3(
+                currentPos.x + xDir * xDistance,
+                currentPos.y, // Y축 고정
+                _lastKnownPosition.z // Z축은 마지막 Player 위치로 고정
+            );
+
+            _directionTimer = 1f; // 방향 전환 쿨타임
         }
 
         /// <summary>
-        /// 다음 포인트로 이동
+        /// 목표 지점을 현재 방향으로 연장
         /// </summary>
-        private void MoveToNextPoint()
+        private void ExtendTarget()
         {
-            if (_searchPointsArray == null || _searchPointsArray.Length == 0) return;
-            _movement.MoveTo(_searchPointsArray[_currentPointIndex]);
+            _currentTarget = _enemy.Position + _currentDirection * _searchDistance;
         }
 
         /// <summary>

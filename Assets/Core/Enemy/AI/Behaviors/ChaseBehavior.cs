@@ -6,7 +6,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
     /// <summary>
     /// 추적 행동
     /// Player를 부드럽게 추적 (예측 이동)
-    /// X-Z 평면 이동
+    /// Chase 상태에서만 X-Z 평면 이동 (Z축 이동 허용)
     /// </summary>
     public sealed class ChaseBehavior : IEnemyAIState
     {
@@ -61,13 +61,13 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             // Player 현재 위치
             Vector3 currentPlayerPos = _playerTransform.position;
 
-            // Player 속도 계산 (간단한 차분, X-Z 평면)
+            // Player 속도 계산 (X-Z 평면)
             Vector3 playerDelta = currentPlayerPos - _lastKnownPlayerPosition;
             playerDelta.y = 0f; // Y축 무시
             Vector3 playerVelocity = playerDelta / deltaTime;
             _lastPlayerVelocity = Vector3.Lerp(_lastPlayerVelocity, playerVelocity, 0.1f);
 
-            // 예측 위치 계산 (X-Z 평면)
+            // 예측 위치 계산 (X-Z 평면, Chase에서는 Z축 이동 허용)
             Vector3 predictedPosition = currentPlayerPos + (_lastPlayerVelocity * _predictionTime);
             predictedPosition.y = _enemy.Position.y; // Y축 고정
 
