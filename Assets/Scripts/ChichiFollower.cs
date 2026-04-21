@@ -54,8 +54,8 @@ public class ChichiFollower : MonoBehaviour
     // 스프라이트 방향 전환용 실제 이동 delta
     private Vector3 _actualMoveDelta;
 
-    // 방향 우선순위: 마지막 주요 이동 축 (수직 우선)
-    private bool _lastDominantWasVertical = true;
+    // 마지막 주요 이동 축 (true=수직, false=수평)
+    private bool _lastDominantWasVertical;
 
     private void Awake()
     {
@@ -188,7 +188,7 @@ public class ChichiFollower : MonoBehaviour
     /// - Player가 치치의 왼쪽 → Side (Y: 180)
     /// - Player가 치치의 위 → Back
     /// - Player가 치치의 아래 → Front
-    /// - 정지 시 Front/Back 우선 유지 (마지막 수직 방향 기억)
+    /// - deadzone 내에서 흔들리면 이전 스프라이트 유지
     /// </summary>
     private void UpdateSpriteDirection()
     {
@@ -205,35 +205,29 @@ public class ChichiFollower : MonoBehaviour
         if (Mathf.Abs(relX) < deadzone && Mathf.Abs(relZ) < deadzone)
             return;
 
-        // 방향 판별: |X| > |Z| → 좌/우, |Z| > |X| → 상하
-        // 단, 수직 이동이 우세했던 적이 있으면 수직 우선 유지 (Side 깜빡임 방지)
+        // 순수하게 |X| vs |Z| 비교 (우선순위 없음)
         Sprite newSprite;
         bool flipY = false;
-        bool isVerticalDominant = Mathf.Abs(relZ) >= Mathf.Abs(relX);
 
-        if (isVerticalDominant || _lastDominantWasVertical)
+        if (Mathf.Abs(relX) > Mathf.Abs(relZ))
         {
-            // Player가 상하에 있음 → Front/Back 우선
-            _lastDominantWasVertical = true;
-            if (relZ > 0f)
-            {
-                // Player가 치치의 위쪽 → Back
-                newSprite = spriteBack;
-            }
-            else
-            {
-                // Player가 치치의 아래쪽 → Front
-                newSprite = spriteFront;
-            }
-            flipY = false; // Front/Back은 반전 없음
-        }
-        else
-        {
-            // Player가 좌/우에 있음 → Side 스프라이트
-            _lastDominantWasVertical = false;
+            // 수평이 더 큼 → Side 스프라이트
             newSprite = spriteSide;
             bool playerIsRight = relX > 0f;
             flipY = playerIsRight; // Player가 오른쪽: Y 0, 왼쪽: Y 180
+        }
+        else
+        {
+            // 수직이 더 큼 → Front/Back 스프라이트
+            if (relZ > 0f)
+            {
+                newSprite = spriteBack; // Player가 위쪽
+            }
+            else
+            {
+                newSprite = spriteFront; // Player가 아래쪽
+            }
+            flipY = false;
         }
 
         // 스프라이트 변경
