@@ -467,7 +467,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c36ea9536b1c4c64594ff29f0fac8c0d, type: 2}
+  - {fileID: 2100000, guid: 3e6979a671a832f44b5efab0522d6be4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -873,7 +873,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 7809c12afc4fb1349b0a078063486b89, type: 2}
+  - {fileID: 2100000, guid: 8d8118a4adbc9cf44867f16aaa68f5f2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1576,6 +1576,70 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[0]'
+      value: 
+      objectReference: {fileID: -958933030, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[1]'
+      value: 
+      objectReference: {fileID: -550664599, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[2]'
+      value: 
+      objectReference: {fileID: -1926956841, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[3]'
+      value: 
+      objectReference: {fileID: 286415181, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[4]'
+      value: 
+      objectReference: {fileID: 1286708904, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[5]'
+      value: 
+      objectReference: {fileID: 1098095789, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[6]'
+      value: 
+      objectReference: {fileID: 444463178, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[7]'
+      value: 
+      objectReference: {fileID: -866563501, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[8]'
+      value: 
+      objectReference: {fileID: -1333484347, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[9]'
+      value: 
+      objectReference: {fileID: 617935001, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[10]'
+      value: 
+      objectReference: {fileID: 1764671201, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[11]'
+      value: 
+      objectReference: {fileID: 883848885, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[12]'
+      value: 
+      objectReference: {fileID: 1869317941, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[13]'
+      value: 
+      objectReference: {fileID: 1816730726, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[14]'
+      value: 
+      objectReference: {fileID: -444720375, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+    - target: {fileID: 2622753924600596128, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+      propertyPath: 'maskSprites.Array.data[15]'
+      value: 
+      objectReference: {fileID: -1150561085, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
     - target: {fileID: 5903600637855583843, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
       propertyPath: m_Name
       value: Player
@@ -1599,7 +1663,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 433625495901261463, guid: 541f7c4c6d744ae41bcc689b50c4e93d, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.83
+      value: 2.71
       objectReference: {fileID: 0}
     - target: {fileID: 433625495901261463, guid: 541f7c4c6d744ae41bcc689b50c4e93d, type: 3}
       propertyPath: m_LocalPosition.y

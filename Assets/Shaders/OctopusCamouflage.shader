@@ -19,7 +19,7 @@ Shader "HideAndInk/OctopusCamouflage"
     {
         Tags
         {
-            "Queue"="Transparent"
+            "Queue"="Transparent+100"
             "IgnoreProjector"="True"
             "RenderType"="Transparent"
             "PreviewType"="Plane"
@@ -31,16 +31,20 @@ Shader "HideAndInk/OctopusCamouflage"
         ZWrite Off
         Blend One OneMinusSrcAlpha 
 
-        // 기본 메인 패스 (URP 2D 멀티패스 무시 버그 방지를 위한 단일 패스)
+        // =========================================
+        // Pass 1: 일반 렌더링 (장애물 앞에 있을 때)
+        // GPU의 ZTest LEqual이 하드웨어에서 가려짐을 판정합니다.
+        // 장애물보다 앞에 있는 픽셀만 그려집니다.
+        // =========================================
         Pass
         {
             Name "Main"
             ZWrite Off
-            ZTest LEqual 
+            ZTest LEqual
 
             CGPROGRAM
             #pragma vertex SpriteVert
-            #pragma fragment CustomFrag
+            #pragma fragment CamouFrag
             #pragma target 2.0
             #pragma multi_compile_instancing
             #pragma multi_compile_local _ PIXELSNAP_ON
@@ -50,32 +54,76 @@ Shader "HideAndInk/OctopusCamouflage"
             sampler2D _ColorPart;
             float _OriginalRate;
 
-            fixed4 CustomFrag(v2f IN) : SV_Target
+            fixed4 CamouFrag(v2f IN) : SV_Target
             {
-                fixed4 c = SampleSpriteTexture (IN.texcoord);
+                fixed4 c = SampleSpriteTexture(IN.texcoord);
                 fixed4 maskCol = tex2D(_ColorPart, IN.texcoord);
 
-                // 마스크 타겟색
-                fixed3 camouflageTarget = maskCol.rgb * IN.color.rgb;
+                // 마스크 구역 판정
+                // 외곽선: 마스크가 투명 (Alpha < 0.05)
+                // 눈: 마스크가 새파란 색 (Blue > 0.5, Red < 0.5)
+                // 몸통: 그 외 모든 불투명 영역
+                bool isEye = (maskCol.b > 0.5 && maskCol.r < 0.5);
+                bool isBody = (maskCol.a >= 0.05 && !isEye);
 
-                // [핵심 강화] 아티스트님의 마스크 이미지가 유니티에서 알파값으로 완벽히 뚫리지 않았을 경우를 대비한 2중 보호 로직
-                // 마스크의 투명도(a)가 낮거나, 어둡게 칠해진(r) 부분은 무조건 0(보호 구역: 눈, 외곽선)으로 간주합니다.
-                // 투명하게 지웠든, 까맣게 칠했든 무조건 눈을 원본 색으로 지켜냅니다!
-                float isBody = (maskCol.a < 0.1 || maskCol.r < 0.1) ? 0.0 : maskCol.a;
+                // 몸통만 의태 적용 (순수 Multiply 기반)
+                if (isBody)
+                {
+                    fixed3 targetColor = IN.color.rgb;
+                    fixed3 camouRGB = c.rgb * targetColor;
+                    c.rgb = lerp(camouRGB, c.rgb, _OriginalRate);
+                }
 
-                // 의태 시: isBody가 0이면 눈/외곽선이므로 c.rgb(원본), 몸통은 타겟색
-                fixed3 fullyCamouflaged = lerp(c.rgb, camouflageTarget, isBody);
-                
-                // 평상시: 무조건 원본
-                fixed3 unCamouflaged = c.rgb; 
-                
-                // 애니메이션에 따른 보간
-                fixed3 finalRGB = lerp(fullyCamouflaged, unCamouflaged, _OriginalRate);
-                
-                // SpriteRenderer의 원본 알파 유지 및 추가 페이드 효과
+                // 스프라이트 렌더러의 투명도 적용
                 c.a *= IN.color.a;
+                c.rgb *= c.a;
+                return c;
+            }
+            ENDCG
+        }
 
-                c.rgb = finalRGB * c.a; 
+        // =========================================
+        // Pass 2: X-Ray 렌더링 (장애물 뒤에 있을 때)
+        // GPU의 ZTest Greater가 하드웨어에서 가려짐을 판정합니다.
+        // 장애물보다 뒤에 있는 픽셀만 그려집니다.
+        // 그 중에서 마스크의 '외곽선' 영역만 출력하고 나머지는 discard합니다.
+        // =========================================
+        Pass
+        {
+            Name "XRay"
+            Tags { "LightMode" = "XRayPass" }
+            ZWrite Off
+            ZTest Greater
+
+            CGPROGRAM
+            #pragma vertex SpriteVert
+            #pragma fragment XRayFrag
+            #pragma target 2.0
+            #pragma multi_compile_instancing
+            #pragma multi_compile_local _ PIXELSNAP_ON
+            #pragma multi_compile _ ETC1_EXTERNAL_ALPHA
+            #include "UnitySprites.cginc"
+
+            sampler2D _ColorPart;
+
+            fixed4 XRayFrag(v2f IN) : SV_Target
+            {
+                fixed4 c = SampleSpriteTexture(IN.texcoord);
+                fixed4 maskCol = tex2D(_ColorPart, IN.texcoord);
+
+                // 외곽선 판정: 마스크의 투명한 부분이 외곽선
+                bool isOutline = maskCol.a < 0.05;
+
+                // 외곽선이 아니거나, 메인 텍스처에 실제 그림이 없는 부분은 버림
+                // (캐릭터 바깥의 빈 공간이 그려지는 것을 방지)
+                if (!isOutline || c.a < 0.01)
+                {
+                    discard;
+                }
+
+                // 외곽선은 원본 색상 그대로 출력
+                c.a *= IN.color.a;
+                c.rgb *= c.a;
                 return c;
             }
             ENDCG
