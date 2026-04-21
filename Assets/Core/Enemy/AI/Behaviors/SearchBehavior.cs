@@ -5,7 +5,8 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 {
     /// <summary>
     /// 탐색 행동
-    /// 마지막 Player 위치 기반으로 주변을 수색
+    /// 마지막 Player 위치 기반으로 주변을 계속 수색 (멈추지 않음)
+    /// X-Z 평면 이동
     /// </summary>
     public sealed class SearchBehavior : IEnemyAIState
     {
@@ -22,7 +23,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         private Vector3[] _searchPointsArray;
         private int _currentPointIndex;
         private float _searchTimer;
-        private bool _isInitialized;
+        private float _minDistance; // 최소 이동 거리
 
         /// <summary>
         /// 탐색 타이머 (0이 되면 Patrol로 복귀)
@@ -37,13 +38,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             IEnemyMovement movement,
             float searchRadius = 3f,
             float searchDuration = 5f,
-            int searchPoints = 4)
+            int searchPoints = 4,
+            float minDistance = 0.5f)
         {
             _enemy = enemy;
             _movement = movement;
             _searchRadius = searchRadius;
             _searchDuration = searchDuration;
             _searchPoints = searchPoints;
+            _minDistance = minDistance;
         }
 
         public EnemyAIState StateType => EnemyAIState.Search;
@@ -61,6 +64,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             _searchTimer = _searchDuration;
             _currentPointIndex = 0;
             GenerateSearchPoints();
+            MoveToNextPoint();
         }
 
         public void OnUpdate(float deltaTime)
@@ -70,33 +74,30 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             // 탐색 시간 초과 체크
             if (_searchTimer <= 0f)
             {
-                _movement.Stop();
-                return;
+                return; // 상태 머신에서 Patrol로 전환 처리
             }
 
-            // 현재 탐색 포인트로 이동
+            // 현재 탐색 포인트로 계속 이동
             if (_searchPointsArray == null || _searchPointsArray.Length == 0)
                 return;
 
+            Vector3 currentPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
             Vector3 targetPoint = _searchPointsArray[_currentPointIndex];
-            Vector2 targetPos = new Vector2(targetPoint.x, targetPoint.y);
+            Vector3 targetPos = new Vector3(targetPoint.x, 0f, targetPoint.z);
 
-            float distanceToTarget = Vector2.Distance(
-                new Vector2(_enemy.Position.x, _enemy.Position.y),
-                targetPos);
+            float distanceToTarget = Vector3.Distance(currentPos, targetPos);
 
-            if (distanceToTarget < 0.3f)
+            if (distanceToTarget < _minDistance)
             {
-                // 다음 포인트로
+                // 도달 → 다음 포인트로 즉시 이동 (멈추지 않음)
                 _currentPointIndex++;
                 if (_currentPointIndex >= _searchPointsArray.Length)
                 {
                     _currentPointIndex = 0; // 반복
+                    // 포인트 재생성 (새로운 패턴)
+                    GenerateSearchPoints();
                 }
-            }
-            else
-            {
-                _movement.MoveTo(targetPos);
+                MoveToNextPoint();
             }
         }
 
@@ -123,13 +124,22 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             {
                 float angle = angleStep * i * Mathf.Deg2Rad;
                 float x = Mathf.Cos(angle) * _searchRadius;
-                float y = Mathf.Sin(angle) * _searchRadius;
+                float z = Mathf.Sin(angle) * _searchRadius;
 
                 _searchPointsArray[i] = new Vector3(
                     _lastKnownPosition.x + x,
-                    _lastKnownPosition.y + y,
-                    _lastKnownPosition.z);
+                    _lastKnownPosition.y, // Y축 고정
+                    _lastKnownPosition.z + z);
             }
+        }
+
+        /// <summary>
+        /// 다음 포인트로 이동
+        /// </summary>
+        private void MoveToNextPoint()
+        {
+            if (_searchPointsArray == null || _searchPointsArray.Length == 0) return;
+            _movement.MoveTo(_searchPointsArray[_currentPointIndex]);
         }
 
         /// <summary>
