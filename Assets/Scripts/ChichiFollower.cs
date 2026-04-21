@@ -54,6 +54,9 @@ public class ChichiFollower : MonoBehaviour
     // 스프라이트 방향 전환용 실제 이동 delta
     private Vector3 _actualMoveDelta;
 
+    // 방향 우선순위: 마지막 주요 이동 축 (수직 우선)
+    private bool _lastDominantWasVertical = true;
+
     private void Awake()
     {
         // ChichiStateMachine 자동 탐색
@@ -181,10 +184,11 @@ public class ChichiFollower : MonoBehaviour
     /// <summary>
     /// 플레이어 상대 위치에 따라 스프라이트 변경 + Side는 Y Rotation 반전
     /// 카메라 반대편 기준이므로 기존 로직 반전 적용
-    /// - Player가 치치의 오른쪽 → Side (Y: 180)
-    /// - Player가 치치의 왼쪽 → Side (Y: 0)
+    /// - Player가 치치의 오른쪽 → Side (Y: 0)
+    /// - Player가 치치의 왼쪽 → Side (Y: 180)
     /// - Player가 치치의 위 → Back
     /// - Player가 치치의 아래 → Front
+    /// - 정지 시 Front/Back 우선 유지 (마지막 수직 방향 기억)
     /// </summary>
     private void UpdateSpriteDirection()
     {
@@ -202,19 +206,15 @@ public class ChichiFollower : MonoBehaviour
             return;
 
         // 방향 판별: |X| > |Z| → 좌/우, |Z| > |X| → 상하
+        // 단, 수직 이동이 우세했던 적이 있으면 수직 우선 유지 (Side 깜빡임 방지)
         Sprite newSprite;
         bool flipY = false;
+        bool isVerticalDominant = Mathf.Abs(relZ) >= Mathf.Abs(relX);
 
-        if (Mathf.Abs(relX) > Mathf.Abs(relZ))
+        if (isVerticalDominant || _lastDominantWasVertical)
         {
-            // Player가 좌/우에 있음 → Side 스프라이트
-            newSprite = spriteSide;
-            bool playerIsRight = relX > 0f;
-            flipY = playerIsRight; // Player가 오른쪽: Y 180, 왼쪽: Y 0
-        }
-        else
-        {
-            // Player가 상하에 있음
+            // Player가 상하에 있음 → Front/Back 우선
+            _lastDominantWasVertical = true;
             if (relZ > 0f)
             {
                 // Player가 치치의 위쪽 → Back
@@ -226,6 +226,14 @@ public class ChichiFollower : MonoBehaviour
                 newSprite = spriteFront;
             }
             flipY = false; // Front/Back은 반전 없음
+        }
+        else
+        {
+            // Player가 좌/우에 있음 → Side 스프라이트
+            _lastDominantWasVertical = false;
+            newSprite = spriteSide;
+            bool playerIsRight = relX > 0f;
+            flipY = playerIsRight; // Player가 오른쪽: Y 0, 왼쪽: Y 180
         }
 
         // 스프라이트 변경
