@@ -138,7 +138,9 @@ namespace HideAndInk.Core.Enemy
             _groundBounds = _movement.ScanGroundBounds(groundScanDistance, groundScanStep);
             _isGroundBoundsScanned = true;
 
+#if UNITY_EDITOR
             Debug.Log($"[EnemyAIController] Ground bounds scanned: X({_groundBounds.MinX:F1} ~ {_groundBounds.MaxX:F1}), Z({_groundBounds.MinZ:F1} ~ {_groundBounds.MaxZ:F1})");
+#endif
         }
 
         /// <summary>
@@ -177,7 +179,9 @@ namespace HideAndInk.Core.Enemy
         /// </summary>
         protected virtual void OnGroundEdgeReached()
         {
+#if UNITY_EDITOR
             Debug.Log($"[EnemyAIController] Ground edge reached at {transform.position}");
+#endif
         }
 
         /// <summary>

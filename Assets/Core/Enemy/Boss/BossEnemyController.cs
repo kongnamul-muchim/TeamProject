@@ -108,7 +108,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
                 else
                 {
+#if UNITY_EDITOR
                     Debug.Log($"[BossEnemyController] ScriptableObject gimmick loaded: {_activeGimmick.Type}");
+#endif
                 }
             }
             // 2순위: MonoBehaviour (customGimmick)
@@ -121,7 +123,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
                 else
                 {
+#if UNITY_EDITOR
                     Debug.Log($"[BossEnemyController] MonoBehaviour gimmick loaded: {_activeGimmick.Type}");
+#endif
                 }
             }
             else
@@ -447,11 +451,15 @@ namespace HideAndInk.Core.Enemy.Boss
                     _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                 }
 
+#if UNITY_EDITOR
                 Debug.Log($"[BossEnemy] Player position alerted: {playerPosition}");
+#endif
             }
             else
             {
+#if UNITY_EDITOR
                 Debug.Log($"[BossEnemy] Alert ignored - Player position not on Ground: {playerPosition}");
+#endif
             }
         }
 
