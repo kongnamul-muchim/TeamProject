@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<< HEAD
+guid: 3724392b66081f645a862d3bfc4ec3b3
+=======
 guid: d142195aec74992498a71d7977b10bf7
+>>>>>>> develop
 AssemblyDefinitionImporter:
   externalObjects: {}
   userData: 
