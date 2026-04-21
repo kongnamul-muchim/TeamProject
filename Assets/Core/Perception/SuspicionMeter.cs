@@ -95,18 +95,17 @@ namespace HideAndInk.Core.Perception
                 _wasDetected = false;
             }
 
-            // 발각 복귀 중이면 하락 제한 (minSuspicionBelowLevel 이상 유지)
+            // 발각 복귀 중이면 하락 제한 (minSuspicionAfterDetected 이상 유지)
             if (isInDetectedCooldown && _currentValue > minSuspicionAfterDetected)
             {
-                float previousValue = _currentValue;
-                ReduceSuspicion(1f);
-                // minSuspicionBelowLevel 이하로 떨어지지 않도록
+                ReduceSuspicion(1f, Time.deltaTime);
+                // minSuspicionAfterDetected 이하로 떨어지지 않도록
                 _currentValue = Mathf.Max(_currentValue, minSuspicionAfterDetected);
             }
             // 일반 하락
             else if (_lastDetectionTime <= 0f && _currentValue > 0f)
             {
-                ReduceSuspicion(1f);
+                ReduceSuspicion(1f, Time.deltaTime);
             }
         }
 
@@ -117,16 +116,17 @@ namespace HideAndInk.Core.Perception
         public void OnDetectedTarget(float detectionIntensity = 1f)
         {
             _lastDetectionTime = detectionGracePeriod;  // Grace period 갱신
-            AddSuspicion(detectionIntensity);
+            AddSuspicion(detectionIntensity, Time.deltaTime);
         }
 
         /// <summary>
         /// 의심도 상승
         /// </summary>
         /// <param name="amount">상승량 (초당)</param>
-        public void AddSuspicion(float amount)
+        /// <param name="deltaTime">경과 시간 (프레임 독립적 계산)</param>
+        public void AddSuspicion(float amount, float deltaTime)
         {
-            _currentValue += amount * increaseSpeed * Time.deltaTime;
+            _currentValue += amount * increaseSpeed * deltaTime;
             _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
 
             CheckLevelChange();
@@ -137,9 +137,10 @@ namespace HideAndInk.Core.Perception
         /// 의심도 하락
         /// </summary>
         /// <param name="amount">하락량 (초당)</param>
-        public void ReduceSuspicion(float amount)
+        /// <param name="deltaTime">경과 시간 (프레임 독립적 계산)</param>
+        public void ReduceSuspicion(float amount, float deltaTime)
         {
-            float decreaseAmount = amount * decreaseSpeed * Time.deltaTime;
+            float decreaseAmount = amount * decreaseSpeed * deltaTime;
 
             // 의태 중이면 추가 하락 적용
             if (_isCamouflaging)
@@ -150,7 +151,7 @@ namespace HideAndInk.Core.Perception
             // 완벽 의태면 추가 하락
             if (_isPerfectCamouflage)
             {
-                decreaseAmount += perfectCamouflageReducePerSec * Time.deltaTime;
+                decreaseAmount += perfectCamouflageReducePerSec * deltaTime;
             }
 
             _currentValue -= decreaseAmount;
