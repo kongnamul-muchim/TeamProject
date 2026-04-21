@@ -7,6 +7,7 @@ namespace HideAndInk.Core.Enemy.Normal
     /// <summary>
     /// 일반 몬스터 컨트롤러
     /// 단순 이동 + Player 접촉 시 보스에게 위치 알림
+    /// X-Z 평면 이동
     /// </summary>
     public class NormalEnemyController : EnemyAIController
     {
@@ -20,7 +21,7 @@ namespace HideAndInk.Core.Enemy.Normal
 
         // 상태
         private float _stateTimer;
-        private Vector2 _targetPosition;
+        private Vector3 _targetPosition;
         private bool _isMoving;
         private bool _isAlerted;
 
@@ -63,13 +64,16 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// 새로운 이동 목표 지점 선택
+        /// 새로운 이동 목표 지점 선택 (X-Z 평면)
         /// </summary>
         private void PickNewTarget()
         {
             Vector2 randomDirection = Random.insideUnitCircle.normalized;
-            Vector2 currentPos = new Vector2(transform.position.x, transform.position.y);
-            _targetPosition = currentPos + randomDirection * moveDistance;
+            Vector3 currentPos = transform.position;
+            _targetPosition = new Vector3(
+                currentPos.x + randomDirection.x * moveDistance,
+                currentPos.y, // Y축 고정
+                currentPos.z + randomDirection.y * moveDistance);
         }
 
         /// <summary>
