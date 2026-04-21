@@ -41,6 +41,9 @@ namespace HideAndInk.Core.VFX
 
             AnimatorStateInfo stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
 
+            // 디버그: 현재 상태 정보 로깅
+            Debug.Log($"[VFXSelfDestruct] {gameObject.name} | elapsed: {_elapsedTime:F3}s | normalizedTime: {stateInfo.normalizedTime:F3} | loop: {stateInfo.loop} | stateNameHash: {stateInfo.shortNameHash}");
+
             // 애니메이션이 아직 시작되지 않았거나 재생 중이면 삭제하지 않음
             // (normalizedTime이 0에 가까우면 Rebind 직후이므로 대기)
             if (stateInfo.normalizedTime < 0.01f && _elapsedTime < minPlayTime * 2f) return;
@@ -48,6 +51,7 @@ namespace HideAndInk.Core.VFX
             // 애니메이션이 끝났으면 콜백 호출 후 삭제
             if (stateInfo.normalizedTime >= 1.0f && !stateInfo.loop && !_hasNotifiedCompletion)
             {
+                Debug.Log($"[VFXSelfDestruct] {gameObject.name} DESTROYED at elapsed: {_elapsedTime:F3}s");
                 _hasNotifiedCompletion = true;
                 OnAnimationComplete?.Invoke();
                 Destroy(gameObject);

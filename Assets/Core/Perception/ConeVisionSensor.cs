@@ -10,16 +10,23 @@ namespace HideAndInk.Core.Perception
     public sealed class ConeVisionSensor : MonoBehaviour, IVisionSensor
     {
         [Header("시야 설정")]
+        [Tooltip("시야 감지 반경 (미터). 이 거리 내의 대상만 감지")]
         [SerializeField] private float viewRadius = 5f;
+        [Tooltip("시야 각도 (도). 부채꼴의 너비")]
         [SerializeField] private float viewAngle = 60f;
+        [Tooltip("시야 패턴 유형: Patrol(순찰), Observe(관찰), Guard(경계)")]
         [SerializeField] private VisionPatternType patternType = VisionPatternType.Patrol;
 
         [Header("레이어 설정")]
-        [SerializeField] private LayerMask targetLayer = -1;          // 감지 대상 레이어
-        [SerializeField] private LayerMask obstacleLayer = -1;        // 장애물 레이어
+        [Tooltip("감지 대상 레이어 (Player 등 감지할 오브젝트가 속한 레이어)")]
+        [SerializeField] private LayerMask targetLayer = -1;
+        [Tooltip("장애물 레이어 (시야를 가리는 오브젝트가 속한 레이어)")]
+        [SerializeField] private LayerMask obstacleLayer = -1;
 
         [Header("시야 방향 (기본값: 전방)")]
-        [SerializeField] private Transform viewDirectionRef;          // 시야 방향 기준 (없으면 자신 전방)
+        [Tooltip("시야 방향 기준 Transform. 지정하면 해당 오브젝트의 forward 방향 사용")]
+        [SerializeField] private Transform viewDirectionRef;
+        [Tooltip("viewDirectionRef가 없을 때 사용할 커스텀 시야 방향")]
         [SerializeField] private Vector3 customViewDirection = Vector3.forward;
 
         // 캐싱
@@ -76,7 +83,58 @@ namespace HideAndInk.Core.Perception
             {
                 return viewDirectionRef.forward;
             }
-            return customViewDirection.normalized;
+            Vector3 dir = customViewDirection.normalized;
+            // zero vector 방지
+            if (dir.sqrMagnitude < 0.001f)
+            {
+                dir = Vector3.forward;
+            }
+            return dir;
+        }
+
+        /// <summary>
+        /// 시야 방향에 수직인 '위' 참조 벡터 계산
+        /// 어떤 방향이든 안정적인 부채꼴 생성을 위해 사용
+        /// </summary>
+        public Vector3 GetViewUpReference()
+        {
+            Vector3 dir = GetViewDirection().normalized;
+            float absX = Mathf.Abs(Vector3.Dot(dir, Vector3.right));
+            float absY = Mathf.Abs(Vector3.Dot(dir, Vector3.up));
+            float absZ = Mathf.Abs(Vector3.Dot(dir, Vector3.forward));
+
+            if (absY < absX && absY < absZ)
+                return Vector3.up;
+            else if (absX < absZ)
+                return Vector3.right;
+            else
+                return Vector3.forward;
+        }
+
+        /// <summary>
+        /// 시야 부채꼴의 가장자리 방향 계산 (3D)
+        /// </summary>
+        public Vector3 GetConeEdgeDirection(float azimuthAngle)
+        {
+            Vector3 viewDir = GetViewDirection().normalized;
+            Vector3 upRef = GetViewUpReference();
+
+            // viewDirection에 수직인 기준 벡터
+            Vector3 refPerp = Vector3.Cross(viewDir, upRef).normalized;
+            if (refPerp.sqrMagnitude < 0.001f)
+            {
+                upRef = GetViewUpReference();
+                refPerp = Vector3.Cross(viewDir, upRef).normalized;
+            }
+
+            // 기준 벡터를 viewDirection 축으로 azimuthAngle만큼 회전
+            Vector3 rotatedPerp = Quaternion.AngleAxis(azimuthAngle, viewDir) * refPerp;
+
+            // viewDirection에서 rotatedPerp 방향으로 halfAngle만큼 기울이기
+            float halfAngleRad = (viewAngle / 2f) * Mathf.Deg2Rad;
+            Vector3 edgeDir = Mathf.Cos(halfAngleRad) * viewDir + Mathf.Sin(halfAngleRad) * rotatedPerp;
+
+            return edgeDir.normalized;
         }
 
         /// <summary>
@@ -145,7 +203,7 @@ namespace HideAndInk.Core.Perception
 
             // 내적 계산으로 각도 구하기
             float dot = Vector3.Dot(viewDirection, directionToTarget);
-            float angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
+            float angle = Mathf.Acos(Mathf.Clamp(dot, -1f, 1f)) * Mathf.Rad2Deg;
 
             return angle <= (viewAngle / 2f);
         }
@@ -176,26 +234,36 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 디버그 시야 표시
+        /// 디버그 시야 표시 (VisionConeRenderer와 동일한 방식으로)
         /// </summary>
         private void OnDrawGizmosSelected()
         {
-            Vector3 viewDir = GetViewDirection();
-            Vector3 leftDir = Quaternion.Euler(0, -viewAngle / 2f, 0) * viewDir;
-            Vector3 rightDir = Quaternion.Euler(0, viewAngle / 2f, 0) * viewDir;
+            Vector3 origin = Origin;
+            Vector3 viewDir = GetViewDirection().normalized;
+            float halfAngle = viewAngle / 2f;
+            int debugSegments = 16;
 
-            // 시야 범위 표시
-            Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
-            Gizmos.DrawFrustum(Origin, viewAngle, viewRadius, 0f, 1f);
-
-            // 시야 방향 표시
+            // 시야 중심 방향 표시 (빨강)
             Gizmos.color = Color.red;
-            Gizmos.DrawRay(Origin, viewDir * viewRadius);
+            Gizmos.DrawRay(origin, viewDir * viewRadius);
 
-            // 왼쪽/오른쪽 경계선
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawRay(Origin, leftDir * viewRadius);
-            Gizmos.DrawRay(Origin, rightDir * viewRadius);
+            // 부채꼴 테두리 표시 (주황)
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
+
+            Vector3 prevPoint = origin;
+            for (int i = 0; i <= debugSegments; i++)
+            {
+                float azimuthAngle = -halfAngle + (viewAngle / debugSegments) * i;
+                Vector3 edgeDir = GetConeEdgeDirection(azimuthAngle);
+                Vector3 point = origin + edgeDir * viewRadius;
+
+                Gizmos.DrawLine(origin, point);
+                if (i > 0)
+                {
+                    Gizmos.DrawLine(prevPoint, point);
+                }
+                prevPoint = point;
+            }
         }
     }
 }
