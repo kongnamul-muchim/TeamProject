@@ -144,97 +144,86 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (_activeGimmick == null) return;
 
-            // 가자미: 매복 기믹
-            if (_activeGimmick is AmbushGimmick ambush)
+            switch (_activeGimmick)
             {
-                ambush.OnSpeedOverride = (speed) => _movement.Speed = speed;
-                ambush.OnVisibilityToggle = (visible) =>
-                {
-                    if (visionSensor != null)
-                        visionSensor.gameObject.SetActive(visible);
-                };
-                ambush.SetOriginalSpeed(patrolSpeed);
+                case AmbushGimmick ambush:
+                    ConnectAmbushCallbacks(ambush);
+                    break;
+                case RelentlessChaseGimmick relentless:
+                    ConnectRelentlessChaseCallbacks(relentless);
+                    break;
+                case ElectricZoneGimmick electric:
+                    ConnectElectricZoneCallbacks(electric);
+                    break;
+                case LureBaitGimmick lure:
+                    ConnectLureBaitCallbacks(lure);
+                    break;
+                case DashChargeGimmick dash:
+                    ConnectDashChargeCallbacks(dash);
+                    break;
             }
+        }
 
-            // 곰치: 집요한 추격 기믹
-            if (_activeGimmick is RelentlessChaseGimmick relentless)
+        /// <summary>
+        /// 가자미: 매복 기믹 콜백
+        /// </summary>
+        private void ConnectAmbushCallbacks(AmbushGimmick ambush)
+        {
+            ambush.OnSpeedOverride = (speed) => _movement.Speed = speed;
+            ambush.OnVisibilityToggle = (visible) =>
             {
-                relentless.OnSuspicionDecayRateOverride = (rate) =>
-                {
-                    Debug.Log($"[BossEnemyController] Suspicion decay rate: {rate}");
-                };
-                relentless.OnSearchRadiusOverride = (multiplier) =>
-                {
-                    Debug.Log($"[BossEnemyController] Search radius multiplier: {multiplier}");
-                };
-                relentless.OnPatrolAreaOverride = (center, radius) =>
-                {
-                    Debug.Log($"[BossEnemyController] Patrol area: {center}, radius: {radius}");
-                };
-                relentless.SetOriginalSpeed(patrolSpeed);
+                if (visionSensor != null)
+                    visionSensor.gameObject.SetActive(visible);
+            };
+            ambush.SetOriginalSpeed(patrolSpeed);
+        }
+
+        /// <summary>
+        /// 곰치: 집요한 추격 기믹 콜백
+        /// </summary>
+        private void ConnectRelentlessChaseCallbacks(RelentlessChaseGimmick relentless)
+        {
+            relentless.SetOriginalSpeed(patrolSpeed);
+        }
+
+        /// <summary>
+        /// 전기뱀장어: 감전 구역 기믹 콜백
+        /// </summary>
+        private void ConnectElectricZoneCallbacks(ElectricZoneGimmick electric)
+        {
+        }
+
+        /// <summary>
+        /// 아귀: 발광 미끼 기믹 콜백
+        /// </summary>
+        private void ConnectLureBaitCallbacks(LureBaitGimmick lure)
+        {
+            if (_isGroundBoundsScanned)
+            {
+                lure.SetGroundBounds(_groundBounds);
             }
-
-            // 전기뱀장어: 감전 구역 기믹
-            if (_activeGimmick is ElectricZoneGimmick electric)
+            lure.OnChaseTriggered = () =>
             {
-                electric.OnZoneCreated = (zone) =>
+                if (_stateMachine != null)
                 {
-                    Debug.Log($"[BossEnemyController] Electric zone created: {zone.name}");
-                };
-                electric.OnPlayerTrapped = (pos) =>
-                {
-                    Debug.Log($"[BossEnemyController] Player trapped at: {pos}");
-                };
-            }
-
-            // 아귀: 발광 미끼 기믹
-            if (_activeGimmick is LureBaitGimmick lure)
-            {
-                if (_isGroundBoundsScanned)
-                {
-                    lure.SetGroundBounds(_groundBounds);
+                    _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                 }
-                lure.OnBaitCreated = (bait) =>
-                {
-                    Debug.Log($"[BossEnemyController] Bait created: {bait.name}");
-                };
-                lure.OnBaitDestroyed = (bait) =>
-                {
-                    Debug.Log($"[BossEnemyController] Bait destroyed: {bait.name}");
-                };
-                lure.OnPlayerDetectedByBait = (pos) =>
-                {
-                    Debug.Log($"[BossEnemyController] Player detected by bait: {pos}");
-                };
-                lure.OnChaseTriggered = () =>
-                {
-                    if (_stateMachine != null)
-                    {
-                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
-                    }
-                };
-            }
+            };
+        }
 
-            // 백상아리: 초고속 돌진 기믹
-            if (_activeGimmick is DashChargeGimmick dash)
+        /// <summary>
+        /// 백상아리: 초고속 돌진 기믹 콜백
+        /// </summary>
+        private void ConnectDashChargeCallbacks(DashChargeGimmick dash)
+        {
+            dash.OnSpeedOverride = (speed) => _movement.Speed = speed;
+            dash.OnDashCompleted = () =>
             {
-                dash.OnSpeedOverride = (speed) => _movement.Speed = speed;
-                dash.OnDashStarted = (dir) =>
+                if (_stateMachine != null)
                 {
-                    Debug.Log($"[BossEnemyController] Dash started: {dir}");
-                };
-                dash.OnObstacleHit = (obj) =>
-                {
-                    Debug.Log($"[BossEnemyController] Obstacle hit: {obj.name}");
-                };
-                dash.OnDashCompleted = () =>
-                {
-                    if (_stateMachine != null)
-                    {
-                        _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
-                    }
-                };
-            }
+                    _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                }
+            };
         }
 
         /// <summary>
