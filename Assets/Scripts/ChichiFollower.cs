@@ -1,25 +1,38 @@
 using UnityEngine;
 
 /// <summary>
-/// 치치의 이동만 담당한다.
-/// 멀어졌을 때만 따라가고, 가까우면 기다린다.
+/// [이동] 치치의 이동만 담당한다.
+/// - Follow 상태: 움직이지 않음 (두두 근처에서 대기)
+/// - CatchUp 상태: 두두 뒤로 부드럽게 따라감
+/// - Charging 상태: 제자리 유지
+/// - 이동 방향에 따라 스프라이트 좌/우 반전
 /// </summary>
 public class ChichiFollower : MonoBehaviour
 {
-    [Header("References")]
+    [Header("🔗 References - 연결할 컴포넌트")]
+    [Tooltip("ChichiStateMachine 컴포넌트 참조")]
     [SerializeField] private ChichiStateMachine stateMachine;
+    [Tooltip("치치 SpriteRenderer (비워두면 자동 탐색)")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
-    [Header("Guide Position")]
+    [Header("📍 Guide Position - 따라가기 위치 설정")]
+    [Tooltip("두두 뒤로 떨어지는 거리")]
     [SerializeField] private float behindDistance = 7f;
+    [Tooltip("측면으로 벗어난 거리")]
     [SerializeField] private float sideOffset = 0.8f;
+    [Tooltip("수직 (Y) 오프셋")]
     [SerializeField] private Vector3 liftOffset = new Vector3(0f, 0.5f, 0f);
+    [Tooltip("추가 가이드 오프셋 (X, Y, Z)")]
     [SerializeField] private Vector3 guideOffset = new Vector3(0f, 0f, 0f);
 
-    [Header("Move Speed")]
+    [Header("⚡ Move Speed - 이동 속도 설정")]
+    [Tooltip("따라갈 때 부드러움 (낮을수록 느리고 부드러움)")]
     [SerializeField] private float catchUpSmoothTime = 0.25f;
+    [Tooltip("충전 중 위치 보정 부드러움")]
     [SerializeField] private float chargeSmoothTime = 0.12f;
+    [Tooltip("목표 위치 보정 부드러움")]
     [SerializeField] private float targetSmoothTime = 0.18f;
+    [Tooltip("방향 전환 속도 (높을수록 빠르게 방향 전환)")]
     [SerializeField] private float turnSpeed = 6f;
 
     private Vector3 _lastTargetPosition;

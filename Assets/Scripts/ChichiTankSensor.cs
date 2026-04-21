@@ -2,12 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 치치 탱크 트리거에 두두 몸/촉수가 닿았는지만 검사한다.
+/// [충돌 감지] 치치 탱크 트리거에 두두 몸/촉수가 닿았는지만 검사한다.
+/// - OnTriggerEnter/Stay/Exit: 트리거 충돌 감지
+/// - RefreshTouchState: 매 프레임 바운드 교차 확인
+/// - 감지되면 ChichiStateMachine 에 isTouchingTank 전달
 /// </summary>
 public class ChichiTankSensor : MonoBehaviour
 {
-    [Header("References")]
+    [Header("🔗 References - 연결할 컴포넌트")]
+    [Tooltip("ChichiStateMachine 컴포넌트 참조")]
     [SerializeField] private ChichiStateMachine stateMachine;
+    [Tooltip("감지할 두두의 Collider 배열 (몸, 촉수 등)")]
     [SerializeField] private Collider[] targetColliders;
 
     private Collider _sensorCollider;

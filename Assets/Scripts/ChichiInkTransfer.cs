@@ -1,19 +1,27 @@
 using UnityEngine;
 
 /// <summary>
-/// 치치가 두두에게 빠른 충전을 넣는 역할만 담당한다.
+/// [잉크 충전] 치치가 두두에게 빠른 충전을 넣는 역할만 담당한다.
+/// - 접촉 시 fullChargeDuration 초 동안 0→최대 충전
+/// - 위협/연막/보스 의태 중에는 충전 중단
 /// </summary>
 public class ChichiInkTransfer : MonoBehaviour, IChichiStateListener
 {
-    [Header("References")]
+    [Header("🔗 References - 연결할 컴포넌트")]
+    [Tooltip("ChichiStateMachine 컴포넌트 참조")]
     [SerializeField] private ChichiStateMachine stateMachine;
+    [Tooltip("두두의 PlayerInk 컴포넌트 참조")]
     [SerializeField] private PlayerInk targetInk;
 
-    [Header("Charge")]
+    [Header("⚡ Charge - 충전 설정")]
+    [Tooltip("0에서 최대 잉크까지 차오르는 데 걸리는 시간(초). 낮을수록 빠름")]
     [Min(0.1f)]
     [SerializeField] private float fullChargeDuration = 4f;
+    [Tooltip("충전 가능 판정 거리 (두두와 이 거리 이내면 충전 시도)")]
     [SerializeField] private float contactDistanceTolerance = 2f;
 
+    [Header("📊 Debug - 현재 상태 (디버그용)")]
+    [Tooltip("현재 급속 충전 중인지 여부")]
     [SerializeField] private bool isFastCharging = false;
 
     public bool IsFastCharging => isFastCharging;
