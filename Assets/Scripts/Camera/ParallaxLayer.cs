@@ -2,48 +2,37 @@ using UnityEngine;
 
 namespace HideAndInk.ParallaxSystem
 {
-    /// <summary>
-    /// 카메라 X 이동에 따라 레이어 좌표를 보간하여 원근감 생성
-    /// 
-    /// rate = 1 → 카메라와 동일하게 이동 → 화면상 움직임 0 (고정)
-    /// rate = 0 → 전혀 이동 안함 → 최대 원근감
-    /// rate = 0.5 → 카메라 이동의 절반 → 중간 원근감
-    /// 
-    /// 공식: layerX = originLayerX + (cameraX - originCameraX) * rate
-    /// 
-    /// SRP: 좌표 보간만 담당
-    /// DI: [SerializeField]로 카메라 참조
-    /// </summary>
-    public sealed class ParallaxLayer : MonoBehaviour, IParallaxLayer
+    public sealed class ParallaxLayer : MonoBehaviour
     {
         [Header("DI - 추적할 카메라")]
         [SerializeField] private UnityEngine.Camera targetCamera;
 
         [Header("보간 비율 (0=최대원근, 1=고정)")]
+        [Range(0, 1)] // 슬라이더로 조절하기 쉽게 추가
         [SerializeField] private float rate = 0.5f;
 
-        [Header("Y축도 보간 적용")]
+        [Header("Y축 설정")]
         [SerializeField] private bool applyY;
+        [SerializeField] private float yRate = 0.2f; // Y축은 보통 더 적게 움직이는게 자연스러움
 
-        private float _originLayerX;
-        private float _originLayerY;
-        private float _originCameraX;
-        private float _originCameraY;
+        private Vector3 _originLayerPos;
+        private Vector3 _originCameraPos;
         private bool _isInitialized;
 
-        public float SpeedRatio => rate;
-
         private void Start()
+        {
+            Initialize();
+        }
+
+        public void Initialize()
         {
             if (targetCamera == null)
                 targetCamera = UnityEngine.Camera.main;
 
             if (targetCamera != null)
             {
-                _originLayerX = transform.position.x;
-                _originLayerY = transform.position.y;
-                _originCameraX = targetCamera.transform.position.x;
-                _originCameraY = targetCamera.transform.position.y;
+                _originLayerPos = transform.position;
+                _originCameraPos = targetCamera.transform.position;
                 _isInitialized = true;
             }
         }
@@ -52,19 +41,31 @@ namespace HideAndInk.ParallaxSystem
         {
             if (!_isInitialized || targetCamera == null) return;
 
-            float cameraDeltaX = targetCamera.transform.position.x - _originCameraX;
-            float newX = _originLayerX + cameraDeltaX * rate;
+            Vector3 cameraPos = targetCamera.transform.position;
+            Vector3 currentPos = transform.position;
 
-            float newY = transform.position.y;
+            // X축 계산
+            float cameraDeltaX = cameraPos.x - _originCameraPos.x;
+            float newX = _originLayerPos.x + (cameraDeltaX * rate);
+
+            // Y축 계산
+            float newY = currentPos.y;
             if (applyY)
             {
-                float cameraDeltaY = targetCamera.transform.position.y - _originCameraY;
-                newY = _originLayerY + cameraDeltaY * rate;
+                float cameraDeltaY = cameraPos.y - _originCameraPos.y;
+                newY = _originLayerPos.y + (cameraDeltaY * yRate);
             }
 
-            transform.position = new Vector3(newX, newY, transform.position.z);
+            transform.position = new Vector3(newX, newY, currentPos.z);
         }
 
-        public void ApplyOffset(Vector3 delta) { }
+        // 에디터에서 값을 바꿀 때 즉시 확인 가능하게 함
+        private void OnValidate()
+        {
+            if (Application.isPlaying && _isInitialized)
+            {
+                // 게임 실행 중 수치 조정 시 즉각 반응
+            }
+        }
     }
 }
