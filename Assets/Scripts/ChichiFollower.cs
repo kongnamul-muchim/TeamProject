@@ -111,14 +111,19 @@ public class ChichiFollower : MonoBehaviour
         UpdateCurrentTarget(stateMachine.CurrentState);
         UpdateMovement();
 
-        // CatchUp 상태일 때만 실제 이동 delta 기록 (스프라이트 방향 판별용)
-        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp)
+        // Follow/Charging 상태: 두두를 바라보도록 스프라이트 방향 업데이트
+        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow
+            || stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging)
+        {
+            UpdateSpriteDirectionByTarget();
+        }
+        // CatchUp 상태: 실제 이동 방향으로 스프라이트 방향 업데이트
+        else if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp)
         {
             _actualMoveDelta = transform.position - prevPosition;
             _actualMoveDelta.y = 0f;
             UpdateSpriteDirectionByMovement();
         }
-        // Follow/Charging 상태: 마지막 스프라이트 유지 (변경 안 함)
 
         _lastTargetPosition = stateMachine.Target.position;
     }
@@ -195,6 +200,57 @@ public class ChichiFollower : MonoBehaviour
         nextPosition.y = _currentTarget.y;
         nextPosition.z = _currentTarget.z;
         transform.position = nextPosition;
+    }
+
+    /// <summary>
+    /// Follow/Charging 상태: 두두를 바라보도록 스프라이트 변경
+    /// - 두두가 좌/우 → Side (flipX로 좌우 반전)
+    /// - 두두가 앞/뒤 → Front/Back
+    /// - SpriteRenderer.flipX 사용 (transform 회전 아님)
+    /// </summary>
+    private void UpdateSpriteDirectionByTarget()
+    {
+        if (spriteRenderer == null || stateMachine.Target == null)
+            return;
+
+        Vector3 toTarget = stateMachine.Target.position - transform.position;
+        toTarget.y = 0f;
+
+        float absX = Mathf.Abs(toTarget.x);
+        float absZ = Mathf.Abs(toTarget.z);
+
+        // Deadzone: 너무 가까우면 변경 안 함
+        const float deadzone = 0.1f;
+        if (absX < deadzone && absZ < deadzone)
+            return;
+
+        Sprite newSprite;
+        bool flipX = false;
+
+        if (absX > absZ)
+        {
+            // 좌/우 → Side
+            newSprite = spriteSide;
+            flipX = toTarget.x < 0f; // 두두가 왼쪽이면 flipX true
+        }
+        else
+        {
+            // 앞/뒤 → Front/Back
+            newSprite = toTarget.z > 0f ? spriteBack : spriteFront;
+            flipX = false;
+        }
+
+        if (newSprite != null && newSprite != _lastSprite)
+        {
+            spriteRenderer.sprite = newSprite;
+            _lastSprite = newSprite;
+        }
+
+        // Side 스프라이트일 때만 flipX 적용
+        if (newSprite == spriteSide)
+        {
+            spriteRenderer.flipX = flipX;
+        }
     }
 
     /// <summary>

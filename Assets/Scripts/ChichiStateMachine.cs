@@ -98,7 +98,16 @@ public class ChichiStateMachine : MonoBehaviour
         IChichiStateListener listener = listenerTarget as IChichiStateListener;
         bool canCharge = listener != null && listener.CanReceiveInk();
 
-        if (canCharge && isTouchingTank && listener.IsChargeInteractionActive())
+        // 위협 중에는 충전 차단
+        if (isUnderThreat)
+        {
+            if (distance > maxFollowDistance)
+                return ChichiState.CatchUp;
+            return ChichiState.Follow;
+        }
+
+        // 충전 조건: 충전 가능 + 탱크 접촉 + 거리 이내 + 상호작용 활성
+        if (canCharge && isTouchingTank && distance <= chargeDistance && listener.IsChargeInteractionActive())
             return ChichiState.Charging;
 
         if (distance > maxFollowDistance)
