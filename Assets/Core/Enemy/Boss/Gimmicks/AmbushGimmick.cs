@@ -317,16 +317,21 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float absX = Mathf.Abs(delta.x);
             float absZ = Mathf.Abs(delta.z);
 
+            // lockZAxis가 true면 Z축 거리 체크를 무시 (X축만 고려)
+            float checkZ = lockZAxis ? 0f : absZ;
+            float farZ = lockZAxis ? float.MaxValue : farSuspicionRadius.y;
+            float nearZ = lockZAxis ? float.MaxValue : nearSuspicionRadius.y;
+
 #if UNITY_EDITOR
-            Debug.Log($"[AmbushGimmick] Player Distance: X={absX:F2}, Z={absZ:F2} | Near=({nearSuspicionRadius.x:F2}, {nearSuspicionRadius.y:F2}) | Far=({farSuspicionRadius.x:F2}, {farSuspicionRadius.y:F2})");
+            Debug.Log($"[AmbushGimmick] Player Distance: X={absX:F2}, Z={absZ:F2} | Near=({nearSuspicionRadius.x:F2}, {nearZ:F2}) | Far=({farSuspicionRadius.x:F2}, {farZ:F2})");
 #endif
 
             // 근접 범위 체크 (직사각형)
-            if (absX <= nearSuspicionRadius.x && absZ <= nearSuspicionRadius.y)
+            if (absX <= nearSuspicionRadius.x && checkZ <= nearZ)
             {
                 // 거리 가중치: 중심 1.0 → 가장자리 0.3
                 float xFactor = 1f - (absX / nearSuspicionRadius.x);
-                float zFactor = 1f - (absZ / nearSuspicionRadius.y);
+                float zFactor = lockZAxis ? 1f : (1f - (checkZ / nearZ));
                 float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
 
@@ -336,11 +341,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
             // 원거리 범위 체크 (직사각형)
-            else if (absX <= farSuspicionRadius.x && absZ <= farSuspicionRadius.y)
+            else if (absX <= farSuspicionRadius.x && checkZ <= farZ)
             {
                 // 거리 가중치: 중심 1.0 → 가장자리 0.2
                 float xFactor = 1f - (absX / farSuspicionRadius.x);
-                float zFactor = 1f - (absZ / farSuspicionRadius.y);
+                float zFactor = lockZAxis ? 1f : (1f - (checkZ / farZ));
                 float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
 
