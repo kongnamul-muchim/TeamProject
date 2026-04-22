@@ -50,16 +50,19 @@ Shader "HideAndInk/OctopusCamouflage_Outline"
                 fixed4 c = SampleSpriteTexture(IN.texcoord);
                 fixed4 maskCol = tex2D(_ColorPart, IN.texcoord);
 
-                // 마스크 구역 판정: 외곽선은 순수하게 '마스크 텍스처에서 투명한 곳(알파 < 0.05)'만 인정합니다.
+                // 마스크 구역 판정: 외곽선은 오로지 마스크에서 알파가 비어있는 곳입니다.
                 bool isOutline = (maskCol.a < 0.05);
 
-                // 외곽선이 아닌 몸통(알파가 있는 곳)이나 스프라이트 바깥의 진짜 빈 공간은 모조리 날려버립니다.
-                if (!isOutline || c.a < 0.01)
+                // 눈이 파란색으로 남아있을 경우 제거하는 로직 (달걀귀신 마스크를 쓰면 자연스럽게 작동 안함)
+                bool isEye = (maskCol.b > 0.5 && maskCol.r < 0.5); 
+                
+                // 마스크에 의해 철저하게 외곽선만 남깁니다.
+                if (!isOutline || isEye || c.a < 0.01)
                 {
                     discard;
                 }
 
-                // 외곽선 통과: 원본 색상을 그대로 유지하여 그립니다. (의태 영향 안 받음)
+                // 외곽선 통과: 원본 색상을 유지하여 그립니다.
                 c.a *= IN.color.a;
                 c.rgb *= c.a;
                 return c;
