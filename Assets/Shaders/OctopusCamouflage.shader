@@ -19,7 +19,7 @@ Shader "HideAndInk/OctopusCamouflage"
     {
         Tags
         {
-            "Queue"="Transparent+100"
+            "Queue"="Transparent"
             "IgnoreProjector"="True"
             "RenderType"="Transparent"
             "PreviewType"="Plane"
@@ -31,20 +31,15 @@ Shader "HideAndInk/OctopusCamouflage"
         ZWrite Off
         Blend One OneMinusSrcAlpha 
 
-        // =========================================
-        // Pass 1: 일반 렌더링 (장애물 앞에 있을 때)
-        // GPU의 ZTest LEqual이 하드웨어에서 가려짐을 판정합니다.
-        // 장애물보다 앞에 있는 픽셀만 그려집니다.
-        // =========================================
         Pass
         {
             Name "Main"
             ZWrite Off
-            ZTest LEqual
+            ZTest Always 
 
             CGPROGRAM
-            #pragma vertex SpriteVert
-            #pragma fragment CamouFrag
+            #pragma vertex CustomSpriteVert
+            #pragma fragment CustomFrag
             #pragma target 2.0
             #pragma multi_compile_instancing
             #pragma multi_compile_local _ PIXELSNAP_ON
@@ -53,77 +48,90 @@ Shader "HideAndInk/OctopusCamouflage"
 
             sampler2D _ColorPart;
             float _OriginalRate;
+            UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 
-            fixed4 CamouFrag(v2f IN) : SV_Target
+            struct v2f_custom
             {
-                fixed4 c = SampleSpriteTexture(IN.texcoord);
+                float4 vertex   : SV_POSITION;
+                fixed4 color    : COLOR;
+                float2 texcoord : TEXCOORD0;
+                float4 screenPos : TEXCOORD1;
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            v2f_custom CustomSpriteVert(appdata_t IN)
+            {
+                v2f_custom OUT;
+                UNITY_SETUP_INSTANCE_ID (IN);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO (OUT);
+
+                OUT.vertex = UnityFlipSprite(IN.vertex, _Flip);
+                OUT.vertex = UnityObjectToClipPos(OUT.vertex);
+                OUT.texcoord = IN.texcoord;
+                OUT.color = IN.color * _RendererColor;
+
+                #ifdef PIXELSNAP_ON
+                OUT.vertex = UnityPixelSnap (OUT.vertex);
+                #endif
+
+                OUT.screenPos = ComputeScreenPos(OUT.vertex);
+
+                return OUT;
+            }
+
+            fixed4 CustomFrag(v2f_custom IN) : SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
+
+                // --- 1. 깊이 비교 (X-Ray 판정 원초적 해킹) ---
+                float2 screenUV = IN.vertex.xy / _ScreenParams.xy;
+                float sceneRawDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, screenUV);
+                float currentRawDepth = IN.vertex.z;
+
+                bool isObscured;
+                #if defined(UNITY_REVERSED_Z)
+                    isObscured = currentRawDepth < sceneRawDepth - 0.001; 
+                #else
+                    isObscured = currentRawDepth > sceneRawDepth + 0.001;
+                #endif
+
+                // --- 2. 기본 색상 및 마스크 샘플링 ---
+                fixed4 c = SampleSpriteTexture (IN.texcoord);
                 fixed4 maskCol = tex2D(_ColorPart, IN.texcoord);
 
-                // 마스크 구역 판정
-                // 외곽선: 마스크가 투명 (Alpha < 0.05)
-                // 눈: 마스크가 새파란 색 (Blue > 0.5, Red < 0.5)
-                // 몸통: 그 외 모든 불투명 영역
-                bool isEye = (maskCol.b > 0.5 && maskCol.r < 0.5);
-                bool isBody = (maskCol.a >= 0.05 && !isEye);
+                // --- 3. 마스크 구역 판정 ---
+                float maskLum = dot(maskCol.rgb, fixed3(0.299, 0.587, 0.114));
+                bool isEye = (maskCol.b > 0.5 && maskCol.r < 0.5); 
+                
+                bool isOutline = (maskCol.a < 0.05) || (maskLum < 0.05 && !isEye);
+                bool isBody = (maskCol.a >= 0.05 && !isEye && maskLum >= 0.05);
 
-                // 몸통만 의태 적용 (순수 Multiply 기반)
+                // --- 4. 장애물에 가려진 상태일 때의 처리 ---
+                if (isObscured)
+                {
+                    if (isOutline)
+                    {
+                        fixed4 xRayCol = c * IN.color;
+                        xRayCol.rgb *= xRayCol.a;
+                        return xRayCol;
+                    }
+                    else
+                    {
+                        discard; 
+                    }
+                }
+
+                // --- 5. 가려지지 않았을 때의 색상 연산 ---
                 if (isBody)
                 {
-                    fixed3 targetColor = IN.color.rgb;
+                    fixed3 targetColor = IN.color.rgb; 
                     fixed3 camouRGB = c.rgb * targetColor;
                     c.rgb = lerp(camouRGB, c.rgb, _OriginalRate);
                 }
-
-                // 스프라이트 렌더러의 투명도 적용
+                
                 c.a *= IN.color.a;
-                c.rgb *= c.a;
-                return c;
-            }
-            ENDCG
-        }
-
-        // =========================================
-        // Pass 2: X-Ray 렌더링 (장애물 뒤에 있을 때)
-        // GPU의 ZTest Greater가 하드웨어에서 가려짐을 판정합니다.
-        // 장애물보다 뒤에 있는 픽셀만 그려집니다.
-        // 그 중에서 마스크의 '외곽선' 영역만 출력하고 나머지는 discard합니다.
-        // =========================================
-        Pass
-        {
-            Name "XRay"
-            Tags { "LightMode" = "XRayPass" }
-            ZWrite Off
-            ZTest Greater
-
-            CGPROGRAM
-            #pragma vertex SpriteVert
-            #pragma fragment XRayFrag
-            #pragma target 2.0
-            #pragma multi_compile_instancing
-            #pragma multi_compile_local _ PIXELSNAP_ON
-            #pragma multi_compile _ ETC1_EXTERNAL_ALPHA
-            #include "UnitySprites.cginc"
-
-            sampler2D _ColorPart;
-
-            fixed4 XRayFrag(v2f IN) : SV_Target
-            {
-                fixed4 c = SampleSpriteTexture(IN.texcoord);
-                fixed4 maskCol = tex2D(_ColorPart, IN.texcoord);
-
-                // 외곽선 판정: 마스크의 투명한 부분이 외곽선
-                bool isOutline = maskCol.a < 0.05;
-
-                // 외곽선이 아니거나, 메인 텍스처에 실제 그림이 없는 부분은 버림
-                // (캐릭터 바깥의 빈 공간이 그려지는 것을 방지)
-                if (!isOutline || c.a < 0.01)
-                {
-                    discard;
-                }
-
-                // 외곽선은 원본 색상 그대로 출력
-                c.a *= IN.color.a;
-                c.rgb *= c.a;
+                c.rgb *= c.a; 
+                
                 return c;
             }
             ENDCG
