@@ -51,6 +51,11 @@ public class ChichiFollower : MonoBehaviour
     // 스프라이트 방향 전환용 실제 이동 delta
     private Vector3 _actualMoveDelta;
 
+    // 스프라이트 토글링 방지
+    private float _spriteChangeTimer;
+    [SerializeField] private float minSpriteChangeInterval = 0.15f;
+    [SerializeField] private float directionAngleThreshold = 30f; // 대각선 임계각 (도)
+
     private void Awake()
     {
         // ChichiStateMachine 자동 탐색
@@ -105,19 +110,23 @@ public class ChichiFollower : MonoBehaviour
         // 목표 위치 계산 및 이동 (통합)
         UpdateMovement();
 
-        // 스프라이트 방향 업데이트
+        // 스프라이트 방향 업데이트 (타이머로 토글링 방지)
         _actualMoveDelta = transform.position - prevPosition;
         _actualMoveDelta.y = 0f;
 
-        if (_actualMoveDelta.sqrMagnitude > 0.0001f)
+        _spriteChangeTimer -= Time.deltaTime;
+        if (_spriteChangeTimer <= 0f)
         {
-            // 이동 중이면 이동 방향으로 스프라이트 변경
-            UpdateSpriteDirectionByMovement();
-        }
-        else
-        {
-            // 정지 상태면 두두를 바라보도록 스프라이트 변경
-            UpdateSpriteDirectionByTarget();
+            if (_actualMoveDelta.sqrMagnitude > 0.001f)
+            {
+                // 이동 중이면 이동 방향으로 스프라이트 변경
+                UpdateSpriteDirectionByMovement();
+            }
+            else
+            {
+                // 정지 상태면 두두를 바라보도록 스프라이트 변경
+                UpdateSpriteDirectionByTarget();
+            }
         }
 
         _lastTargetPosition = stateMachine.Target.position;
@@ -192,14 +201,16 @@ public class ChichiFollower : MonoBehaviour
         float absZ = Mathf.Abs(toTarget.z);
 
         // Deadzone: 너무 가까우면 변경 안 함
-        const float deadzone = 0.1f;
+        const float deadzone = 0.3f;
         if (absX < deadzone && absZ < deadzone)
             return;
 
+        // 임계각 기반 방향 판별 (대각선에서 토글 방지)
+        float angle = Mathf.Atan2(absX, absZ) * Mathf.Rad2Deg;
         Sprite newSprite;
         bool flipX = false;
 
-        if (absX > absZ)
+        if (angle > directionAngleThreshold)
         {
             // 좌/우 → Side
             newSprite = spriteSide;
@@ -216,6 +227,7 @@ public class ChichiFollower : MonoBehaviour
         {
             spriteRenderer.sprite = newSprite;
             _lastSprite = newSprite;
+            _spriteChangeTimer = minSpriteChangeInterval;
         }
 
         // Side 스프라이트일 때만 flipX 적용
@@ -240,14 +252,19 @@ public class ChichiFollower : MonoBehaviour
         float moveZ = _actualMoveDelta.z;
 
         // Deadzone: 이동량이 너무 작으면 변경 안 함
-        const float deadzone = 0.01f;
+        const float deadzone = 0.02f;
         if (Mathf.Abs(moveX) < deadzone && Mathf.Abs(moveZ) < deadzone)
             return;
+
+        // 임계각 기반 방향 판별 (대각선에서 토글 방지)
+        float absX = Mathf.Abs(moveX);
+        float absZ = Mathf.Abs(moveZ);
+        float angle = Mathf.Atan2(absX, absZ) * Mathf.Rad2Deg;
 
         Sprite newSprite;
         bool flipX = false;
 
-        if (Mathf.Abs(moveX) > Mathf.Abs(moveZ))
+        if (angle > directionAngleThreshold)
         {
             newSprite = spriteSide;
             bool movingRight = moveX > 0f;
@@ -270,6 +287,7 @@ public class ChichiFollower : MonoBehaviour
         {
             spriteRenderer.sprite = newSprite;
             _lastSprite = newSprite;
+            _spriteChangeTimer = minSpriteChangeInterval;
         }
 
         // Side 스프라이트일 때만 flipX 적용
