@@ -22,11 +22,11 @@ public class ChichiStateMachine : MonoBehaviour
     [Tooltip("충전 가능 여부 확인할 리스너 (자동 설정됨)")]
     [SerializeField] private MonoBehaviour listenerTarget;
 
-    [Header("📏 Distance - 거리 설정")]
-    [Tooltip("Player가 치치에게 다가올 때 멈추는 거리 (X/Z 각각)")]
-    [SerializeField] private float stopDistance = 2f;
-    [Tooltip("이 거리 이상 멀어지면 CatchUp 상태로 전환")]
-    [SerializeField] private float followDistance = 7f;
+    [Header("📏 Distance - 거리 설정 (X/Z 독립)")]
+    [Tooltip("Player가 치치에게 다가올 때 멈추는 거리 (X=가로, Z=세로)")]
+    [SerializeField] private Vector2 stopDistance = new Vector2(2f, 2f);
+    [Tooltip("이 거리 이상 멀어지면 CatchUp 상태로 전환 (X=가로, Z=세로)")]
+    [SerializeField] private Vector2 followDistance = new Vector2(7f, 7f);
     [Tooltip("Player와 접촉하여 충전 진입하는 거리")]
     [SerializeField] private float chargeDistance = 1.8f;
 
@@ -42,8 +42,8 @@ public class ChichiStateMachine : MonoBehaviour
     public ChichiState CurrentState => currentState;
     public bool IsTouchingTank => isTouchingTank;
     public bool IsUnderThreat => isUnderThreat;
-    public float StopDistance => stopDistance;
-    public float FollowDistance => followDistance;
+    public Vector2 StopDistance => stopDistance;
+    public Vector2 FollowDistance => followDistance;
     public float ChargeDistance => chargeDistance;
 
     public System.Action<ChichiState> OnStateChanged;
@@ -90,27 +90,33 @@ public class ChichiStateMachine : MonoBehaviour
         chichiPosition.y = 0f;
         targetPosition.y = 0f;
 
-        // X/Z 각각 거리 계산 (Follower와 동일한 기준)
+        // X/Z 각각 거리 계산
         float distanceX = Mathf.Abs(targetPosition.x - chichiPosition.x);
         float distanceZ = Mathf.Abs(targetPosition.z - chichiPosition.z);
-        float maxDistance = Mathf.Max(distanceX, distanceZ);
 
         IChichiStateListener listener = listenerTarget as IChichiStateListener;
         bool canCharge = listener != null && listener.CanReceiveInk();
         bool isInteractionActive = listener != null && listener.IsChargeInteractionActive();
 
+        // 직사각형 영역 기반 판정: X는 X와, Z는 Z와 각각 비교
+        bool withinStopX = distanceX <= stopDistance.x;
+        bool withinStopZ = distanceZ <= stopDistance.y;
+        bool withinFollowX = distanceX <= followDistance.x;
+        bool withinFollowZ = distanceZ <= followDistance.y;
+
         // 위협 중에는 충전 차단, Follow/CatchUp만 가능
         if (isUnderThreat)
-            return maxDistance > followDistance ? ChichiState.CatchUp : ChichiState.Follow;
+            return (!withinFollowX || !withinFollowZ) ? ChichiState.CatchUp : ChichiState.Follow;
 
         // 충전 조건: 충전 가능 + 탱크 접촉 + 거리 이내 + 상호작용 활성
+        float maxDistance = Mathf.Max(distanceX, distanceZ);
         if (canCharge && isTouchingTank && maxDistance <= chargeDistance && isInteractionActive)
             return ChichiState.Charging;
 
-        // 거리 기반 상태 전환
-        if (maxDistance > followDistance)
+        // 거리 기반 상태 전환 (직사각형: X와 Z 모두 이내여야 해당 영역)
+        if (!withinFollowX || !withinFollowZ)
             return ChichiState.CatchUp;
-        if (maxDistance > stopDistance)
+        if (!withinStopX || !withinStopZ)
             return ChichiState.Follow;
 
         return ChichiState.Idle;

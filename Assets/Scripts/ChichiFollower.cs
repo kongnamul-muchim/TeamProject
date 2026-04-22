@@ -169,16 +169,20 @@ public class ChichiFollower : MonoBehaviour
         }
 
         Vector3 targetPosition = stateMachine.Target.position;
-        float followDistance = stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp
+        Vector2 distanceThreshold = stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp
             ? stateMachine.FollowDistance
             : stateMachine.StopDistance;
 
-        Vector3 planarOffset = behindDirection * followDistance + sideDirection * currentSideOffset + new Vector3(guideOffset.x, 0f, 0f);
+        // X/Z 각각 오프셋 적용 (직사각형 영역)
+        float offsetX = behindDirection.x * distanceThreshold.x;
+        float offsetZ = behindDirection.z * distanceThreshold.y;
+
+        Vector3 planarOffset = new Vector3(offsetX, 0f, offsetZ) + sideDirection * currentSideOffset + new Vector3(guideOffset.x, 0f, 0f);
 
         return new Vector3(
             targetPosition.x + planarOffset.x,
             targetPosition.y + liftOffset.y + guideOffset.y,
-            targetPosition.z);
+            targetPosition.z + planarOffset.z);
     }
 
     private int CalculateDirectionZone(Vector3 delta)
