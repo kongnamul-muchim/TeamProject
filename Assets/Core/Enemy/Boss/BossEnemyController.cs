@@ -21,6 +21,7 @@ namespace HideAndInk.Core.Enemy.Boss
         [Header("보스 설정")]
         [SerializeField] private ConeVisionSensor visionSensor;
         [SerializeField] private BossSuspicionSystem suspicionSystem;
+        [SerializeField] private HideAndInk.Core.Perception.VisionConeRenderer visionConeRenderer;
 
         [Header("상태별 속도")]
         [SerializeField] private float patrolSpeed = 2f;
@@ -538,6 +539,11 @@ namespace HideAndInk.Core.Enemy.Boss
                         Debug.Log($"[BossEnemyController] Patrol: 360도 거리 전용 모드 활성화");
 #endif
                     }
+                    // 매복 중에는 시야각 표시 비활성화
+                    if (_activeGimmick is AmbushGimmick && visionConeRenderer != null)
+                    {
+                        visionConeRenderer.enabled = false;
+                    }
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
@@ -549,6 +555,11 @@ namespace HideAndInk.Core.Enemy.Boss
                         Debug.Log($"[BossEnemyController] Chase: 360도 거리 전용 모드 활성화");
 #endif
                     }
+                    // Chase에서는 시야각 표시 복귀
+                    if (visionConeRenderer != null)
+                    {
+                        visionConeRenderer.enabled = true;
+                    }
                     break;
                 case EnemyAIState.Search:
                     _movement.Speed = searchSpeed;
@@ -559,6 +570,11 @@ namespace HideAndInk.Core.Enemy.Boss
 #if UNITY_EDITOR
                         Debug.Log($"[BossEnemyController] Search: 부채꼴 모드 복귀");
 #endif
+                    }
+                    // Search에서는 시야각 표시 복귀
+                    if (visionConeRenderer != null)
+                    {
+                        visionConeRenderer.enabled = true;
                     }
                     break;
             }
