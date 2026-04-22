@@ -136,13 +136,16 @@ public class ChichiFollower : MonoBehaviour
 
         if (state == ChichiStateMachine.ChichiState.Follow)
         {
-            // Follow 진입 시 현재 X,Y 고정
+            // Follow 진입 시 현재 X,Y 고정 + Z는 두두 위치로
             _followFixedPosition = transform.position;
             _followFixedPosition.z = stateMachine.Target.position.z;
             _currentTarget = _followFixedPosition;
         }
         else if (state == ChichiStateMachine.ChichiState.CatchUp)
         {
+            // CatchUp 진입 시 Follow 고정 위치를 현재 위치로 업데이트 (복귀 시 튀김 방지)
+            _followFixedPosition = transform.position;
+            _followFixedPosition.z = stateMachine.Target.position.z;
             _currentTarget = GetFollowTargetPosition();
         }
         // Charging: 제자리 유지 (_currentTarget 변경 안 함)
@@ -167,17 +170,16 @@ public class ChichiFollower : MonoBehaviour
     {
         if (state == ChichiStateMachine.ChichiState.CatchUp)
         {
-            Vector3 desiredTarget = GetFollowTargetPosition();
-            _currentTarget = Vector3.SmoothDamp(_currentTarget, desiredTarget, ref _targetVelocity, targetSmoothTime);
+            // CatchUp: 목표 위치를 직접 계산 (SmoothDamp 제거, UpdateMovement에서만 사용)
+            _currentTarget = GetFollowTargetPosition();
         }
         else if (state == ChichiStateMachine.ChichiState.Follow)
         {
-            // Follow 상태: Z만 두두 위치로 부드럽게 이동 (X,Y는 _followFixedPosition 고정)
+            // Follow 상태: Z만 두두 위치로 설정 (X,Y는 _followFixedPosition 고정)
             if (stateMachine.Target != null)
             {
-                Vector3 followZTarget = _followFixedPosition;
-                followZTarget.z = stateMachine.Target.position.z;
-                _currentTarget = Vector3.SmoothDamp(_currentTarget, followZTarget, ref _targetVelocity, targetSmoothTime);
+                _currentTarget = _followFixedPosition;
+                _currentTarget.z = stateMachine.Target.position.z;
             }
         }
         // Charging 상태: _currentTarget 변경 안 함 (제자리 유지)
@@ -231,7 +233,7 @@ public class ChichiFollower : MonoBehaviour
         {
             // 좌/우 → Side
             newSprite = spriteSide;
-            flipX = toTarget.x < 0f; // 두두가 왼쪽이면 flipX true
+            flipX = toTarget.x > 0f; // 두두가 오른쪽이면 flipX true
         }
         else
         {
@@ -322,11 +324,12 @@ public class ChichiFollower : MonoBehaviour
         }
 
         Vector3 targetPosition = stateMachine.Target.position;
-        Vector3 planarOffset = behindDirection * followDistance + sideDirection * sideOffset + new Vector3(guideOffset.x, 0f, guideOffset.z);
+        // X,Y만 오프셋 적용, Z는 두두 위치 정확히 사용
+        Vector3 planarOffset = behindDirection * followDistance + sideDirection * sideOffset + new Vector3(guideOffset.x, 0f, 0f);
 
         return new Vector3(
             targetPosition.x + planarOffset.x,
             targetPosition.y + liftOffset.y + guideOffset.y,
-            targetPosition.z + planarOffset.z);
+            targetPosition.z);
     }
 }
