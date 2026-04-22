@@ -64,9 +64,9 @@ namespace HideAndInk.Player
 
         private void Update()
         {
-            // Unity 기본 Input으로 이동 입력 처리
-            float h = Input.GetAxisRaw(horizontalAxis);
-            float v = Input.GetAxisRaw(verticalAxis);
+            // Unity 기본 Input으로 이동 입력 처리 (카메라 반대편이므로 반전)
+            float h = -Input.GetAxisRaw(horizontalAxis);
+            float v = -Input.GetAxisRaw(verticalAxis);
             _moveInput = new Vector2(h, v);
 
             // 이동 입력 전달
@@ -131,8 +131,16 @@ namespace HideAndInk.Player
         /// <param name="ignore">무시 여부</param>
         public void SetIgnoreWallCollision(bool ignore)
         {
-            // TODO: 실제 벽 충돌 무시 로직 구현 필요
-            // 현재는 인터페이스만 제공
+            int playerLayer = gameObject.layer;
+
+            // wallLayer에 포함된 모든 레이어에 대해 충돌 무시/복원
+            for (int i = 0; i < 32; i++)
+            {
+                if ((wallLayer & (1 << i)) != 0)
+                {
+                    Physics.IgnoreLayerCollision(playerLayer, i, ignore);
+                }
+            }
         }
 
         // 충돌 감지용 레이어

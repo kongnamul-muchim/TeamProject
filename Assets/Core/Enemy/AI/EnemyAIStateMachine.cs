@@ -102,7 +102,9 @@ namespace HideAndInk.Core.Enemy.AI
             // 이벤트 발생
             OnStateChanged?.Invoke(previousState, newState);
 
+#if UNITY_EDITOR
             Debug.Log($"[EnemyAIStateMachine] {previousState} → {newState}");
+#endif
         }
 
         /// <summary>

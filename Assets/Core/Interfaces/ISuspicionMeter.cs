@@ -26,8 +26,8 @@ namespace HideAndInk.Core.Interfaces
     {
         float CurrentValue { get; }
         SuspicionLevel CurrentLevel { get; }
-        void AddSuspicion(float amount);
-        void ReduceSuspicion(float amount);
+        void AddSuspicion(float amount, float deltaTime);
+        void ReduceSuspicion(float amount, float deltaTime);
         void Reset();
         void SetSuspicion(float value);
         void SetIncreaseSpeed(float speed);

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
@@ -84,9 +85,9 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// Player 접촉 감지
+        /// Player 접촉 감지 (3D)
         /// </summary>
-        private void OnTriggerEnter2D(Collider2D other)
+        private void OnTriggerEnter(Collider other)
         {
             if (_isAlerted) return;
 
@@ -112,15 +113,16 @@ namespace HideAndInk.Core.Enemy.Normal
                 boss.AlertPlayerPosition(playerPosition);
             }
 
-            // 알림 후 일정 시간 후 재활성화
-            Invoke(nameof(ResetAlert), 3f);
+            // 알림 후 일정 시간 후 재활성화 (코루틴 사용)
+            StartCoroutine(ResetAlertAfterDelay(3f));
         }
 
         /// <summary>
-        /// 알림 상태 초기화
+        /// 지연 후 알림 상태 초기화
         /// </summary>
-        private void ResetAlert()
+        private IEnumerator ResetAlertAfterDelay(float delay)
         {
+            yield return new WaitForSeconds(delay);
             _isAlerted = false;
         }
     }
