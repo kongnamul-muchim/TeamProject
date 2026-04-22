@@ -1,74 +1,54 @@
 using UnityEngine;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Player;
 
 /// <summary>
 /// [이동] 치치의 이동만 담당한다.
-/// - Follow 상태: 두두를 부드럽게 따라감 (느린 속도, X/Y/Z 모두)
-/// - CatchUp 상태: 두두를 빠르게 따라잡음 (빠른 속도)
-/// - Charging 상태: 두두를 매우 부드럽게 따라감 (충전 중에도 위치 유지)
-/// - 이동 방향에 따라 스프라이트 변경 (Front/Back/Side)
-/// - Side 스프라이트는 좌/우에 따라 SpriteRenderer.flipX 반전
+/// - StateMachine의 상태에 따라 동작: Idle(멈춤), Follow(따라감), CatchUp(빠르게 따라감), Charging(멈춤)
 /// </summary>
 public class ChichiFollower : MonoBehaviour
 {
-    [Header("🔗 References - 연결할 컴포넌트")]
-    [Tooltip("ChichiStateMachine 컴포넌트 (비워두면 자동 탐색)")]
+    [Header("🔗 References")]
     [SerializeField] private ChichiStateMachine stateMachine;
-    [Tooltip("치치 SpriteRenderer (비워두면 자동 탐색)")]
     [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private PlayerMovementAdapter playerMovement;
 
-    [Header("🎨 Sprites - 방향별 스프라이트")]
-    [Tooltip("아래 방향 (Front) 스프라이트")]
+    [Header("🎨 Sprites")]
     [SerializeField] private Sprite spriteFront;
-    [Tooltip("위 방향 (Back) 스프라이트")]
     [SerializeField] private Sprite spriteBack;
-    [Tooltip("좌/우 방향 (Side) 스프라이트")]
     [SerializeField] private Sprite spriteSide;
 
-    [Header("📍 Guide Position - 따라가기 위치 설정")]
-    [Tooltip("측면으로 벗어난 거리")]
+    [Header("📍 Offset")]
+    [Tooltip("측면으로 벗어난 거리 (Player 이동 시에만 적용)")]
     [SerializeField] private float sideOffset = 0.8f;
-    [Tooltip("수직 (Y) 오프셋")]
     [SerializeField] private Vector3 liftOffset = new Vector3(0f, 0.5f, 0f);
-    [Tooltip("추가 가이드 오프셋 (X, Y)")]
     [SerializeField] private Vector2 guideOffset = new Vector2(0f, 0f);
 
-    [Header("⚡ Move Speed - 이동 속도 설정")]
-    [Tooltip("Follow 상태 부드러움 (높을수록 느리고 부드러움)")]
+    [Header("⚡ Move Speed")]
+    [SerializeField] private float idleSmoothTime = 0.3f;
     [SerializeField] private float followSmoothTime = 0.4f;
-    [Tooltip("CatchUp 상태 부드러움 (낮을수록 빠름)")]
     [SerializeField] private float catchUpSmoothTime = 0.15f;
-    [Tooltip("충전 중 위치 보정 부드러움")]
-    [SerializeField] private float chargeSmoothTime = 0.2f;
-    [Tooltip("방향 전환 속도 (높을수록 빠르게 방향 전환)")]
     [SerializeField] private float turnSpeed = 8f;
 
-    private Vector3 _lastTargetPosition;
-    private Vector3 _lastMoveDirection = Vector3.forward;
-    private Vector3 _smoothedMoveDirection = Vector3.forward;
+    [Header("🧭 Sprite")]
+    [SerializeField] private float directionAngleThreshold = 45f;
+    [SerializeField] private float minSpriteChangeInterval = 0.15f;
+
+    private Vector3 _smoothedPlayerDirection = Vector3.forward;
     private Vector3 _moveVelocity;
     private Sprite _lastSprite;
-
-    // 스프라이트 방향 전환용 실제 이동 delta
-    private Vector3 _actualMoveDelta;
-
-    // 스프라이트 토글링 방지
     private float _spriteChangeTimer;
-    [SerializeField] private float minSpriteChangeInterval = 0.15f;
-    [SerializeField] private float directionAngleThreshold = 30f; // 대각선 임계각 (도)
+    private int _currentDirectionZone = 0;
+    private Vector3 _actualMoveDelta;
 
     private void Awake()
     {
-        // ChichiStateMachine 자동 탐색
         if (stateMachine == null)
-        {
             stateMachine = GetComponent<ChichiStateMachine>();
-        }
-
-        // SpriteRenderer 자동 탐색
         if (spriteRenderer == null)
-        {
             spriteRenderer = GetComponent<SpriteRenderer>();
-        }
+        if (playerMovement == null)
+            playerMovement = FindObjectOfType<PlayerMovementAdapter>();
     }
 
     private void Start()
@@ -76,15 +56,8 @@ public class ChichiFollower : MonoBehaviour
         if (stateMachine == null || stateMachine.Target == null)
             return;
 
-        _lastTargetPosition = stateMachine.Target.position;
-
-        // 시작 시 두두 방향으로 _smoothedMoveDirection 초기화
-        Vector3 initialDelta = stateMachine.Target.position - transform.position;
-        if (initialDelta.sqrMagnitude > 0.00001f)
-        {
-            _smoothedMoveDirection = initialDelta.normalized;
-            _lastMoveDirection = _smoothedMoveDirection;
-        }
+        if (playerMovement != null)
+            _smoothedPlayerDirection = MoveDirectionToVector(playerMovement.Direction);
 
         stateMachine.OnStateChanged += HandleStateChanged;
     }
@@ -92,9 +65,7 @@ public class ChichiFollower : MonoBehaviour
     private void OnDestroy()
     {
         if (stateMachine != null)
-        {
             stateMachine.OnStateChanged -= HandleStateChanged;
-        }
     }
 
     private void LateUpdate()
@@ -102,211 +73,93 @@ public class ChichiFollower : MonoBehaviour
         if (stateMachine == null || stateMachine.Target == null)
             return;
 
-        Vector3 prevPosition = transform.position;
+        MoveDirection playerDir = playerMovement != null ? playerMovement.Direction : MoveDirection.Down;
+        Vector3 playerForward = MoveDirectionToVector(playerDir);
 
-        // 이동 방향 업데이트
-        UpdateMoveDirection(stateMachine.Target.position - _lastTargetPosition);
-
-        // 목표 위치 계산 및 이동 (통합)
-        UpdateMovement();
-
-        // 스프라이트 방향 업데이트 (타이머로 토글링 방지)
-        _actualMoveDelta = transform.position - prevPosition;
-        _actualMoveDelta.y = 0f;
-
-        _spriteChangeTimer -= Time.deltaTime;
-        if (_spriteChangeTimer <= 0f)
+        // Player 방향 부드럽게 업데이트 (충전 중에는 업데이트 안 함)
+        if (stateMachine.CurrentState != ChichiStateMachine.ChichiState.Charging)
         {
-            if (_actualMoveDelta.sqrMagnitude > 0.001f)
-            {
-                // 이동 중이면 이동 방향으로 스프라이트 변경
-                UpdateSpriteDirectionByMovement();
-            }
-            else
-            {
-                // 정지 상태면 두두를 바라보도록 스프라이트 변경
-                UpdateSpriteDirectionByTarget();
-            }
+            _smoothedPlayerDirection = Vector3.Lerp(_smoothedPlayerDirection, playerForward, turnSpeed * Time.deltaTime);
+            if (_smoothedPlayerDirection.sqrMagnitude > 0.00001f)
+                _smoothedPlayerDirection.Normalize();
         }
 
-        _lastTargetPosition = stateMachine.Target.position;
+        // 상태에 따른 동작 분기
+        switch (stateMachine.CurrentState)
+        {
+            case ChichiStateMachine.ChichiState.Charging:
+                // 충전 중: 완전히 멈춤, 스프라이트만 업데이트
+                UpdateSpriteByPlayerDirection(playerDir);
+                return;
+
+            case ChichiStateMachine.ChichiState.Idle:
+                // Player가 가까움: 멈춤, 스프라이트만 업데이트
+                UpdateSpriteByPlayerDirection(playerDir);
+                return;
+
+            case ChichiStateMachine.ChichiState.Follow:
+            case ChichiStateMachine.ChichiState.CatchUp:
+                // 따라감: 이동 + 스프라이트 업데이트
+                Vector3 prevPosition = transform.position;
+                UpdateMovement();
+
+                _actualMoveDelta = transform.position - prevPosition;
+                _actualMoveDelta.y = 0f;
+
+                bool isMoving = _actualMoveDelta.sqrMagnitude > 0.001f;
+                _spriteChangeTimer -= Time.deltaTime;
+
+                if (_spriteChangeTimer <= 0f)
+                {
+                    if (isMoving)
+                    {
+                        int newZone = CalculateDirectionZone(_actualMoveDelta);
+                        if (newZone != _currentDirectionZone)
+                        {
+                            _currentDirectionZone = newZone;
+                            UpdateSpriteDirectionByZone(_currentDirectionZone);
+                            _spriteChangeTimer = minSpriteChangeInterval;
+                        }
+                    }
+                    else
+                    {
+                        UpdateSpriteByPlayerDirection(playerDir);
+                        _spriteChangeTimer = minSpriteChangeInterval;
+                    }
+                }
+                break;
+        }
     }
 
-    private void HandleStateChanged(ChichiStateMachine.ChichiState state)
+    private Vector3 MoveDirectionToVector(MoveDirection dir)
     {
-        // 상태 전환 시 SmoothDamp velocity 리셋 (위치 튀김 방지)
-        _moveVelocity = Vector3.zero;
+        return dir switch
+        {
+            MoveDirection.Down => Vector3.forward,
+            MoveDirection.Up => Vector3.back,
+            MoveDirection.Left => Vector3.left,
+            MoveDirection.Right => Vector3.right,
+            _ => Vector3.forward
+        };
     }
 
-    private void UpdateMoveDirection(Vector3 delta)
-    {
-        if (delta.sqrMagnitude > 0.00001f)
-        {
-            _lastMoveDirection = delta.normalized;
-        }
-
-        _smoothedMoveDirection = Vector3.Lerp(_smoothedMoveDirection, _lastMoveDirection, turnSpeed * Time.deltaTime);
-        if (_smoothedMoveDirection.sqrMagnitude > 0.00001f)
-        {
-            _smoothedMoveDirection.Normalize();
-        }
-    }
-
-    /// <summary>
-    /// 통합 이동 시스템: 모든 상태에서 동일한 목표 위치로 이동, smoothTime만 다르게 적용
-    /// </summary>
     private void UpdateMovement()
     {
         Vector3 targetPosition = GetFollowTargetPosition();
+        float smoothTime = stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp
+            ? catchUpSmoothTime
+            : followSmoothTime;
 
-        // 상태별 smoothTime 선택
-        float smoothTime;
-        switch (stateMachine.CurrentState)
-        {
-            case ChichiStateMachine.ChichiState.Follow:
-                smoothTime = followSmoothTime;
-                break;
-            case ChichiStateMachine.ChichiState.CatchUp:
-                smoothTime = catchUpSmoothTime;
-                break;
-            case ChichiStateMachine.ChichiState.Charging:
-                smoothTime = chargeSmoothTime;
-                break;
-            default:
-                smoothTime = followSmoothTime;
-                break;
-        }
-
-        // SmoothDamp로 부드러운 이동
         Vector3 nextPosition = Vector3.SmoothDamp(transform.position, targetPosition, ref _moveVelocity, smoothTime);
         nextPosition.y = targetPosition.y;
         transform.position = nextPosition;
     }
 
-    /// <summary>
-    /// Follow/Charging 상태: 두두를 바라보도록 스프라이트 변경
-    /// - 두두가 좌/우 → Side (flipX로 좌우 반전)
-    /// - 두두가 앞/뒤 → Front/Back
-    /// - SpriteRenderer.flipX 사용 (transform 회전 아님)
-    /// </summary>
-    private void UpdateSpriteDirectionByTarget()
-    {
-        if (spriteRenderer == null || stateMachine.Target == null)
-            return;
-
-        Vector3 toTarget = stateMachine.Target.position - transform.position;
-        toTarget.y = 0f;
-
-        float absX = Mathf.Abs(toTarget.x);
-        float absZ = Mathf.Abs(toTarget.z);
-
-        // Deadzone: 너무 가까우면 변경 안 함
-        const float deadzone = 0.3f;
-        if (absX < deadzone && absZ < deadzone)
-            return;
-
-        // 임계각 기반 방향 판별 (대각선에서 토글 방지)
-        float angle = Mathf.Atan2(absX, absZ) * Mathf.Rad2Deg;
-        Sprite newSprite;
-        bool flipX = false;
-
-        if (angle > directionAngleThreshold)
-        {
-            // 좌/우 → Side
-            newSprite = spriteSide;
-            flipX = toTarget.x > 0f; // 두두가 오른쪽이면 flipX true
-        }
-        else
-        {
-            // 앞/뒤 → Front/Back
-            newSprite = toTarget.z > 0f ? spriteBack : spriteFront;
-            flipX = false;
-        }
-
-        if (newSprite != null && newSprite != _lastSprite)
-        {
-            spriteRenderer.sprite = newSprite;
-            _lastSprite = newSprite;
-            _spriteChangeTimer = minSpriteChangeInterval;
-        }
-
-        // Side 스프라이트일 때만 flipX 적용
-        if (newSprite == spriteSide)
-        {
-            spriteRenderer.flipX = flipX;
-        }
-    }
-
-    /// <summary>
-    /// 이동 상태: 치치의 실제 이동 방향에 따라 스프라이트 변경
-    /// - X+ → Side (flipX: true), X- → Side (flipX: false)
-    /// - Z+ → Back, Z- → Front
-    /// - SpriteRenderer.flipX 사용 (transform 회전 아님)
-    /// </summary>
-    private void UpdateSpriteDirectionByMovement()
-    {
-        if (spriteRenderer == null)
-            return;
-
-        float moveX = _actualMoveDelta.x;
-        float moveZ = _actualMoveDelta.z;
-
-        // Deadzone: 이동량이 너무 작으면 변경 안 함
-        const float deadzone = 0.02f;
-        if (Mathf.Abs(moveX) < deadzone && Mathf.Abs(moveZ) < deadzone)
-            return;
-
-        // 임계각 기반 방향 판별 (대각선에서 토글 방지)
-        float absX = Mathf.Abs(moveX);
-        float absZ = Mathf.Abs(moveZ);
-        float angle = Mathf.Atan2(absX, absZ) * Mathf.Rad2Deg;
-
-        Sprite newSprite;
-        bool flipX = false;
-
-        if (angle > directionAngleThreshold)
-        {
-            newSprite = spriteSide;
-            bool movingRight = moveX > 0f;
-            flipX = !movingRight; // 오른쪽: flipX true, 왼쪽: flipX false
-        }
-        else
-        {
-            if (moveZ > 0f)
-            {
-                newSprite = spriteBack;
-            }
-            else
-            {
-                newSprite = spriteFront;
-            }
-            flipX = false; // Front/Back은 flipX 사용 안 함
-        }
-
-        if (newSprite != null && newSprite != _lastSprite)
-        {
-            spriteRenderer.sprite = newSprite;
-            _lastSprite = newSprite;
-            _spriteChangeTimer = minSpriteChangeInterval;
-        }
-
-        // Side 스프라이트일 때만 flipX 적용
-        if (newSprite == spriteSide)
-        {
-            spriteRenderer.flipX = flipX;
-        }
-    }
-
-    /// <summary>
-    /// 따라가기 목표 위치 계산
-    /// - 두두 위치 + 방향 기반 오프셋
-    /// - Z는 두두 위치 정확히 사용
-    /// </summary>
     private Vector3 GetFollowTargetPosition()
     {
-        float followDistance = stateMachine.MaxFollowDistance;
-
-        Vector3 behindDirection = -_smoothedMoveDirection;
+        Vector3 behindDirection = -_smoothedPlayerDirection;
+        bool playerIsMoving = playerMovement != null && playerMovement.IsMoving;
+        float currentSideOffset = playerIsMoving ? sideOffset : 0f;
         Vector3 sideDirection = new Vector3(-behindDirection.z, 0f, behindDirection.x);
 
         if (behindDirection.sqrMagnitude < 0.00001f)
@@ -316,12 +169,110 @@ public class ChichiFollower : MonoBehaviour
         }
 
         Vector3 targetPosition = stateMachine.Target.position;
-        // X,Y만 오프셋 적용, Z는 두두 위치 정확히 사용
-        Vector3 planarOffset = behindDirection * followDistance + sideDirection * sideOffset + new Vector3(guideOffset.x, 0f, 0f);
+        float followDistance = stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp
+            ? stateMachine.FollowDistance
+            : stateMachine.StopDistance;
+
+        Vector3 planarOffset = behindDirection * followDistance + sideDirection * currentSideOffset + new Vector3(guideOffset.x, 0f, 0f);
 
         return new Vector3(
             targetPosition.x + planarOffset.x,
             targetPosition.y + liftOffset.y + guideOffset.y,
             targetPosition.z);
+    }
+
+    private int CalculateDirectionZone(Vector3 delta)
+    {
+        float moveX = delta.x;
+        float moveZ = delta.z;
+
+        if (Mathf.Abs(moveX) < 0.02f && Mathf.Abs(moveZ) < 0.02f)
+            return _currentDirectionZone;
+
+        float absX = Mathf.Abs(moveX);
+        float absZ = Mathf.Abs(moveZ);
+        float angle = Mathf.Atan2(absX, absZ) * Mathf.Rad2Deg;
+
+        if (angle > directionAngleThreshold)
+            return moveX > 0f ? 1 : 3;
+        else
+            return moveZ > 0f ? 2 : 0;
+    }
+
+    private void UpdateSpriteDirectionByZone(int zone)
+    {
+        if (spriteRenderer == null)
+            return;
+
+        Sprite newSprite;
+        bool flipX = false;
+
+        switch (zone)
+        {
+            case 0: newSprite = spriteFront; break;
+            case 1: newSprite = spriteSide; flipX = true; break;
+            case 2: newSprite = spriteBack; break;
+            case 3: newSprite = spriteSide; flipX = false; break;
+            default: newSprite = spriteFront; break;
+        }
+
+        if (newSprite != null && newSprite != _lastSprite)
+        {
+            spriteRenderer.sprite = newSprite;
+            _lastSprite = newSprite;
+        }
+
+        spriteRenderer.flipX = flipX;
+    }
+
+    private void UpdateSpriteByPlayerDirection(MoveDirection playerDir)
+    {
+        if (spriteRenderer == null)
+            return;
+
+        Vector3 toChichi = (transform.position - stateMachine.Target.position).normalized;
+        toChichi.y = 0f;
+        Vector3 playerMoveDir = MoveDirectionToVector(playerDir);
+        float alignment = Vector3.Dot(playerMoveDir, toChichi);
+        bool facingPlayer = alignment > 0f;
+
+        Sprite newSprite;
+        bool flipX = false;
+
+        if (facingPlayer)
+        {
+            switch (playerDir)
+            {
+                case MoveDirection.Down: newSprite = spriteFront; break;
+                case MoveDirection.Up: newSprite = spriteBack; break;
+                case MoveDirection.Left: newSprite = spriteSide; flipX = true; break;
+                case MoveDirection.Right: newSprite = spriteSide; flipX = false; break;
+                default: newSprite = spriteFront; break;
+            }
+        }
+        else
+        {
+            switch (playerDir)
+            {
+                case MoveDirection.Down: newSprite = spriteBack; break;
+                case MoveDirection.Up: newSprite = spriteFront; break;
+                case MoveDirection.Left: newSprite = spriteSide; flipX = false; break;
+                case MoveDirection.Right: newSprite = spriteSide; flipX = true; break;
+                default: newSprite = spriteFront; break;
+            }
+        }
+
+        if (newSprite != null && newSprite != _lastSprite)
+        {
+            spriteRenderer.sprite = newSprite;
+            _lastSprite = newSprite;
+        }
+
+        spriteRenderer.flipX = flipX;
+    }
+
+    private void HandleStateChanged(ChichiStateMachine.ChichiState state)
+    {
+        _moveVelocity = Vector3.zero;
     }
 }
