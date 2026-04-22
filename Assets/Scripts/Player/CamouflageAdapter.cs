@@ -394,6 +394,8 @@ namespace HideAndInk.Player
             }
         }
 
+        private float _currentBlendRate = 1f; // 현재 애니메이션 보간 기억용
+
         /// <summary>
         /// 색상 및 OriginalRate 업데이트
         /// </summary>
@@ -405,8 +407,8 @@ namespace HideAndInk.Player
                 _rateRestoreProgress += Time.deltaTime;
                 float progress = Mathf.Clamp01(_rateRestoreProgress / RATE_RESTORE_DURATION);
 
-                // 0 → 1로 복원 (같은 속도로)
-                float rate = Mathf.Lerp(0f, 1f, progress);
+                // 취소 시점의 색상(_currentBlendRate)에서 1(원본)로 부드럽게 복원
+                float rate = Mathf.Lerp(_currentBlendRate, 1f, progress);
                 _materialCloner?.SetOriginalRate(rate);
 
                 // 복원 완료
@@ -414,6 +416,7 @@ namespace HideAndInk.Player
                 {
                     _isRestoringRate = false;
                     _rateRestoreProgress = 0f;
+                    _currentBlendRate = 1f;
                 }
                 return;
             }
@@ -423,34 +426,28 @@ namespace HideAndInk.Player
             switch (_stateMachine.CurrentState)
             {
                 case CamouflageState.Attached:
-                    // SpriteRenderer.color를 타겟 색으로 즉시 변경, OriginalRate = 1
                     _materialCloner?.BlendToTarget(_stateMachine.TargetObject, 1f);
                     _materialCloner?.SetOriginalRate(1f);
+                    _currentBlendRate = 1f;
                     break;
 
                 case CamouflageState.Locked:
-                    // SpriteRenderer.color는 유지, OriginalRate = 1
                     _materialCloner?.SetOriginalRate(1f);
+                    _currentBlendRate = 1f;
                     break;
 
                 case CamouflageState.Partial:
-                    // SpriteRenderer.color는 유지 (이미 타겟 색)
-                    // OriginalRate: 1 → 0 감소 (blendProgress에 비례)
                     if (_stateMachine is CamouflageStateMachine stateMachineImpl)
                     {
                         float rate = Mathf.Lerp(1f, 0f, stateMachineImpl.BlendProgress);
                         _materialCloner?.SetOriginalRate(rate);
+                        _currentBlendRate = rate; // 현재 진행률 저장
                     }
                     break;
 
                 case CamouflageState.Perfect:
-                    // SpriteRenderer.color는 유지, OriginalRate = 0
                     _materialCloner?.SetOriginalRate(0f);
-                    break;
-
-                case CamouflageState.None:
-                    // 해제 시 SpriteRenderer.color는 변경하지 않음
-                    // OriginalRate는 _isRestoringRate에서 처리
+                    _currentBlendRate = 0f;
                     break;
             }
         }
