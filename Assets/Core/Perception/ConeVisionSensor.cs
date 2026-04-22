@@ -34,6 +34,9 @@ namespace HideAndInk.Core.Perception
         private float _cachedViewRadius;
         private float _cachedViewAngle;
 
+        // 거리 전용 모드 (매복 중 360도 감지용)
+        private bool _distanceOnlyMode;
+
         /// <summary>
         /// 시야 감지 원점
         /// </summary>
@@ -53,6 +56,11 @@ namespace HideAndInk.Core.Perception
         /// 시야 패턴 유형
         /// </summary>
         public VisionPatternType PatternType => patternType;
+
+        /// <summary>
+        /// 거리 전용 모드 활성화 여부
+        /// </summary>
+        public bool IsDistanceOnlyMode => _distanceOnlyMode;
 
         private void OnValidate()
         {
@@ -76,6 +84,7 @@ namespace HideAndInk.Core.Perception
 
         /// <summary>
         /// 시야 방향 가져오기
+        /// viewDirectionRef가 없으면 자동으로 Enemy 본체 forward 사용
         /// </summary>
         public Vector3 GetViewDirection()
         {
@@ -83,13 +92,24 @@ namespace HideAndInk.Core.Perception
             {
                 return viewDirectionRef.forward;
             }
-            Vector3 dir = customViewDirection.normalized;
+            // viewDirectionRef가 없으면 자동으로 본체 forward 사용 (회전 연동)
+            Vector3 dir = transform.forward;
             // zero vector 방지
             if (dir.sqrMagnitude < 0.001f)
             {
                 dir = Vector3.forward;
             }
             return dir;
+        }
+
+        /// <summary>
+        /// 거리 전용 모드 설정 (매복 중 360도 감지용)
+        /// true: 각도/장애물 무시, 거리만 체크
+        /// false: 일반 ConeVision 동작
+        /// </summary>
+        public void SetDistanceOnlyMode(bool enabled)
+        {
+            _distanceOnlyMode = enabled;
         }
 
         /// <summary>
@@ -139,6 +159,7 @@ namespace HideAndInk.Core.Perception
 
         /// <summary>
         /// 특정 대상이 시야 내에 있는지 확인
+        /// 거리 전용 모드일 때는 각도/장애물 무시, 거리만 체크
         /// </summary>
         public bool CanSee(GameObject target)
         {
@@ -148,19 +169,25 @@ namespace HideAndInk.Core.Perception
             Vector3 directionToTarget = targetPosition - Origin;
             float distanceToTarget = directionToTarget.magnitude;
 
-            // 거리 체크
+            // 거리 체크 (항상)
             if (distanceToTarget > viewRadius)
             {
                 return false;
             }
 
-            // 각도 체크
+            // 거리 전용 모드: 각도/장애물 무시
+            if (_distanceOnlyMode)
+            {
+                return true;
+            }
+
+            // 각도 체크 (일반 모드)
             if (!IsWithinViewAngle(targetPosition))
             {
                 return false;
             }
 
-            // 장애물 체크
+            // 장애물 체크 (일반 모드)
             if (IsBlockedByObstacle(targetPosition))
             {
                 return false;
@@ -234,7 +261,7 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 디버그 시야 표시 (VisionConeRenderer와 동일한 방식으로)
+        /// 디버그 시야 표시 (VisionConeRenderer와 동일한 XZ 평면 투영 방식으로)
         /// </summary>
         private void OnDrawGizmosSelected()
         {
@@ -243,9 +270,13 @@ namespace HideAndInk.Core.Perception
             float halfAngle = viewAngle / 2f;
             int debugSegments = 16;
 
-            // 시야 중심 방향 표시 (빨강)
+            // XZ 평면으로 투영 (VisionConeRenderer와 동일한 방식)
+            Vector3 viewXZ = new Vector3(viewDir.x, 0f, viewDir.z).normalized;
+            if (viewXZ.sqrMagnitude < 0.001f) viewXZ = Vector3.forward;
+
+            // 시야 중심 방향 표시 (빨강) - XZ 평면 투영
             Gizmos.color = Color.red;
-            Gizmos.DrawRay(origin, viewDir * viewRadius);
+            Gizmos.DrawRay(origin, viewXZ * viewRadius);
 
             // 부채꼴 테두리 표시 (주황)
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
@@ -254,8 +285,8 @@ namespace HideAndInk.Core.Perception
             for (int i = 0; i <= debugSegments; i++)
             {
                 float azimuthAngle = -halfAngle + (viewAngle / debugSegments) * i;
-                Vector3 edgeDir = GetConeEdgeDirection(azimuthAngle);
-                Vector3 point = origin + edgeDir * viewRadius;
+                Vector3 dir = Quaternion.AngleAxis(azimuthAngle, Vector3.up) * viewXZ;
+                Vector3 point = origin + dir * viewRadius;
 
                 Gizmos.DrawLine(origin, point);
                 if (i > 0)

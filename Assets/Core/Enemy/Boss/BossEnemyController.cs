@@ -180,11 +180,13 @@ namespace HideAndInk.Core.Enemy.Boss
             ambush.OnMovementStop = () => _movement.Stop();
             ambush.OnMovementResume = () => _movement.Speed = patrolSpeed;
 
-            // 시야 토글
-            ambush.OnVisibilityToggle = (visible) =>
+            // 시야 모드 전환 (거리 전용 모드 ↔ 일반 시야)
+            ambush.OnVisibilityToggle = (ambushMode) =>
             {
                 if (visionSensor != null)
-                    visionSensor.gameObject.SetActive(visible);
+                {
+                    visionSensor.SetDistanceOnlyMode(ambushMode);
+                }
             };
 
             // 의심도 상승 (2단계: 원거리/근접)
@@ -201,6 +203,15 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 Vector3 clampedTarget = ClampToGroundBounds(targetPosition);
                 _movement.MoveTo(clampedTarget);
+            };
+
+            // PatrolBehavior 이동 제어권 토글
+            ambush.OnPatrolBehaviorOverride = (isOverridden) =>
+            {
+                if (_patrolBehavior != null)
+                {
+                    _patrolBehavior.SetMovementOverride(isOverridden);
+                }
             };
 
             // 돌진 모드 토글 (돌진 중에는 ChaseBehavior 우회)
@@ -356,10 +367,14 @@ namespace HideAndInk.Core.Enemy.Boss
 
         /// <summary>
         /// 의심도 업데이트
+        /// AmbushGimmick일 때는 거리 기반 의심도를 사용하므로 시야 기반 의심도 스킵
         /// </summary>
         private void UpdateSuspicion(bool canSeePlayer)
         {
             if (suspicionMeter == null) return;
+
+            // AmbushGimmick은 거리 기반 의심도를 사용 (OnPatrolUpdate에서 직접 호출)
+            if (_activeGimmick is AmbushGimmick) return;
 
             if (canSeePlayer)
             {

@@ -24,6 +24,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         // 상태
         private Vector3 _currentTarget;
         private bool _isInitialized;
+        private bool _movementOverride; // 기믹이 이동 제어권을 가지고 있는지
+
+        /// <summary>
+        /// 이동 제어권 설정 (true = 기믹이 제어, false = PatrolBehavior가 제어)
+        /// </summary>
+        public void SetMovementOverride(bool isOverridden)
+        {
+            _movementOverride = isOverridden;
+        }
 
         /// <summary>
         /// 생성자
@@ -57,6 +66,9 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         public void OnUpdate(float deltaTime)
         {
+            // 기믹이 이동 제어권을 가지고 있으면 PatrolBehavior는 아무것도 하지 않음
+            if (_movementOverride) return;
+
             // 현재 위치 (X축만, Z축 고정)
             Vector3 currentPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
             Vector3 targetPos = new Vector3(_currentTarget.x, 0f, _currentTarget.z);
@@ -76,6 +88,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         public void OnExit()
         {
+            _movementOverride = false; // 제어권 해제
             _movement.Stop();
         }
 

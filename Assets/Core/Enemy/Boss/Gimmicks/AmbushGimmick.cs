@@ -60,6 +60,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public System.Action<float, float> OnSuspicionIncrease; // (rate, deltaTime)
         public System.Action<Vector3> OnRelocateAmbush; // 새 매복 위치 요청
         public System.Action<bool> OnDashModeToggle; // 돌진 모드 ON/OFF
+        public System.Action<bool> OnPatrolBehaviorOverride; // PatrolBehavior 이동 제어권 토글
 
         public void OnActivate(Transform bossTransform)
         {
@@ -78,7 +79,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = false;
             _isDashing = false;
             OnMovementResume?.Invoke();
-            OnVisibilityToggle?.Invoke(true);
+            OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
+            OnPatrolBehaviorOverride?.Invoke(false);
         }
 
         #region Patrol
@@ -90,6 +92,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isDashing = false;
             _ambushTimer = ambushDuration;
 
+            // PatrolBehavior 이동 제어권 넘김
+            OnPatrolBehaviorOverride?.Invoke(true);
+
             // Player 근처 랜덤 위치로 이동
             RequestRelocateAmbush();
         }
@@ -100,6 +105,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // Player 캐싱 재시도
             if (_playerTransform == null) CachePlayerTransform();
+
+            // 매복 위치로 이동 중인지 체크 (도달 전까지 이동 계속)
+            float distanceToAmbush = Vector3.Distance(_bossTransform.position, _ambushPoint);
+            if (distanceToAmbush > 1f)
+            {
+                // 아직 매복 위치로 이동 중
+                OnRelocateAmbush?.Invoke(_ambushPoint);
+                return;
+            }
+
+            // 매복 위치 도착 → 이동 멈춤 + 거리 전용 모드
+            OnMovementStop?.Invoke();
+            OnVisibilityToggle?.Invoke(true); // 거리 전용 모드 ON
 
             // 매복 대기 타이머
             _ambushTimer -= deltaTime;
@@ -123,6 +141,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = false;
             OnMovementResume?.Invoke();
             OnVisibilityToggle?.Invoke(true);
+            OnPatrolBehaviorOverride?.Invoke(false); // PatrolBehavior 제어권 반환
         }
 
         #endregion
@@ -132,7 +151,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnChaseEnter()
         {
             _isAmbushing = false;
-            OnVisibilityToggle?.Invoke(true);
+            OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
 
             // 돌진 1회 체크
             if (!_hasDashed)
@@ -265,10 +284,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             OnRelocateAmbush?.Invoke(newAmbushPoint);
             _ambushPoint = newAmbushPoint;
-
-            // 매복 시작: 이동 멈춤 + 시야 숨김
-            OnMovementStop?.Invoke();
-            OnVisibilityToggle?.Invoke(false);
         }
 
         /// <summary>
@@ -288,7 +303,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             OnDashModeToggle?.Invoke(true);
             OnSpeedOverride?.Invoke(dashSpeed);
-            OnVisibilityToggle?.Invoke(true);
+            OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
 
 #if UNITY_EDITOR
             Debug.Log("[AmbushGimmick] 기습 돌진 시작!");
