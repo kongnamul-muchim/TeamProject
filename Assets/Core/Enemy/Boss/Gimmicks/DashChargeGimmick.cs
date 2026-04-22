@@ -153,5 +153,79 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public bool IsCharging => _isCharging;
         public bool IsCooldown => _cooldownTimer > 0f && !_isCharging;
+
+        #region Movement Override (IEnemyGimmick 확장)
+
+        /// <summary>
+        /// DashChargeGimmick은 이동 제어권을 가짐 (절벽 구간 순찰 + 돌진)
+        /// </summary>
+        public bool HasMovementOverride => true;
+
+        /// <summary>
+        /// Patrol 상태 이동 목표: 절벽 구간 X축 순찰 (Z 고정)
+        /// </summary>
+        public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
+        {
+            // 돌진 중이면 돌진 방향 유지
+            if (_isCharging)
+            {
+                Vector3 target = currentPos + _dashDirection * 5f;
+                target.y = currentPos.y;
+                target.z = currentPos.z; // Z 고정
+                return target;
+            }
+
+            // 돌진 쿨다운 중이면 정지
+            if (_cooldownTimer > 0f)
+            {
+                return currentPos;
+            }
+
+            // 절벽 구간 X축 순찰 (Z 고정)
+            float xDistance = Random.Range(8f, 18f);
+            float xDir = Random.value > 0.5f ? 1f : -1f;
+
+            Vector3 targetPos = new Vector3(
+                currentPos.x + xDir * xDistance,
+                currentPos.y,
+                currentPos.z // Z 고정
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                targetPos.x = bounds.ClampX(targetPos.x);
+                targetPos.z = bounds.ClampZ(targetPos.z);
+            }
+
+            return targetPos;
+        }
+
+        /// <summary>
+        /// Search 상태 이동 목표: 돌진 종료 위치 수색 (Z 고정)
+        /// </summary>
+        public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
+        {
+            // 돌진 종료 위치 기준 X축 수색 (Z 고정)
+            float searchRadius = 3f;
+            float xDir = Random.value > 0.5f ? 1f : -1f;
+            float xDistance = Random.Range(1f, searchRadius);
+
+            Vector3 target = new Vector3(
+                lastKnownPos.x + xDir * xDistance,
+                currentPos.y,
+                currentPos.z // Z 고정
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
+        }
+
+        #endregion
     }
 }

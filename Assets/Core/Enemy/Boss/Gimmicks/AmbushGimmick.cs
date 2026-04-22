@@ -22,15 +22,21 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [Tooltip("매복 위치 재설정 시 Z축 고정 여부 (true = X축만 이동)")]
         [SerializeField] private bool lockZAxis = true;
 
+        [Header("매복 스프라이트")]
+        [Tooltip("매복 상태일 때 표시할 스프라이트 (땅에 숨은 모습)")]
+        [SerializeField] private Sprite ambushSprite;
+        [Tooltip("매복 상태일 때 적용할 SpriteRenderer (비워두면 자동 탐색)")]
+        [SerializeField] private SpriteRenderer targetSpriteRenderer;
+
         [Header("의심도 설정")]
         [Tooltip("원거리 의심도 범위 (m). 이 거리 내에서 서서히 의심도 상승")]
         [SerializeField] private float farSuspicionRadius = 10f;
         [Tooltip("근접 의심도 범위 (m). 이 거리 내에서 급격히 의심도 상승")]
         [SerializeField] private float nearSuspicionRadius = 3f;
         [Tooltip("원거리 의심도 상승률 (초당)")]
-        [SerializeField] private float farSuspicionRate = 10f;
+        [SerializeField] private float farSuspicionRate = 5f;
         [Tooltip("근접 의심도 상승률 (초당)")]
-        [SerializeField] private float nearSuspicionRate = 40f;
+        [SerializeField] private float nearSuspicionRate = 15f;
         [Tooltip("추적 취소 의심도 기준. 이 값 이하로 떨어지면 매복 복귀")]
         [SerializeField] private float suspicionDropThreshold = 20f;
 
@@ -50,6 +56,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _isDashing;
         private float _dashTimer;
         private Vector3 _dashTarget;
+        private SpriteRenderer _spriteRenderer;
+        private Sprite _originalSprite;
 
         // 외부 연동 콜백
         public System.Action<float> OnSpeedOverride;
@@ -72,6 +80,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // Player Transform 캐싱
             CachePlayerTransform();
+
+            // SpriteRenderer 캐싱
+            CacheSpriteRenderer();
         }
 
         public void OnDeactivate()
@@ -94,6 +105,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // PatrolBehavior 이동 제어권 넘김
             OnPatrolBehaviorOverride?.Invoke(true);
+
+            // 매복 스프라이트로 변경
+            ApplyAmbushSprite(true);
 
             // Player 근처 랜덤 위치로 이동
             RequestRelocateAmbush();
@@ -140,7 +154,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isAmbushing = false;
             OnMovementResume?.Invoke();
-            OnVisibilityToggle?.Invoke(true);
+            // OnVisibilityToggle은 ChaseEnter에서 false로 설정하므로 여기선 제거
             OnPatrolBehaviorOverride?.Invoke(false); // PatrolBehavior 제어권 반환
         }
 
@@ -152,6 +166,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isAmbushing = false;
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
+
+            // 원래 스프라이트로 복원
+            ApplyAmbushSprite(false);
 
             // 돌진 1회 체크
             if (!_hasDashed)
@@ -196,11 +213,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnSearchUpdate(float deltaTime)
         {
-            // Search 중에도 Player가 있으면 의심도 체크
-            if (_playerTransform != null)
-            {
-                UpdateSuspicion(deltaTime);
-            }
+            // Search 상태에서는 의심도 자연 하락만 허용 (BossEnemyController가 시야 발견 시 상승 처리)
         }
 
         public void OnSearchExit()
@@ -225,7 +238,45 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 의심도 업데이트 (2단계: 원거리/근접)
+        /// SpriteRenderer 캐싱
+        /// </summary>
+        private void CacheSpriteRenderer()
+        {
+            if (targetSpriteRenderer != null)
+            {
+                _spriteRenderer = targetSpriteRenderer;
+            }
+            else if (_bossTransform != null)
+            {
+                _spriteRenderer = _bossTransform.GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (_spriteRenderer != null)
+            {
+                _originalSprite = _spriteRenderer.sprite;
+            }
+        }
+
+        /// <summary>
+        /// 매복 스프라이트 적용/해제
+        /// </summary>
+        private void ApplyAmbushSprite(bool isAmbushing)
+        {
+            if (_spriteRenderer == null) return;
+
+            if (isAmbushing && ambushSprite != null)
+            {
+                _spriteRenderer.sprite = ambushSprite;
+            }
+            else if (_originalSprite != null)
+            {
+                _spriteRenderer.sprite = _originalSprite;
+            }
+        }
+
+        /// <summary>
+        /// 의심도 업데이트 (거리 기반 가중치 적용)
+        /// 중심에 가까울수록 의심도 상승률 증가
         /// </summary>
         private void UpdateSuspicion(float deltaTime)
         {
@@ -235,13 +286,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             if (distanceToPlayer <= nearSuspicionRadius)
             {
-                // 근접: 급격한 의심도 상승
-                OnSuspicionIncrease?.Invoke(nearSuspicionRate, deltaTime);
+                // 근접: 거리 가중치 적용 (중심 1.0 → 가장자리 0.3)
+                float distanceFactor = 1f - (distanceToPlayer / nearSuspicionRadius);
+                float weightedRate = nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
+                OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
             else if (distanceToPlayer <= farSuspicionRadius)
             {
-                // 원거리: 서서한 의심도 상승
-                OnSuspicionIncrease?.Invoke(farSuspicionRate, deltaTime);
+                // 원거리: 거리 가중치 적용 (중심 1.0 → 가장자리 0.2)
+                float distanceFactor = 1f - ((distanceToPlayer - nearSuspicionRadius) / (farSuspicionRadius - nearSuspicionRadius));
+                float weightedRate = farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
+                OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
             // farSuspicionRadius 밖이면 의심도 상승 없음 (자연 하락에 맡김)
         }
@@ -334,6 +389,90 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public Vector3 AmbushPoint => _ambushPoint;
         public float SuspicionDropThreshold => suspicionDropThreshold;
         public float FarSuspicionRadius => farSuspicionRadius;
+        public float NearSuspicionRadius => nearSuspicionRadius;
+
+        #endregion
+
+        #region Movement Override (IEnemyGimmick 확장)
+
+        /// <summary>
+        /// AmbushGimmick은 항상 이동 제어권을 가짐 (매복 위치 기반 이동)
+        /// </summary>
+        public bool HasMovementOverride => true;
+
+        /// <summary>
+        /// Patrol 상태 이동 목표: 매복 위치 (_ambushPoint) 반환
+        /// Z축은 lockZAxis 설정에 따라 고정 또는 미세 이동
+        /// </summary>
+        public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
+        {
+            // 매복 위치가 설정되어 있으면 그곳으로 이동
+            if (_ambushPoint != Vector3.zero)
+            {
+                Vector3 target = _ambushPoint;
+
+                // Ground 범위 내로 제한
+                if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+                {
+                    target = bounds.ClampXZ(target);
+                }
+
+                // Z축 고정 (lockZAxis = true면 현재 Z 유지)
+                if (lockZAxis)
+                {
+                    target.z = currentPos.z;
+                }
+
+                return target;
+            }
+
+            // 매복 위치 없으면 현재 위치 유지
+            return currentPos;
+        }
+
+        /// <summary>
+        /// Search 상태 이동 목표: 마지막 Player 위치 주변 수색
+        /// Z축은 미세 이동만 허용 (±1m)
+        /// </summary>
+        public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
+        {
+            // 마지막 Player 위치 기준 랜덤 수색
+            float searchRadius = 3f;
+            float angle = Random.Range(0f, 360f);
+            float distance = Random.Range(1f, searchRadius);
+
+            Vector3 target;
+            if (lockZAxis)
+            {
+                // Z축 고정, X축만 수색
+                float xDir = Mathf.Cos(angle * Mathf.Deg2Rad);
+                target = new Vector3(
+                    lastKnownPos.x + xDir * distance,
+                    currentPos.y,
+                    currentPos.z
+                );
+            }
+            else
+            {
+                // X-Z 평면 수색 (Z축 미세 이동 ±1m 제한)
+                float xDir = Mathf.Cos(angle * Mathf.Deg2Rad);
+                float zDir = Mathf.Sin(angle * Mathf.Deg2Rad);
+                float zOffset = Mathf.Clamp(zDir * distance, -1f, 1f);
+                target = new Vector3(
+                    lastKnownPos.x + xDir * distance,
+                    currentPos.y,
+                    currentPos.z + zOffset
+                );
+            }
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
+        }
 
         #endregion
     }

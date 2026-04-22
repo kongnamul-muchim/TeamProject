@@ -13,7 +13,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
     {
         private readonly IEnemy _enemy;
         private readonly IEnemyMovement _movement;
-        private readonly Transform _playerTransform;
+        private Transform _playerTransform;
 
         // 추적 설정
         private readonly float _predictionTime;     // 예측 시간 (초)
@@ -65,6 +65,14 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             _hasGroundBounds = true;
         }
 
+        /// <summary>
+        /// Player Transform 설정 (Controller에서 동적으로 업데이트)
+        /// </summary>
+        public void SetPlayerTransform(Transform playerTransform)
+        {
+            _playerTransform = playerTransform;
+        }
+
         public EnemyAIState StateType => EnemyAIState.Chase;
 
         public void OnEnter()
@@ -87,8 +95,12 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             // Player 속도 계산 (X-Z 평면)
             Vector3 playerDelta = currentPlayerPos - _lastKnownPlayerPosition;
             playerDelta.y = 0f; // Y축 무시
-            Vector3 playerVelocity = playerDelta / deltaTime;
-            _lastPlayerVelocity = Vector3.Lerp(_lastPlayerVelocity, playerVelocity, 0.1f);
+            
+            if (deltaTime > 0.001f)
+            {
+                Vector3 playerVelocity = playerDelta / deltaTime;
+                _lastPlayerVelocity = Vector3.Lerp(_lastPlayerVelocity, playerVelocity, 0.1f);
+            }
 
             // 예측 위치 계산 (X-Z 평면, Chase에서는 Z축 이동 허용)
             Vector3 predictedPosition = currentPlayerPos + (_lastPlayerVelocity * _predictionTime);

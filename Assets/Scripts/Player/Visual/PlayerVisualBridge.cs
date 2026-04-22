@@ -109,19 +109,19 @@ namespace HideAndInk.Player.Visual
 
             if (isMoving)
             {
-                // 이동 중일 때 속도 방향 전달
+                // 이동 중일 때 속도 방향 전달 (0 0 0 기준 직관적 매핑)
                 _animator.SetFloat(moveXParam, velocity.normalized.x);
                 _animator.SetFloat(moveYParam, velocity.normalized.y);
             }
             else
             {
-                // 정지 시 마지막 방향 유지하기 위한 로직 (필요 시 direction 기반으로 설정 가능)
+                // 정지 시 마지막 방향 유지하기 위한 로직 (0 0 0 기준 직관적 매핑)
                 switch (direction)
                 {
-                    case MoveDirection.Up:    _animator.SetFloat(moveYParam, 1);  _animator.SetFloat(moveXParam, 0); break;
-                    case MoveDirection.Down:  _animator.SetFloat(moveYParam, -1); _animator.SetFloat(moveXParam, 0); break;
-                    case MoveDirection.Left:  _animator.SetFloat(moveXParam, -1); _animator.SetFloat(moveYParam, 0); break;
-                    case MoveDirection.Right: _animator.SetFloat(moveXParam, 1);  _animator.SetFloat(moveYParam, 0); break;
+                case MoveDirection.Up:    _animator.SetFloat(moveYParam, 1);  _animator.SetFloat(moveXParam, 0); break;
+                case MoveDirection.Down:  _animator.SetFloat(moveYParam, -1); _animator.SetFloat(moveXParam, 0); break;
+                case MoveDirection.Left:  _animator.SetFloat(moveXParam, -1); _animator.SetFloat(moveYParam, 0); break;
+                case MoveDirection.Right: _animator.SetFloat(moveXParam, 1);  _animator.SetFloat(moveYParam, 0); break;
                 }
             }
         }

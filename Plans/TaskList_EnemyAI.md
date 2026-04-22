@@ -80,19 +80,29 @@
 
 ---
 
-## Phase 2: 보스 기믹 (Phase 1 완료 후)
+## Phase 2: 보스 기믹 이동 제어권 (Phase 1 완료 후)
 
-### 8. 보스별 특수 기믹
-- [ ] `Assets/Core/Enemy/Boss/Gimmicks/` 폴더 생성
-- [ ] Ch.1 가자미: 매복 기믹 (모래에 숨었다 기습)
-- [ ] Ch.2 곰치: 집요한 추격 기믹 (의태 감지 시 추적 강화)
-- [ ] Ch.3 전기뱀장어: 감전 구역 생성 기믹
-- [ ] Ch.4 아귀: 발광 미끼 배치 기믹
-- [ ] Ch.5 백상아리: 초고속 돌진 + 엄폐물 파괴 기믹
+### 8. 보스별 특수 기믹 (이동 제어권 확장)
+- [ ] `IEnemyGimmick.cs` 확장
+  - `HasMovementOverride` 속성 추가
+  - `GetPatrolTarget(currentPos, bounds)` 메서드 추가
+  - `GetSearchTarget(currentPos, lastKnownPos, bounds)` 메서드 추가
+- [ ] `PatrolBehavior.cs` 수정
+  - 생성자에 `IEnemyGimmick` 주입 추가
+  - `OnUpdate()`에서 기믹 이동 제어권 확인
+  - 기믹이 제어하면 X-Z 평면 목표 사용 (Z축 제한)
+- [ ] `SearchBehavior.cs` 수정
+  - 생성자에 `IEnemyGimmick` 주입 추가
+  - `OnUpdate()`에서 기믹 이동 제어권 확인
+- [ ] `BossEnemyController.cs` 수정
+  - Behavior 생성 시 `_activeGimmick` 전달
+- [ ] Ch.1 가자미 (AmbushGimmick): 매복 위치 이동 (Z 고정)
+- [ ] Ch.2 곰치 (RelentlessChaseGimmick): 집중 순찰 영역 내 X-Z 이동 (Z ±2m)
+- [ ] Ch.3 전기뱀장어 (ElectricZoneGimmick): X-Z 순찰 (Z ±1m)
+- [ ] Ch.4 아귀 (LureBaitGimmick): 미끼 순회 이동 (Z ±2m)
+- [ ] Ch.5 백상아리 (DashChargeGimmick): 절벽 구간 X축 순찰 (Z 고정)
 
----
-
-## Phase 3: 정예 몬스터 기믹 (Phase 2 완료 후)
+### 9. 정예 몬스터 기믹 (Phase 2 완료 후)
 
 ### 9. 정예 몬스터 컨트롤러
 - [ ] `Assets/Core/Enemy/Elite/EliteEnemyController.cs` 생성

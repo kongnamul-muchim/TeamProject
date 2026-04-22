@@ -20,7 +20,7 @@ namespace HideAndInk.Core.Enemy.Boss
 
         [Header("보스 설정")]
         [SerializeField] private ConeVisionSensor visionSensor;
-        [SerializeField] private SuspicionMeter suspicionMeter;
+        [SerializeField] private BossSuspicionSystem suspicionSystem;
 
         [Header("상태별 속도")]
         [SerializeField] private float patrolSpeed = 2f;
@@ -58,8 +58,8 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             base.Start();
             CacheCamouflageAdapter();
-            InitializeBehaviors();
-            InitializeGimmick();
+            InitializeGimmick();      // 기믹 먼저 초기화
+            InitializeBehaviors();    // Behavior 생성 시 기믹 사용
             InitializeStateMachine();
         }
 
@@ -70,7 +70,8 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             _patrolBehavior = new PatrolBehavior(
                 enemy: this,
-                movement: _movement);
+                movement: _movement,
+                gimmick: _activeGimmick);
 
             _chaseBehavior = new ChaseBehavior(
                 enemy: this,
@@ -81,6 +82,7 @@ namespace HideAndInk.Core.Enemy.Boss
             _searchBehavior = new SearchBehavior(
                 enemy: this,
                 movement: _movement,
+                gimmick: _activeGimmick,
                 searchDuration: searchDuration,
                 searchDistance: searchDistance);
 
@@ -138,6 +140,15 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 ConnectGimmickCallbacks();
                 _activeGimmick.OnActivate(transform);
+
+                // AmbushGimmick일 경우 의심도 범위를 BossSuspicionSystem에 전달
+                if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
+                {
+                    suspicionSystem.SetSuspicionRadius(ambush.FarSuspicionRadius, ambush.NearSuspicionRadius);
+#if UNITY_EDITOR
+                    suspicionSystem.linkedGimmick = ambush; // 에디터에서 OnValidate용
+#endif
+                }
             }
         }
 
@@ -189,12 +200,12 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
 
-            // 의심도 상승 (2단계: 원거리/근접)
+            // 의심도 상승 (AmbushGimmick → BossSuspicionSystem 연동)
             ambush.OnSuspicionIncrease = (rate, deltaTime) =>
             {
-                if (suspicionMeter != null)
+                if (suspicionSystem != null)
                 {
-                    suspicionMeter.AddSuspicion(rate, deltaTime);
+                    suspicionSystem.AddSuspicion(rate, deltaTime);
                 }
             };
 
@@ -287,8 +298,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 chaseState: _chaseBehavior,
                 searchState: _searchBehavior);
 
-            _stateMachine.Initialize(EnemyAIState.Patrol);
+            // 이벤트 핸들러를 Initialize 전에 등록해야 초기 상태 설정이 적용됨
             _stateMachine.OnStateChanged += OnAIStateChanged;
+            _stateMachine.Initialize(EnemyAIState.Patrol);
 
             // 초기 속도
             _movement.Speed = patrolSpeed;
@@ -298,10 +310,25 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (_stateMachine == null) return;
 
+            // Player Transform 재확인 (null이면 재탐색)
+            if (_playerTransform == null)
+            {
+                FindPlayer();
+            }
+
+            // ChaseBehavior의 PlayerTransform 업데이트 (매 프레임)
+            if (_playerTransform != null && _chaseBehavior != null)
+            {
+                _chaseBehavior.SetPlayerTransform(_playerTransform);
+            }
+
             // Player 감지
             bool canSeePlayer = CanSeePlayer();
 
-            // 의심도 업데이트
+            // 의태 상태 업데이트
+            UpdateCamouflageState();
+
+            // 의심도 업데이트 (시야/근접 기반)
             UpdateSuspicion(canSeePlayer);
 
             // 상태 전환 체크
@@ -312,6 +339,18 @@ namespace HideAndInk.Core.Enemy.Boss
 
             // 기믹 상태 업데이트
             UpdateGimmick(deltaTime);
+        }
+
+        /// <summary>
+        /// 의태 상태 업데이트
+        /// </summary>
+        private void UpdateCamouflageState()
+        {
+            if (suspicionSystem == null) return;
+
+            bool isCamouflaging = IsPlayerCamouflaging();
+            bool isPerfect = _camouflageAdapter != null && _camouflageAdapter.IsPerfect;
+            suspicionSystem.SetCamouflageState(isCamouflaging, isPerfect);
         }
 
         /// <summary>
@@ -366,19 +405,39 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// 의심도 업데이트
-        /// AmbushGimmick일 때는 거리 기반 의심도를 사용하므로 시야 기반 의심도 스킵
+        /// 의심도 업데이트 (시야/근접 기반)
         /// </summary>
         private void UpdateSuspicion(bool canSeePlayer)
         {
-            if (suspicionMeter == null) return;
+            if (suspicionSystem == null) return;
 
-            // AmbushGimmick은 거리 기반 의심도를 사용 (OnPatrolUpdate에서 직접 호출)
-            if (_activeGimmick is AmbushGimmick) return;
-
-            if (canSeePlayer)
+            // 가자미 기믹이 활성화되어 있으면
+            if (_activeGimmick is AmbushGimmick)
             {
-                suspicionMeter.OnDetectedTarget(detectionIntensity: 1f);
+                // Patrol: 기믹이 거리 기반 의심도 관리 (컨트롤러는 관여 안 함)
+                if (_stateMachine.IsPatrol) return;
+
+                // Search: Player 시야 발견 시에만 의심도 상승
+                if (_stateMachine.IsSearch && canSeePlayer)
+                {
+                    suspicionSystem.ReportVisionDetection(1f);
+                    return;
+                }
+
+                // Chase: Player 시야 발견 시에만 의심도 상승
+                if (_stateMachine.IsChase && canSeePlayer)
+                {
+                    suspicionSystem.ReportVisionDetection(1f);
+                    return;
+                }
+            }
+            else
+            {
+                // 일반 보스: 시야 기반 의심도 보고 (의태 중이면 무시)
+                if (canSeePlayer)
+                {
+                    suspicionSystem.ReportVisionDetection(1f);
+                }
             }
         }
 
@@ -387,15 +446,15 @@ namespace HideAndInk.Core.Enemy.Boss
         /// </summary>
         private void CheckStateTransitions(bool canSeePlayer)
         {
-            if (_stateMachine == null) return;
+            if (_stateMachine == null || suspicionSystem == null) return;
 
             var currentState = _stateMachine.CurrentState;
-            var suspicionLevel = suspicionMeter?.CurrentLevel ?? SuspicionLevel.Safe;
-            var suspicionValue = suspicionMeter?.CurrentValue ?? 0f;
+            var suspicionLevel = suspicionSystem.CurrentLevel;
 
             // Ambush 기믹 전용: 의심도 기반 상태 전환
             bool isAmbushGimmick = _activeGimmick is AmbushGimmick;
             float ambushDropThreshold = isAmbushGimmick ? (_activeGimmick as AmbushGimmick).SuspicionDropThreshold : 0f;
+            float suspicionValue = suspicionSystem.CurrentValue;
 
             switch (currentState)
             {
@@ -408,27 +467,33 @@ namespace HideAndInk.Core.Enemy.Boss
                     break;
 
                 case EnemyAIState.Chase:
-                    // Chase → Search: Player 놓침
-                    if (!canSeePlayer)
+                    // Chase → Search: Player 놓침 + 의심도 하락
+                    // Ambush 기믹: 의심도가 임계값 이하로 떨어져야 Search로 전환
+                    if (isAmbushGimmick)
                     {
-                        // 마지막 위치 전달
-                        if (_playerTransform != null)
+                        if (suspicionValue < ambushDropThreshold)
                         {
-                            _searchBehavior.SetLastKnownPosition(_playerTransform.position);
-                        }
-                        _stateMachine.TryTransitionTo(EnemyAIState.Search);
-                    }
-                    // Ambush 전용: 의심도 하락으로 추적 취소
-                    else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
-                    {
 #if UNITY_EDITOR
-                        Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Search");
+                            Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Search");
 #endif
-                        if (_playerTransform != null)
-                        {
-                            _searchBehavior.SetLastKnownPosition(_playerTransform.position);
+                            if (_playerTransform != null)
+                            {
+                                _searchBehavior.SetLastKnownPosition(_playerTransform.position);
+                            }
+                            _stateMachine.TryTransitionTo(EnemyAIState.Search);
                         }
-                        _stateMachine.TryTransitionTo(EnemyAIState.Search);
+                    }
+                    else
+                    {
+                        // 일반 보스: Player 놓치면 바로 Search
+                        if (!canSeePlayer)
+                        {
+                            if (_playerTransform != null)
+                            {
+                                _searchBehavior.SetLastKnownPosition(_playerTransform.position);
+                            }
+                            _stateMachine.TryTransitionTo(EnemyAIState.Search);
+                        }
                     }
                     break;
 
@@ -465,12 +530,36 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 case EnemyAIState.Patrol:
                     _movement.Speed = patrolSpeed;
+                    // Patrol: 매복 모드 (거리 전용 360도)
+                    if (_activeGimmick is AmbushGimmick && visionSensor != null)
+                    {
+                        visionSensor.SetDistanceOnlyMode(true);
+#if UNITY_EDITOR
+                        Debug.Log($"[BossEnemyController] Patrol: 360도 거리 전용 모드 활성화");
+#endif
+                    }
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
+                    // Chase: 360도 감지 (매복 보스는 Player 위치 이미 파악)
+                    if (_activeGimmick is AmbushGimmick && visionSensor != null)
+                    {
+                        visionSensor.SetDistanceOnlyMode(true);
+#if UNITY_EDITOR
+                        Debug.Log($"[BossEnemyController] Chase: 360도 거리 전용 모드 활성화");
+#endif
+                    }
                     break;
                 case EnemyAIState.Search:
                     _movement.Speed = searchSpeed;
+                    // Search: 부채꼴 모드 복귀 (일반 수색)
+                    if (_activeGimmick is AmbushGimmick && visionSensor != null)
+                    {
+                        visionSensor.SetDistanceOnlyMode(false);
+#if UNITY_EDITOR
+                        Debug.Log($"[BossEnemyController] Search: 부채꼴 모드 복귀");
+#endif
+                    }
                     break;
             }
 
@@ -511,7 +600,7 @@ namespace HideAndInk.Core.Enemy.Boss
 
         /// <summary>
         /// 일반 몬스터가 Player 위치를 알림
-        /// Player 위치가 Ground 위에 있으면 Chase 상태로 전환
+        /// Player 위치가 Ground 위에 있으면 해당 위치로 이동
         /// </summary>
         public void AlertPlayerPosition(Vector3 playerPosition)
         {
@@ -540,6 +629,39 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         #endregion
+
+        /// <summary>
+        /// 이동 처리 오버라이드
+        /// Chase 상태에서는 Ground 검증을 완화 (Player 추적 우선)
+        /// </summary>
+        protected override void UpdateMovement(float deltaTime)
+        {
+            if (_movement == null) return;
+
+            _movement.Update(deltaTime);
+
+            // Chase 상태에서는 Ground 검증을 스킵 (Player 추적 우선)
+            bool isChasing = _stateMachine != null && _stateMachine.IsChase;
+
+            if (_movement.IsMoving && !isChasing)
+            {
+                // 이동 방향 앞쪽에 Ground가 있는지 확인
+                if (!_movement.IsGroundAhead())
+                {
+                    // Ground가 없으면 이동 중지 및 방향 전환
+                    _movement.Stop();
+                    OnGroundEdgeReached();
+                    return;
+                }
+            }
+
+            // 속도를 실제 Transform에 적용 (X-Z 평면, Y축 고정)
+            Vector3 newPosition = transform.position;
+            newPosition.x += _movement.Velocity.x * deltaTime;
+            newPosition.z += _movement.Velocity.z * deltaTime;
+            // Y축은 고정
+            transform.position = newPosition;
+        }
 
         protected virtual void OnDestroy()
         {

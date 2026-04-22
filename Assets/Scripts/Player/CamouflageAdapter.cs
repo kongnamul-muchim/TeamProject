@@ -518,11 +518,11 @@ namespace HideAndInk.Player
 
             Vector3 targetPos = _stateMachine.TargetObject.transform.position;
 
-            // 뒷면에서 접근: 오브젝트 뒤로 이동
-            // 앞면에서 접근: 오브젝트 앞으로 이동
+            // 뒷면에서 접근: 오브젝트 앞으로 이동
+            // 앞면에서 접근: 오브젝트 뒤로 이동
             Vector3 offset = _isAttachingFromBehind
-                ? -_stateMachine.TargetObject.transform.forward * BACK_OFFSET
-                : _stateMachine.TargetObject.transform.forward * BACK_OFFSET;
+                ? _stateMachine.TargetObject.transform.forward * BACK_OFFSET
+                : -_stateMachine.TargetObject.transform.forward * BACK_OFFSET;
 
             return targetPos + offset;
         }
@@ -552,7 +552,7 @@ namespace HideAndInk.Player
             Vector3 dirToPlayer = (transform.position - target.transform.position).normalized;
             Vector3 targetForward = target.transform.forward;
             float dot = Vector3.Dot(dirToPlayer, targetForward);
-            _isAttachingFromBehind = dot < 0f;
+            _isAttachingFromBehind = dot > 0f;
 
             // Outline 원래 색상 저장
             _originalOutlineColor = _targetOutline.OutlineColor;

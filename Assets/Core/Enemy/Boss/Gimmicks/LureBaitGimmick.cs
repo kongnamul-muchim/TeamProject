@@ -190,6 +190,103 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 Debug.Log("[LureBaitGimmick] Chase 전환!", this);
             }
         }
+
+        #region Movement Override (IEnemyGimmick 확장)
+
+        /// <summary>
+        /// LureBaitGimmick은 이동 제어권을 가짐 (미끼 순회 이동)
+        /// </summary>
+        public bool HasMovementOverride => true;
+
+        /// <summary>
+        /// Patrol 상태 이동 목표: 미끼 배치 위치 순회 (Z ±2m 제한)
+        /// </summary>
+        public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
+        {
+            // 활성 미끼 중 가장 가까운 미끼로 이동
+            if (_activeBaits != null && _activeBaits.Length > 0)
+            {
+                GameObject nearestBait = null;
+                float nearestDist = float.MaxValue;
+
+                foreach (var bait in _activeBaits)
+                {
+                    if (bait != null)
+                    {
+                        float dist = Vector3.Distance(currentPos, bait.transform.position);
+                        if (dist < nearestDist)
+                        {
+                            nearestDist = dist;
+                            nearestBait = bait;
+                        }
+                    }
+                }
+
+                if (nearestBait != null)
+                {
+                    Vector3 target = nearestBait.transform.position;
+                    target.y = currentPos.y;
+
+                    // Z축 ±2m 제한 (현재 Z 기준)
+                    target.z = Mathf.Clamp(target.z, currentPos.z - 2f, currentPos.z + 2f);
+
+                    // Ground 범위 내로 제한
+                    if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+                    {
+                        target = bounds.ClampXZ(target);
+                    }
+
+                    return target;
+                }
+            }
+
+            // 미끼가 없으면 현재 위치 기준 X-Z 랜덤 이동 (Z ±2m 제한)
+            float xDistance = Random.Range(5f, 12f);
+            float xDir = Random.value > 0.5f ? 1f : -1f;
+            float zOffset = Random.Range(-2f, 2f);
+
+            Vector3 fallbackTarget = new Vector3(
+                currentPos.x + xDir * xDistance,
+                currentPos.y,
+                currentPos.z + zOffset
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                fallbackTarget = bounds.ClampXZ(fallbackTarget);
+            }
+
+            return fallbackTarget;
+        }
+
+        /// <summary>
+        /// Search 상태 이동 목표: 미끼 감지 위치 수색 (Z ±2m 제한)
+        /// </summary>
+        public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
+        {
+            // Player가 감지된 위치 기준 수색
+            float searchRadius = 3f;
+            float angle = Random.Range(0f, 360f);
+            float distance = Random.Range(1f, searchRadius);
+            float zOffset = Mathf.Clamp(Mathf.Sin(angle * Mathf.Deg2Rad) * distance, -2f, 2f);
+
+            Vector3 target = new Vector3(
+                lastKnownPos.x + Mathf.Cos(angle * Mathf.Deg2Rad) * distance,
+                currentPos.y,
+                currentPos.z + zOffset
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
+        }
+
+        #endregion
     }
 
     /// <summary>

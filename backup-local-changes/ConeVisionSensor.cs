@@ -26,8 +26,8 @@ namespace HideAndInk.Core.Perception
         [Header("시야 방향 (기본값: 전방)")]
         [Tooltip("시야 방향 기준 Transform. 지정하면 해당 오브젝트의 forward 방향 사용")]
         [SerializeField] private Transform viewDirectionRef;
-        [Tooltip("viewDirectionRef가 없을 때 사용할 커스텀 시야 방향")]
-        [SerializeField] private Vector3 customViewDirection = Vector3.forward;
+        [Tooltip("viewDirectionRef가 없을 때 사용할 커스텀 시야 방향 (0이면 Enemy 회전 연동)")]
+        [SerializeField] private Vector3 customViewDirection;
 
         // 캐싱
         private Vector3 _cachedOrigin;
@@ -84,7 +84,7 @@ namespace HideAndInk.Core.Perception
 
         /// <summary>
         /// 시야 방향 가져오기
-        /// viewDirectionRef가 없으면 Enemy 본체 right(2D 전방) 사용 (회전 연동)
+        /// viewDirectionRef가 없으면 Enemy 본체 right(2D 전방) 사용 (Y축 회전 연동)
         /// </summary>
         public Vector3 GetViewDirection()
         {
@@ -111,22 +111,6 @@ namespace HideAndInk.Core.Perception
         public void SetDistanceOnlyMode(bool enabled)
         {
             _distanceOnlyMode = enabled;
-        }
-
-        /// <summary>
-        /// 시야 반경 코드에서 변경
-        /// </summary>
-        public void SetViewRadius(float radius)
-        {
-            viewRadius = Mathf.Max(0f, radius);
-        }
-
-        /// <summary>
-        /// 시야 각도 코드에서 변경
-        /// </summary>
-        public void SetViewAngle(float angle)
-        {
-            viewAngle = Mathf.Clamp(angle, 0f, 360f);
         }
 
         /// <summary>
@@ -189,18 +173,12 @@ namespace HideAndInk.Core.Perception
             // 거리 체크 (항상)
             if (distanceToTarget > viewRadius)
             {
-#if UNITY_EDITOR
-                // Debug.Log($"[ConeVisionSensor] CanSee: OUT OF RANGE ({distanceToTarget:F1} > {viewRadius:F1})");
-#endif
                 return false;
             }
 
             // 거리 전용 모드: 각도/장애물 무시
             if (_distanceOnlyMode)
             {
-#if UNITY_EDITOR
-                // Debug.Log($"[ConeVisionSensor] CanSee: DISTANCE ONLY MODE - VISIBLE ({distanceToTarget:F1}m)");
-#endif
                 return true;
             }
 
@@ -281,6 +259,43 @@ namespace HideAndInk.Core.Perception
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 디버그 시야 표시 (VisionConeRenderer와 동일한 XZ 평면 투영 방식으로)
+        /// </summary>
+        private void OnDrawGizmosSelected()
+        {
+            Vector3 origin = Origin;
+            Vector3 viewDir = GetViewDirection().normalized;
+            float halfAngle = viewAngle / 2f;
+            int debugSegments = 16;
+
+            // XZ 평면으로 투영 (VisionConeRenderer와 동일한 방식)
+            Vector3 viewXZ = new Vector3(viewDir.x, 0f, viewDir.z).normalized;
+            if (viewXZ.sqrMagnitude < 0.001f) viewXZ = Vector3.right;  // 2D 기본 방향: 오른쪽
+
+            // 시야 중심 방향 표시 (빨강) - XZ 평면 투영
+            Gizmos.color = Color.red;
+            Gizmos.DrawRay(origin, viewXZ * viewRadius);
+
+            // 부채꼴 테두리 표시 (주황)
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
+
+            Vector3 prevPoint = origin;
+            for (int i = 0; i <= debugSegments; i++)
+            {
+                float azimuthAngle = -halfAngle + (viewAngle / debugSegments) * i;
+                Vector3 dir = Quaternion.AngleAxis(azimuthAngle, Vector3.up) * viewXZ;
+                Vector3 point = origin + dir * viewRadius;
+
+                Gizmos.DrawLine(origin, point);
+                if (i > 0)
+                {
+                    Gizmos.DrawLine(prevPoint, point);
+                }
+                prevPoint = point;
+            }
         }
     }
 }
