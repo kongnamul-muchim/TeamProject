@@ -206,10 +206,6 @@ namespace HideAndInk.Core.Perception
             Gizmos.color = new Color(1f, 0f, 0f, 0.4f);
             Gizmos.DrawWireCube(transform.position, new Vector3(nearRadius.x * 2f, 0.05f, nearRadius.y * 2f));
 
-            // 바닥 원형 - 붉은색 디스크 (Near Radius 기준, 위험 지역)
-            Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
-            Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - 0.05f, transform.position.z), nearRadius);
-
             // 중심점 표시
             Gizmos.color = Color.red;
             Gizmos.DrawSphere(transform.position, 0.15f);
