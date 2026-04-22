@@ -674,11 +674,9 @@ MonoBehaviour:
   dangerThreshold: 60
   detectedThreshold: 100
   visionIncreaseSpeed: 10
-  proximityIncreaseSpeed: 8
   normalDecreaseSpeed: 5
   camouflageDecreaseSpeed: 15
-  proximityRadius: 1
-  proximityDropDelay: 1
+  linkedGimmick: {fileID: 11400000, guid: a86094f2116fc4d4a919856ca2d13398, type: 2}
 --- !u!1 &1253547413
 GameObject:
   m_ObjectHideFlags: 0

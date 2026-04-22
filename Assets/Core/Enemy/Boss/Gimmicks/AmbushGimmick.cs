@@ -33,6 +33,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private float farSuspicionRadius = 10f;
         [Tooltip("근접 의심도 범위 (m). 이 거리 내에서 급격히 의심도 상승")]
         [SerializeField] private float nearSuspicionRadius = 3f;
+        [Tooltip("Gizmos 높이 (맵 두께에 맞게 조절)")]
+        [SerializeField] private float gizmosHeight = 0.5f;
         [Tooltip("원거리 의심도 상승률 (초당)")]
         [SerializeField] private float farSuspicionRate = 5f;
         [Tooltip("근접 의심도 상승률 (초당)")]
@@ -390,6 +392,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public float SuspicionDropThreshold => suspicionDropThreshold;
         public float FarSuspicionRadius => farSuspicionRadius;
         public float NearSuspicionRadius => nearSuspicionRadius;
+        public float GizmosHeight => gizmosHeight;
 
         #endregion
 

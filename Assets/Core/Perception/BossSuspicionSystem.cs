@@ -186,14 +186,28 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void OnDrawGizmosSelected()
         {
+            // linkedGimmick이 할당되어 있으면 SO의 현재 값을 직접 사용 (에디터 실시간 반영)
+            float farRadius = _farSuspicionRadius;
+            float nearRadius = _nearSuspicionRadius;
+            float gizmosHeight = 0.5f;
+
+#if UNITY_EDITOR
+            if (linkedGimmick != null)
+            {
+                farRadius = linkedGimmick.FarSuspicionRadius;
+                nearRadius = linkedGimmick.NearSuspicionRadius;
+                gizmosHeight = linkedGimmick.GizmosHeight;
+            }
+#endif
+
             // 네모박스 (사각형 영역) - 주황색 와이어프레임 (Far Radius 기준)
-            float boxSize = _farSuspicionRadius * 2f;
+            float boxSize = farRadius * 2f;
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
-            Gizmos.DrawWireCube(transform.position, new Vector3(boxSize, 0.1f, boxSize));
+            Gizmos.DrawWireCube(transform.position, new Vector3(boxSize, gizmosHeight, boxSize));
 
             // 바닥 원형 - 붉은색 디스크 (Near Radius 기준, 위험 지역)
             Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
-            Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - 0.05f, transform.position.z), _nearSuspicionRadius);
+            Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - 0.05f, transform.position.z), nearRadius);
 
             // 중심점 표시
             Gizmos.color = Color.red;
