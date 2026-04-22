@@ -2,9 +2,9 @@ using UnityEngine;
 
 /// <summary>
 /// [이동] 치치의 이동만 담당한다.
-/// - Follow 상태: 움직이지 않음 (두두 근처에서 대기, Z축만 부드럽게 따라감)
-/// - CatchUp 상태: 두두 뒤로 부드럽게 따라감
-/// - Charging 상태: 제자리 유지
+/// - Follow 상태: 두두를 부드럽게 따라감 (느린 속도, X/Y/Z 모두)
+/// - CatchUp 상태: 두두를 빠르게 따라잡음 (빠른 속도)
+/// - Charging 상태: 두두를 매우 부드럽게 따라감 (충전 중에도 위치 유지)
 /// - 이동 방향에 따라 스프라이트 변경 (Front/Back/Side)
 /// - Side 스프라이트는 좌/우에 따라 SpriteRenderer.flipX 반전
 /// </summary>
@@ -29,32 +29,27 @@ public class ChichiFollower : MonoBehaviour
     [SerializeField] private float sideOffset = 0.8f;
     [Tooltip("수직 (Y) 오프셋")]
     [SerializeField] private Vector3 liftOffset = new Vector3(0f, 0.5f, 0f);
-    [Tooltip("추가 가이드 오프셋 (X, Y, Z)")]
-    [SerializeField] private Vector3 guideOffset = new Vector3(0f, 0f, 0f);
+    [Tooltip("추가 가이드 오프셋 (X, Y)")]
+    [SerializeField] private Vector2 guideOffset = new Vector2(0f, 0f);
 
     [Header("⚡ Move Speed - 이동 속도 설정")]
-    [Tooltip("따라갈 때 부드러움 (낮을수록 느리고 부드러움)")]
-    [SerializeField] private float catchUpSmoothTime = 0.25f;
+    [Tooltip("Follow 상태 부드러움 (높을수록 느리고 부드러움)")]
+    [SerializeField] private float followSmoothTime = 0.4f;
+    [Tooltip("CatchUp 상태 부드러움 (낮을수록 빠름)")]
+    [SerializeField] private float catchUpSmoothTime = 0.15f;
     [Tooltip("충전 중 위치 보정 부드러움")]
-    [SerializeField] private float chargeSmoothTime = 0.12f;
-    [Tooltip("목표 위치 보정 부드러움")]
-    [SerializeField] private float targetSmoothTime = 0.18f;
+    [SerializeField] private float chargeSmoothTime = 0.2f;
     [Tooltip("방향 전환 속도 (높을수록 빠르게 방향 전환)")]
-    [SerializeField] private float turnSpeed = 6f;
+    [SerializeField] private float turnSpeed = 8f;
 
     private Vector3 _lastTargetPosition;
     private Vector3 _lastMoveDirection = Vector3.forward;
     private Vector3 _smoothedMoveDirection = Vector3.forward;
-    private Vector3 _currentTarget;
     private Vector3 _moveVelocity;
-    private Vector3 _targetVelocity;
     private Sprite _lastSprite;
 
-    // 스프라이트 방향 전환용 실제 이동 delta (CatchUp 상태일 때만 계산)
+    // 스프라이트 방향 전환용 실제 이동 delta
     private Vector3 _actualMoveDelta;
-
-    // Follow 상태에서의 X,Y 고정 위치 (상태 전환 시 스냅용)
-    private Vector3 _followFixedPosition;
 
     private void Awake()
     {
@@ -86,9 +81,6 @@ public class ChichiFollower : MonoBehaviour
             _lastMoveDirection = _smoothedMoveDirection;
         }
 
-        _currentTarget = GetFollowTargetPosition();
-        _followFixedPosition = transform.position;
-        _followFixedPosition.z = stateMachine.Target.position.z;
         stateMachine.OnStateChanged += HandleStateChanged;
     }
 
@@ -107,22 +99,25 @@ public class ChichiFollower : MonoBehaviour
 
         Vector3 prevPosition = transform.position;
 
+        // 이동 방향 업데이트
         UpdateMoveDirection(stateMachine.Target.position - _lastTargetPosition);
-        UpdateCurrentTarget(stateMachine.CurrentState);
+
+        // 목표 위치 계산 및 이동 (통합)
         UpdateMovement();
 
-        // Follow/Charging 상태: 두두를 바라보도록 스프라이트 방향 업데이트
-        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow
-            || stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging)
+        // 스프라이트 방향 업데이트
+        _actualMoveDelta = transform.position - prevPosition;
+        _actualMoveDelta.y = 0f;
+
+        if (_actualMoveDelta.sqrMagnitude > 0.0001f)
         {
-            UpdateSpriteDirectionByTarget();
-        }
-        // CatchUp 상태: 실제 이동 방향으로 스프라이트 방향 업데이트
-        else if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp)
-        {
-            _actualMoveDelta = transform.position - prevPosition;
-            _actualMoveDelta.y = 0f;
+            // 이동 중이면 이동 방향으로 스프라이트 변경
             UpdateSpriteDirectionByMovement();
+        }
+        else
+        {
+            // 정지 상태면 두두를 바라보도록 스프라이트 변경
+            UpdateSpriteDirectionByTarget();
         }
 
         _lastTargetPosition = stateMachine.Target.position;
@@ -132,28 +127,10 @@ public class ChichiFollower : MonoBehaviour
     {
         // 상태 전환 시 SmoothDamp velocity 리셋 (위치 튀김 방지)
         _moveVelocity = Vector3.zero;
-        _targetVelocity = Vector3.zero;
-
-        if (state == ChichiStateMachine.ChichiState.Follow)
-        {
-            // Follow 진입 시 현재 X,Y 고정 + Z는 두두 위치로
-            _followFixedPosition = transform.position;
-            _followFixedPosition.z = stateMachine.Target.position.z;
-            _currentTarget = _followFixedPosition;
-        }
-        else if (state == ChichiStateMachine.ChichiState.CatchUp)
-        {
-            // CatchUp 진입 시 Follow 고정 위치를 현재 위치로 업데이트 (복귀 시 튀김 방지)
-            _followFixedPosition = transform.position;
-            _followFixedPosition.z = stateMachine.Target.position.z;
-            _currentTarget = GetFollowTargetPosition();
-        }
-        // Charging: 제자리 유지 (_currentTarget 변경 안 함)
     }
 
     private void UpdateMoveDirection(Vector3 delta)
     {
-        // Y축도 포함 (스프라이트 방향 판별용)
         if (delta.sqrMagnitude > 0.00001f)
         {
             _lastMoveDirection = delta.normalized;
@@ -166,41 +143,34 @@ public class ChichiFollower : MonoBehaviour
         }
     }
 
-    private void UpdateCurrentTarget(ChichiStateMachine.ChichiState state)
-    {
-        if (state == ChichiStateMachine.ChichiState.CatchUp)
-        {
-            // CatchUp: 목표 위치를 직접 계산 (SmoothDamp 제거, UpdateMovement에서만 사용)
-            _currentTarget = GetFollowTargetPosition();
-        }
-        else if (state == ChichiStateMachine.ChichiState.Follow)
-        {
-            // Follow 상태: Z만 두두 위치로 설정 (X,Y는 _followFixedPosition 고정)
-            if (stateMachine.Target != null)
-            {
-                _currentTarget = _followFixedPosition;
-                _currentTarget.z = stateMachine.Target.position.z;
-            }
-        }
-        // Charging 상태: _currentTarget 변경 안 함 (제자리 유지)
-    }
-
+    /// <summary>
+    /// 통합 이동 시스템: 모든 상태에서 동일한 목표 위치로 이동, smoothTime만 다르게 적용
+    /// </summary>
     private void UpdateMovement()
     {
-        // Follow 상태에서는 X,Y는 고정, Z만 부드럽게 따라감
-        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.Follow)
+        Vector3 targetPosition = GetFollowTargetPosition();
+
+        // 상태별 smoothTime 선택
+        float smoothTime;
+        switch (stateMachine.CurrentState)
         {
-            Vector3 pos = transform.position;
-            pos.z = _currentTarget.z;
-            transform.position = pos;
-            return;
+            case ChichiStateMachine.ChichiState.Follow:
+                smoothTime = followSmoothTime;
+                break;
+            case ChichiStateMachine.ChichiState.CatchUp:
+                smoothTime = catchUpSmoothTime;
+                break;
+            case ChichiStateMachine.ChichiState.Charging:
+                smoothTime = chargeSmoothTime;
+                break;
+            default:
+                smoothTime = followSmoothTime;
+                break;
         }
 
-        // CatchUp / Charging 상태: SmoothDamp로 위치 이동
-        float smoothTime = stateMachine.CurrentState == ChichiStateMachine.ChichiState.Charging ? chargeSmoothTime : catchUpSmoothTime;
-        Vector3 nextPosition = Vector3.SmoothDamp(transform.position, _currentTarget, ref _moveVelocity, smoothTime);
-        nextPosition.y = _currentTarget.y;
-        nextPosition.z = _currentTarget.z;
+        // SmoothDamp로 부드러운 이동
+        Vector3 nextPosition = Vector3.SmoothDamp(transform.position, targetPosition, ref _moveVelocity, smoothTime);
+        nextPosition.y = targetPosition.y;
         transform.position = nextPosition;
     }
 
@@ -256,7 +226,7 @@ public class ChichiFollower : MonoBehaviour
     }
 
     /// <summary>
-    /// CatchUp 상태: 치치의 실제 이동 방향에 따라 스프라이트 변경
+    /// 이동 상태: 치치의 실제 이동 방향에 따라 스프라이트 변경
     /// - X+ → Side (flipX: true), X- → Side (flipX: false)
     /// - Z+ → Back, Z- → Front
     /// - SpriteRenderer.flipX 사용 (transform 회전 아님)
@@ -309,9 +279,13 @@ public class ChichiFollower : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 따라가기 목표 위치 계산
+    /// - 두두 위치 + 방향 기반 오프셋
+    /// - Z는 두두 위치 정확히 사용
+    /// </summary>
     private Vector3 GetFollowTargetPosition()
     {
-        // 따라가기 거리는 StateMachine 의 maxFollowDistance 사용
         float followDistance = stateMachine.MaxFollowDistance;
 
         Vector3 behindDirection = -_smoothedMoveDirection;
