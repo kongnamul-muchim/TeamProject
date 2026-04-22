@@ -19,8 +19,6 @@ public class ChichiFollower : MonoBehaviour
     [SerializeField] private Sprite spriteSide;
 
     [Header("📍 Offset")]
-    [Tooltip("측면으로 벗어난 거리 (Player 이동 시에만 적용)")]
-    [SerializeField] private float sideOffset = 0.8f;
     [SerializeField] private Vector3 liftOffset = new Vector3(0f, 0.5f, 0f);
     [SerializeField] private Vector2 guideOffset = new Vector2(0f, 0f);
 
@@ -157,32 +155,34 @@ public class ChichiFollower : MonoBehaviour
 
     private Vector3 GetFollowTargetPosition()
     {
-        Vector3 behindDirection = -_smoothedPlayerDirection;
-        bool playerIsMoving = playerMovement != null && playerMovement.IsMoving;
-        float currentSideOffset = playerIsMoving ? sideOffset : 0f;
-        Vector3 sideDirection = new Vector3(-behindDirection.z, 0f, behindDirection.x);
+        Vector3 targetPosition = stateMachine.Target.position;
 
-        if (behindDirection.sqrMagnitude < 0.00001f)
+        // CatchUp: Player 뒤로 followDistance만큼 떨어짐
+        // Follow: Player 위치를 직접 타겟으로 (Idle 전환은 StateMachine이 담당)
+        if (stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp)
         {
-            behindDirection = Vector3.back;
-            sideDirection = Vector3.right;
+            Vector3 behindDirection = -_smoothedPlayerDirection;
+            if (behindDirection.sqrMagnitude < 0.00001f)
+                behindDirection = Vector3.back;
+
+            Vector2 dist = stateMachine.FollowDistance;
+            Vector3 planarOffset = new Vector3(
+                behindDirection.x * dist.x,
+                0f,
+                behindDirection.z * dist.y
+            );
+
+            return new Vector3(
+                targetPosition.x + planarOffset.x + guideOffset.x,
+                targetPosition.y + liftOffset.y + guideOffset.y,
+                targetPosition.z + planarOffset.z);
         }
 
-        Vector3 targetPosition = stateMachine.Target.position;
-        Vector2 distanceThreshold = stateMachine.CurrentState == ChichiStateMachine.ChichiState.CatchUp
-            ? stateMachine.FollowDistance
-            : stateMachine.StopDistance;
-
-        // X/Z 각각 오프셋 적용 (직사각형 영역)
-        float offsetX = behindDirection.x * distanceThreshold.x;
-        float offsetZ = behindDirection.z * distanceThreshold.y;
-
-        Vector3 planarOffset = new Vector3(offsetX, 0f, offsetZ) + sideDirection * currentSideOffset + new Vector3(guideOffset.x, 0f, 0f);
-
+        // Follow: Player 위치 + 작은 오프셋 (가이드만 적용)
         return new Vector3(
-            targetPosition.x + planarOffset.x,
+            targetPosition.x + guideOffset.x,
             targetPosition.y + liftOffset.y + guideOffset.y,
-            targetPosition.z + planarOffset.z);
+            targetPosition.z);
     }
 
     private int CalculateDirectionZone(Vector3 delta)
