@@ -658,7 +658,7 @@ MonoBehaviour:
   searchSpeed: 3
   searchDistance: 3
   searchDuration: 5
-  gimmickAsset: {fileID: 0}
+  gimmickAsset: {fileID: 11400000, guid: a86094f2116fc4d4a919856ca2d13398, type: 2}
   customGimmick: {fileID: 0}
 --- !u!114 &710864468
 MonoBehaviour:

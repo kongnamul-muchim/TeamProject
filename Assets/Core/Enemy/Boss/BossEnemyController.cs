@@ -173,13 +173,49 @@ namespace HideAndInk.Core.Enemy.Boss
         /// </summary>
         private void ConnectAmbushCallbacks(AmbushGimmick ambush)
         {
+            // 속도 제어
             ambush.OnSpeedOverride = (speed) => _movement.Speed = speed;
+
+            // 이동 멈춤/재개
+            ambush.OnMovementStop = () => _movement.Stop();
+            ambush.OnMovementResume = () => _movement.Speed = patrolSpeed;
+
+            // 시야 토글
             ambush.OnVisibilityToggle = (visible) =>
             {
                 if (visionSensor != null)
                     visionSensor.gameObject.SetActive(visible);
             };
-            ambush.SetOriginalSpeed(patrolSpeed);
+
+            // 의심도 상승 (2단계: 원거리/근접)
+            ambush.OnSuspicionIncrease = (rate, deltaTime) =>
+            {
+                if (suspicionMeter != null)
+                {
+                    suspicionMeter.AddSuspicion(rate, deltaTime);
+                }
+            };
+
+            // 매복 위치 재설정 (Player 근처 랜덤 위치로 이동)
+            ambush.OnRelocateAmbush = (targetPosition) =>
+            {
+                Vector3 clampedTarget = ClampToGroundBounds(targetPosition);
+                _movement.MoveTo(clampedTarget);
+            };
+
+            // 돌진 모드 토글 (돌진 중에는 ChaseBehavior 우회)
+            ambush.OnDashModeToggle = (isDashing) =>
+            {
+                // 돌진 중에는 ChaseBehavior의 예측 이동 대신 직선 돌진
+                // ChaseBehavior가 MoveTo를 호출하지만, 속도가 dashSpeed로 오버라이드됨
+            };
+
+            // 돌진 완료 → 일반 ChaseBehavior로 복귀
+            ambush.OnDashCompleted = (dashTarget) =>
+            {
+                // 돌진 완료 후 ChaseBehavior가 계속 Player 추적
+                // 상태 전환 불필요 (이미 Chase 상태)
+            };
         }
 
         /// <summary>
@@ -340,6 +376,11 @@ namespace HideAndInk.Core.Enemy.Boss
 
             var currentState = _stateMachine.CurrentState;
             var suspicionLevel = suspicionMeter?.CurrentLevel ?? SuspicionLevel.Safe;
+            var suspicionValue = suspicionMeter?.CurrentValue ?? 0f;
+
+            // Ambush 기믹 전용: 의심도 기반 상태 전환
+            bool isAmbushGimmick = _activeGimmick is AmbushGimmick;
+            float ambushDropThreshold = isAmbushGimmick ? (_activeGimmick as AmbushGimmick).SuspicionDropThreshold : 0f;
 
             switch (currentState)
             {
@@ -362,6 +403,18 @@ namespace HideAndInk.Core.Enemy.Boss
                         }
                         _stateMachine.TryTransitionTo(EnemyAIState.Search);
                     }
+                    // Ambush 전용: 의심도 하락으로 추적 취소
+                    else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
+                    {
+#if UNITY_EDITOR
+                        Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Search");
+#endif
+                        if (_playerTransform != null)
+                        {
+                            _searchBehavior.SetLastKnownPosition(_playerTransform.position);
+                        }
+                        _stateMachine.TryTransitionTo(EnemyAIState.Search);
+                    }
                     break;
 
                 case EnemyAIState.Search:
@@ -369,6 +422,14 @@ namespace HideAndInk.Core.Enemy.Boss
                     if (canSeePlayer)
                     {
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
+                    // Ambush 전용: 의심도 하락으로 매복 복귀
+                    else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
+                    {
+#if UNITY_EDITOR
+                        Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped in Search ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Patrol (Re-ambush)");
+#endif
+                        _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
                     }
                     // Search → Patrol: 탐색 시간 초과
                     else if (_searchBehavior.IsSearchTimeout())
