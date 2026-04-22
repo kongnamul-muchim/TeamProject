@@ -594,7 +594,7 @@ MonoBehaviour:
   trackingThreshold: 0.5
   trackingMemoryMultiplier: 1.5
   lostTargetThreshold: 0.2
-  suspicionMeter: {fileID: 1540738567}
+  suspicionMeter: {fileID: 0}
 --- !u!114 &710864463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -739,17 +739,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 516912067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1540738567 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3297640407222950382, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
-  m_PrefabInstance: {fileID: 9030604088078134067}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f0d6894c1067b24dafe318076728be8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.SuspicionMeter
 --- !u!1 &1556155324
 GameObject:
   m_ObjectHideFlags: 0
@@ -798,7 +787,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b4a25f7475659f4b859bd3863afb2e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.SuspicionMeterUI
-  suspicionMeter: {fileID: 1540738567}
+  suspicionMeter: {fileID: 0}
   suspicionFillImage: {fileID: 0}
   suspicionText: {fileID: 1968272509}
   suspicionLevelText: {fileID: 402308813}
@@ -1251,6 +1240,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1800170050815014156, guid: 857c8c388fdfef34fbec870767022439, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5e38b2b3cbae93341bbd43967ad97d99, type: 2}
     - target: {fileID: 5705393309387548850, guid: 857c8c388fdfef34fbec870767022439, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.08

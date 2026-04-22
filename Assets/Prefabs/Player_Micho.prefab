@@ -405,6 +405,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4987047004403506284}
   - component: {fileID: 3585654356924280463}
+  - component: {fileID: 5019178174811249822}
   m_Layer: 6
   m_Name: Visual
   m_TagString: Untagged
@@ -486,3 +487,16 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &5019178174811249822
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8977722265186421912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1138e16d10f972046aa748469d4d9236, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::XRayMaterialDualizer
+  outlineMaterial: {fileID: 2100000, guid: 5f137be7095c0fd4495a7e7e6b4fae11, type: 2}

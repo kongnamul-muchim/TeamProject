@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Octopus 2
-  m_Shader: {fileID: 4800000, guid: de90088e9acbb514b97c1ee613d60a6a, type: 3}
+  m_Name: Octopus_Body
+  m_Shader: {fileID: 4800000, guid: 795326fbc1e1d034faa20c169366969b, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
