@@ -149,6 +149,11 @@ namespace HideAndInk.Core.Enemy.Boss
 #if UNITY_EDITOR
                     suspicionSystem.linkedGimmick = ambush; // 에디터에서 OnValidate용
 #endif
+                    // Ground Bounds 전달 (매복 위치 생성 시 사용)
+                    if (_isGroundBoundsScanned)
+                    {
+                        ambush.SetGroundBounds(_groundBounds);
+                    }
                 }
             }
         }

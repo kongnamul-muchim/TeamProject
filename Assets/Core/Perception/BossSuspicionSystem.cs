@@ -121,8 +121,14 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void AddSuspicion(float rate, float deltaTime)
         {
+            float previousValue = _currentValue;
             _currentValue += rate * deltaTime;
             _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
+
+#if UNITY_EDITOR
+            Debug.Log($"[BossSuspicionSystem] AddSuspicion: {previousValue:F2} → {_currentValue:F2} (Rate={rate:F2}, DeltaTime={deltaTime:F3})");
+#endif
+
             CheckLevelChange();
         }
 

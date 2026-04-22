@@ -628,6 +628,7 @@ MonoBehaviour:
   groundScanStep: 1
   visionSensor: {fileID: 710864469}
   suspicionSystem: {fileID: 710864470}
+  visionConeRenderer: {fileID: 710864466}
   patrolSpeed: 2
   chaseSpeed: 5
   searchSpeed: 3
