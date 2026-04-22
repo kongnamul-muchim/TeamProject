@@ -29,13 +29,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private SpriteRenderer targetSpriteRenderer;
 
         [Header("의심도 설정")]
-        [Tooltip("원거리 의심도 범위 (m). 이 거리 내에서 서서히 의심도 상승")]
-        [SerializeField] private float farSuspicionRadius = 10f;
-        [Tooltip("근접 의심도 범위 (m). 이 거리 내에서 급격히 의심도 상승")]
-        [SerializeField] private float nearSuspicionRadius = 3f;
-        [Header("Gizmos 시각화")]
-        [Tooltip("Gizmos 직사각형 크기 (X, Z). 맵 크기에 맞게 조절")]
-        [SerializeField] private Vector2 gizmosRectSize = new Vector2(20f, 20f);
+        [Tooltip("원거리 의심도 범위 (X, Z). 이 거리 내에서 서서히 의심도 상승")]
+        [SerializeField] private Vector2 farSuspicionRadius = new Vector2(10f, 10f);
+        [Tooltip("근접 의심도 범위 (X, Z). 이 거리 내에서 급격히 의심도 상승")]
+        [SerializeField] private Vector2 nearSuspicionRadius = new Vector2(3f, 3f);
         [Tooltip("원거리 의심도 상승률 (초당)")]
         [SerializeField] private float farSuspicionRate = 5f;
         [Tooltip("근접 의심도 상승률 (초당)")]
@@ -278,30 +275,38 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 의심도 업데이트 (거리 기반 가중치 적용)
+        /// 의심도 업데이트 (직사각형 거리 기반 가중치 적용)
         /// 중심에 가까울수록 의심도 상승률 증가
         /// </summary>
         private void UpdateSuspicion(float deltaTime)
         {
             if (_playerTransform == null) return;
 
-            float distanceToPlayer = Vector3.Distance(_bossTransform.position, _playerTransform.position);
+            Vector3 delta = _playerTransform.position - _bossTransform.position;
+            float absX = Mathf.Abs(delta.x);
+            float absZ = Mathf.Abs(delta.z);
 
-            if (distanceToPlayer <= nearSuspicionRadius)
+            // 근접 범위 체크 (직사각형)
+            if (absX <= nearSuspicionRadius.x && absZ <= nearSuspicionRadius.y)
             {
-                // 근접: 거리 가중치 적용 (중심 1.0 → 가장자리 0.3)
-                float distanceFactor = 1f - (distanceToPlayer / nearSuspicionRadius);
+                // 거리 가중치: 중심 1.0 → 가장자리 0.3
+                float xFactor = 1f - (absX / nearSuspicionRadius.x);
+                float zFactor = 1f - (absZ / nearSuspicionRadius.y);
+                float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
-            else if (distanceToPlayer <= farSuspicionRadius)
+            // 원거리 범위 체크 (직사각형)
+            else if (absX <= farSuspicionRadius.x && absZ <= farSuspicionRadius.y)
             {
-                // 원거리: 거리 가중치 적용 (중심 1.0 → 가장자리 0.2)
-                float distanceFactor = 1f - ((distanceToPlayer - nearSuspicionRadius) / (farSuspicionRadius - nearSuspicionRadius));
+                // 거리 가중치: 중심 1.0 → 가장자리 0.2
+                float xFactor = 1f - (absX / farSuspicionRadius.x);
+                float zFactor = 1f - (absZ / farSuspicionRadius.y);
+                float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
-            // farSuspicionRadius 밖이면 의심도 상승 없음 (자연 하락에 맡김)
+            // 범위 밖이면 의심도 상승 없음 (자연 하락에 맡김)
         }
 
         /// <summary>
@@ -391,9 +396,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public bool HasDashed => _hasDashed;
         public Vector3 AmbushPoint => _ambushPoint;
         public float SuspicionDropThreshold => suspicionDropThreshold;
-        public float FarSuspicionRadius => farSuspicionRadius;
-        public float NearSuspicionRadius => nearSuspicionRadius;
-        public Vector2 GizmosRectSize => gizmosRectSize;
+        public Vector2 FarSuspicionRadius => farSuspicionRadius;
+        public Vector2 NearSuspicionRadius => nearSuspicionRadius;
 
         #endregion
 

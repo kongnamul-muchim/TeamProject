@@ -44,13 +44,13 @@ namespace HideAndInk.Core.Perception
         private float _lastDetectedTime;
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
-        private float _farSuspicionRadius = 10f;
-        private float _nearSuspicionRadius = 3f;
+        private Vector2 _farSuspicionRadius = new Vector2(10f, 10f);
+        private Vector2 _nearSuspicionRadius = new Vector2(3f, 3f);
 
         /// <summary>
         /// 의심도 범위 설정 (AmbushGimmick에서 호출)
         /// </summary>
-        public void SetSuspicionRadius(float farRadius, float nearRadius)
+        public void SetSuspicionRadius(Vector2 farRadius, Vector2 nearRadius)
         {
             _farSuspicionRadius = farRadius;
             _nearSuspicionRadius = nearRadius;
@@ -187,22 +187,24 @@ namespace HideAndInk.Core.Perception
         private void OnDrawGizmosSelected()
         {
             // linkedGimmick이 할당되어 있으면 SO의 현재 값을 직접 사용 (에디터 실시간 반영)
-            float farRadius = _farSuspicionRadius;
-            float nearRadius = _nearSuspicionRadius;
-            Vector2 gizmosRectSize = new Vector2(20f, 20f);
+            Vector2 farRadius = _farSuspicionRadius;
+            Vector2 nearRadius = _nearSuspicionRadius;
 
 #if UNITY_EDITOR
             if (linkedGimmick != null)
             {
                 farRadius = linkedGimmick.FarSuspicionRadius;
                 nearRadius = linkedGimmick.NearSuspicionRadius;
-                gizmosRectSize = linkedGimmick.GizmosRectSize;
             }
 #endif
 
-            // 네모박스 (직사각형 영역) - 주황색 와이어프레임 (Far Radius 기준)
+            // 직사각형 영역 (Far Radius) - 주황색 와이어프레임
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
-            Gizmos.DrawWireCube(transform.position, new Vector3(gizmosRectSize.x, 0.05f, gizmosRectSize.y));
+            Gizmos.DrawWireCube(transform.position, new Vector3(farRadius.x * 2f, 0.05f, farRadius.y * 2f));
+
+            // 직사각형 영역 (Near Radius) - 붉은색 와이어프레임
+            Gizmos.color = new Color(1f, 0f, 0f, 0.4f);
+            Gizmos.DrawWireCube(transform.position, new Vector3(nearRadius.x * 2f, 0.05f, nearRadius.y * 2f));
 
             // 바닥 원형 - 붉은색 디스크 (Near Radius 기준, 위험 지역)
             Gizmos.color = new Color(1f, 0f, 0f, 0.3f);
