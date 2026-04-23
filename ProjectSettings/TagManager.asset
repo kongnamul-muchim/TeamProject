@@ -57,11 +57,11 @@ TagManager:
   - name: Background_Near
     uniqueID: 3583738687
     locked: 0
-  - name: foreground
-    uniqueID: 3758733175
-    locked: 0
   - name: Player
     uniqueID: 149697889
+    locked: 0
+  - name: foreground
+    uniqueID: 3758733175
     locked: 0
   m_RenderingLayers:
   - Default
