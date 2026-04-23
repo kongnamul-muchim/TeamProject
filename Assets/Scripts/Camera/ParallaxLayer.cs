@@ -9,13 +9,39 @@ namespace HideAndInk.ParallaxSystem
     /// - Controller 구독 모드: ParallaxController가 있으면 이벤트로 delta를 받아 이동 (권장)
     /// - 독립 모드: Controller가 없으면 자체 LateUpdate에서 카메라를 추적 (Fallback)
     /// 
+    /// 위치 기준:
+    /// - CameraAnchored (기본): 카메라 기준 위치. 배경이 항상 화면에 유지됨.
+    ///   rate=0 → 카메라와 동일 속도 (원경, 오프셋만 다름)
+    ///   rate=1 → 카메라 중심에 고정 (전경)
+    /// 
+    /// - WorldAnchored: 월드 기준 위치. 전경 오브젝트에 적합.
+    ///   rate=0 → 월드에 고정 (배경이 화면 밖으로 사라질 수 있음)
+    ///   rate=1 → 카메라와 1:1 이동
+    /// 
     /// SRP: 위치 계산만 담당, DI: [SerializeField]로 설정 참조
     /// OCP: IParallaxLayer 구현으로 새 레이어 타입 확장 가능
     /// </summary>
     public sealed class ParallaxLayer : MonoBehaviour, IParallaxLayer
     {
+        // ── 열거형 ──
+
+        /// <summary>패럴랙스 위치 기준 모드</summary>
+        public enum AnchorMode
+        {
+            /// <summary>카메라 기준: 배경이 항상 화면에 유지됨 (배경 레이어용)</summary>
+            CameraAnchored,
+
+            /// <summary>월드 기준: 월드 좌표에 고정 (전경 오브젝트용)</summary>
+            WorldAnchored
+        }
+
+        // ── DI ──
+
         [Header("DI - 추적할 카메라 (미할당 시 Camera.main)")]
         [SerializeField] private UnityEngine.Camera targetCamera;
+
+        [Header("위치 기준 모드")]
+        [SerializeField] private AnchorMode anchorMode = AnchorMode.CameraAnchored;
 
         [Header("X축 보간 비율 (0=최대원근, 1=고정)")]
         [Range(0f, 1f)]
@@ -60,19 +86,49 @@ namespace HideAndInk.ParallaxSystem
                 targetCamera = mainCam;
         }
 
+        /// <summary>카메라 위치에 따라 레이어 위치를 계산한다.</summary>
+        private Vector3 CalculatePosition(Vector3 cameraPos)
+        {
+            float originOffsetX = _originLayerPos.x - _originCameraPos.x;
+            float originOffsetY = _originLayerPos.y - _originCameraPos.y;
+
+            float newX;
+            float newY;
+
+            switch (anchorMode)
+            {
+                // 카메라 기준: 배경이 항상 화면에 유지됨
+                // rate=0 → 카메라 위치 + 전체 오프셋 (원경, 카메라와 같은 속도로 이동)
+                // rate=1 → 카메라 위치 (전경, 카메라 중심에 고정)
+                case AnchorMode.CameraAnchored:
+                    newX = cameraPos.x + originOffsetX * (1f - rate);
+                    newY = applyY
+                        ? cameraPos.y + originOffsetY * (1f - yRate)
+                        : transform.position.y;
+                    break;
+
+                // 월드 기준: 기존 동작 (전경 오브젝트용)
+                // rate=0 → 월드에 고정 (배경이 화면 밖으로 사라질 수 있음)
+                // rate=1 → 카메라와 1:1 이동
+                case AnchorMode.WorldAnchored:
+                default:
+                    newX = _originLayerPos.x + (cameraPos.x - _originCameraPos.x) * rate;
+                    newY = applyY
+                        ? _originLayerPos.y + (cameraPos.y - _originCameraPos.y) * yRate
+                        : transform.position.y;
+                    break;
+            }
+
+            return new Vector3(newX, newY, transform.position.z);
+        }
+
         /// <summary>Controller로부터 delta를 받아 위치를 갱신한다.</summary>
         public void ApplyOffset(Vector3 delta)
         {
             if (!_isInitialized) return;
 
-            // Controller 구독 모드: 누적 delta 대신 origin 기반 절대 위치 계산
             Vector3 cameraPos = targetCamera.transform.position;
-            float newX = _originLayerPos.x + (cameraPos.x - _originCameraPos.x) * rate;
-            float newY = transform.position.y;
-            if (applyY)
-                newY = _originLayerPos.y + (cameraPos.y - _originCameraPos.y) * yRate;
-
-            transform.position = new Vector3(newX, newY, transform.position.z);
+            transform.position = CalculatePosition(cameraPos);
         }
 
         /// <summary>Controller가 이 레이어를 관리한다고 알린다. 독립 모드를 비활성화한다.</summary>
@@ -107,12 +163,7 @@ namespace HideAndInk.ParallaxSystem
             if (!_isInitialized) return;
 
             Vector3 cameraPos = targetCamera.transform.position;
-            float newX = _originLayerPos.x + (cameraPos.x - _originCameraPos.x) * rate;
-            float newY = transform.position.y;
-            if (applyY)
-                newY = _originLayerPos.y + (cameraPos.y - _originCameraPos.y) * yRate;
-
-            transform.position = new Vector3(newX, newY, transform.position.z);
+            transform.position = CalculatePosition(cameraPos);
         }
     }
 }
