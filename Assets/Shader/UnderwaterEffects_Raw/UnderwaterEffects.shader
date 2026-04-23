@@ -2,69 +2,62 @@ Shader "Paro222/UnderwaterEffects"
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" {}
+        [HideInInspector] _MainTex ("Base (RGB)", 2D) = "white" {}
+        _color ("Fog Color", Color) = (1, 0, 0, 1)
+        _dis ("Distance", Float) = 10
+        _alpha ("Alpha", Range(0, 1)) = 1
+        _refraction ("Refraction", Float) = 1
+        _NormalMap ("Normal Map", 2D) = "bump" {}
+        _normalUV ("Normal UV", Vector) = (1, 1, 0.2, 0.1)
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
-        LOD 100
-
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
         Pass
         {
-            CGPROGRAM
+            ZTest Always ZWrite Off Cull Off
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            #include "UnityCG.cginc"
+            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
+            struct Varyings { float2 uv : TEXCOORD0; float4 positionCS : SV_POSITION; };
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
+            // Blitter API 전용 텍스처 선언
+            TEXTURE2D(_BlitTexture); SAMPLER(sampler_BlitTexture);
+            TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
+            TEXTURE2D(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
 
-            struct v2f
-            {
-                float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
-            };
+            CBUFFER_START(UnityPerMaterial)
+                float4 _color; float _dis; float _alpha; float _refraction; float4 _normalUV;
+            CBUFFER_END
 
-            half remap(half x, half t1, half t2, half s1, half s2)
-            {
-                return (x - t1) / (t2 - t1) * (s2 - s1) + s1;
+            Varyings vert (Attributes input) {
+                Varyings output;
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.uv = input.uv;
+                return output;
             }
 
-            sampler2D _MainTex;
-            sampler2D _NormalMap;
-            float4 _normalUV;
-            float4 _MainTex_ST;
-            fixed4 _color;
-            float _dis;
-            float _alpha;
-            float _refraction;
-            sampler2D_float _CameraDepthTexture;
+            half4 frag (Varyings input) : SV_Target {
+                // 노멀맵 기반 굴절 오프셋 계산
+                float3 normalSample = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, input.uv * _normalUV.xy + _normalUV.zw * _Time.y));
+                float2 offset = normalSample.xy * _refraction * 0.05;
 
-            v2f vert (appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                return o;
-            }
-
-            fixed4 frag (v2f i) : SV_Target
-            {
-                // sample the texture
-                fixed3 normalmap = UnpackNormal(tex2D(_NormalMap, i.uv * _normalUV.xy + _normalUV.zw * _Time.y));
-
-                float depth_tex = UNITY_SAMPLE_DEPTH(tex2D(_CameraDepthTexture, i.uv + normalmap * _refraction * 0.01));
-                float depth = saturate(smoothstep(0, _dis * 0.01, Linear01Depth(depth_tex)) + _alpha);
+                // 굴절이 적용된 화면 컬러 샘플링
+                half4 col = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, input.uv + offset);
                 
-                fixed4 col = tex2D(_MainTex, i.uv + normalmap * _refraction * 0.01);
+                // 깊이값 샘플링 및 거리 계산
+                float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv + offset).r;
+                float depth = Linear01Depth(rawDepth, _ZBufferParams);
+                
+                // 포그 강도 (Distance와 Alpha 기반)
+                float fog = saturate(smoothstep(0, _dis * 0.05, depth) + _alpha);
 
-                return lerp(col, _color, depth);
+                return lerp(col, _color, fog);
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }

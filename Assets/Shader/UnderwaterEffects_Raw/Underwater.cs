@@ -1,124 +1,96 @@
-//Created by Paro.
+using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine;
 
 public class Underwater : ScriptableRendererFeature
 {
     [System.Serializable]
     public class Settings
     {
-        //future settings
         public Material material;
-        public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingSkybox;
-        public Color color;
-        public float distance = 10;
-        [Range(0, 1)]
-        public float alpha;
-        public float refraction = 0.1f;
+        public RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        [Header("Fog Settings")]
+        public Color color = Color.red;
+        public float distance = 10f;
+        [Range(0, 1)] public float alpha = 1f;
+        [Header("Refraction Settings")]
+        public float refraction = 1f;
         public Texture normalmap;
-        public Vector4 UV = new Vector4(1,1,0.2f,0.1f);
+        public Vector4 UV = new Vector4(1, 1, 0.2f, 0.1f);
     }
 
     public Settings settings = new Settings();
+
     class Pass : ScriptableRenderPass
     {
         public Settings settings;
-        private RTHandle source;
-        private RTHandle tempTexture;
+        private RTHandle m_TempTexture;
 
-        private string profilerTag;
-
-        public void Setup(RTHandle source)
+        public Pass()
         {
-            this.source = source;
-        }
-
-        public Pass(string profilerTag)
-        {
-            this.profilerTag = profilerTag;
+            // 최신 URP 필수 입력 선언
+            ConfigureInput(ScriptableRenderPassInput.Color | ScriptableRenderPassInput.Depth);
         }
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
-            RenderTextureDescriptor cameraTextureDescriptor = renderingData.cameraData.cameraTargetDescriptor;
-            RenderingUtils.ReAllocateIfNeeded(ref tempTexture, cameraTextureDescriptor, name: "_UnderwaterTempTexture");
-            ConfigureTarget(tempTexture);
-            ConfigureClear(ClearFlag.All, Color.black);
+            // 임시 텍스처 생성 (카메라와 동일한 해상도)
+            var desc = renderingData.cameraData.cameraTargetDescriptor;
+            desc.depthBufferBits = 0;
+            RenderingUtils.ReAllocateIfNeeded(ref m_TempTexture, desc, FilterMode.Bilinear, TextureWrapMode.Clamp, name: "_UnderwaterTemp");
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            CommandBuffer cmd = CommandBufferPool.Get(profilerTag);
-            cmd.Clear();
+            if (settings.material == null) return;
 
-            //it is very important that if something fails our code still calls 
-            //CommandBufferPool.Release(cmd) or we will have a HUGE memory leak
-            if(settings.material == null) return;
+            CommandBuffer cmd = CommandBufferPool.Get("Underwater Effects");
+            
+            // 최신 URP에서는 renderer에서 직접 타겟 핸들을 가져옵니다.
+            RTHandle source = renderingData.cameraData.renderer.cameraColorTargetHandle;
 
-            try
-            {
-                //here we set out material properties
-                //...
-                settings.material.SetFloat("_dis", settings.distance);
+            // 매테리얼 변수 강제 업데이트
+            settings.material.SetColor("_color", settings.color);
+            settings.material.SetFloat("_dis", settings.distance);
+            settings.material.SetFloat("_alpha", settings.alpha);
+            settings.material.SetFloat("_refraction", settings.refraction);
+            settings.material.SetTexture("_NormalMap", settings.normalmap);
+            settings.material.SetVector("_normalUV", settings.UV);
 
-                settings.material.SetFloat("_alpha", settings.alpha);
+            // [핵심] Blitter를 이용한 화면 복사 및 쉐이더 적용
+            // 1. 카메라 화면(source)을 임시 텍스처(m_TempTexture)로 옮기면서 수중 쉐이더 적용
+            Blitter.BlitCameraTexture(cmd, source, m_TempTexture, settings.material, 0);
+            
+            // 2. 쉐이더가 적용된 임시 텍스처를 다시 카메라 화면(source)으로 덮어쓰기
+            Blitter.BlitCameraTexture(cmd, m_TempTexture, source);
 
-                settings.material.SetColor("_color", settings.color);
-
-                settings.material.SetTexture("_NormalMap", settings.normalmap);
-
-                settings.material.SetFloat("_refraction", settings.refraction);
-
-                settings.material.SetVector("_normalUV", settings.UV);
-
-                //never use a Blit from source to source, as it only works with MSAA
-                // enabled and the scene view doesnt have MSAA,
-                // so the scene view will be pure black
-
-                Blitter.BlitCameraTexture(cmd, source, tempTexture);
-                Blitter.BlitCameraTexture(cmd, tempTexture, source, settings.material, 0);
-
-                context.ExecuteCommandBuffer(cmd);
-            }
-            catch
-            {
-                Debug.LogError("Error");
-            }
-            cmd.Clear();
+            context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
+        }
+
+        public void Cleanup()
+        {
+            m_TempTexture?.Release();
         }
     }
 
-    Pass pass;
-    // Removed renderTextureHandle
+    Pass m_Pass;
+
     public override void Create()
     {
-        pass = new Pass("Underwater Effects");
-        name = "Underwater Effects";
-        pass.settings = settings;
-        pass.renderPassEvent = settings.renderPassEvent;
-    }
-#if UNITY_2022_1_OR_NEWER
-    public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
-    {
-        var cameraColorTargetIdent = renderer.cameraColorTargetHandle;
-        pass.Setup(cameraColorTargetIdent);
+        m_Pass = new Pass();
+        m_Pass.settings = settings;
+        m_Pass.renderPassEvent = settings.renderPassEvent;
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        renderer.EnqueuePass(pass);
+        // 렌더링 패스 등록
+        renderer.EnqueuePass(m_Pass);
     }
-#else
-    // called every frame once per camera
-    public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
+
+    protected override void Dispose(bool disposing)
     {
-        var cameraColorTargetIdent = renderer.cameraColorTargetHandle;
-        pass.Setup(cameraColorTargetIdent);
-        renderer.EnqueuePass(pass);
+        m_Pass?.Cleanup();
     }
-#endif
 }
-
-
