@@ -207,14 +207,7 @@ namespace HideAndInk.Core.Enemy.Normal
         /// </summary>
         private void PickNewTarget()
         {
-            Vector2 randomDirection = Random.insideUnitCircle.normalized;
-            Vector3 currentPos = transform.position;
-            Vector3 target = new Vector3(
-                currentPos.x + randomDirection.x * moveDistance,
-                currentPos.y,
-                currentPos.z + randomDirection.y * moveDistance);
-
-            _targetPosition = ClampToGroundBounds(target);
+            _targetPosition = PickPatrolTarget(moveDistance);
         }
 
         /// <summary>

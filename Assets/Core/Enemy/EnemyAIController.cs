@@ -297,6 +297,24 @@ namespace HideAndInk.Core.Enemy
         }
 
         /// <summary>
+        /// 순찰 목표 지점 선택 (공통 메서드)
+        /// Ground 범위 내로 제한된 목표 위치 반환
+        /// </summary>
+        /// <param name="distance">이동 거리</param>
+        /// <returns>목표 위치</returns>
+        protected Vector3 PickPatrolTarget(float distance)
+        {
+            Vector2 randomDirection = Random.insideUnitCircle.normalized;
+            Vector3 currentPos = transform.position;
+            Vector3 target = new Vector3(
+                currentPos.x + randomDirection.x * distance,
+                currentPos.y,
+                currentPos.z + randomDirection.y * distance);
+
+            return ClampToGroundBounds(target);
+        }
+
+        /// <summary>
         /// Player 찾기 (Tag "Player" 우선, 실패 시 레이어 기반 탐색)
         /// </summary>
         protected virtual void FindPlayer()
