@@ -327,16 +327,16 @@ namespace HideAndInk.Core.Enemy
                 return;
             }
 
-            // 2순위: 레이어 기반 탐색 (FindObjectsByType으로 최적화)
+            // 2순위: 레이어 기반 탐색 (GameObject 기반으로 최적화)
             int playerLayer = LayerMask.NameToLayer("Player");
             if (playerLayer >= 0)
             {
-                var transforms = FindObjectsByType<Transform>(FindObjectsSortMode.None);
-                foreach (var t in transforms)
+                var gameObjects = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+                foreach (var go in gameObjects)
                 {
-                    if (t.gameObject.layer == playerLayer)
+                    if (go.layer == playerLayer)
                     {
-                        _playerTransform = t;
+                        _playerTransform = go.transform;
                         return;
                     }
                 }
