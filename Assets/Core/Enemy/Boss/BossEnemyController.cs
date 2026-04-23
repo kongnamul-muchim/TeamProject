@@ -47,6 +47,12 @@ namespace HideAndInk.Core.Enemy.Boss
         // 기믹 시스템
         private IEnemyGimmick _activeGimmick;
 
+        [Header("의심도 설정")]
+        [Tooltip("Chase 진입 시 의심도 값 (0~100)")]
+        [SerializeField] private float chaseStartSuspicion = 100f;
+        [Tooltip("Chase 중 의심도 하락 배율 (1=기본, 0.5=절반 속도)")]
+        [SerializeField] private float chaseSuspicionDecayMultiplier = 0.5f;
+
         [Header("애니메이션")]
         [SerializeField] private Animator bossAnimator;
 
@@ -616,6 +622,11 @@ namespace HideAndInk.Core.Enemy.Boss
                 case EnemyAIState.Patrol:
                     _movement.Speed = patrolSpeed;
                     if (bossAnimator != null) bossAnimator.SetBool("IsChase", false);
+                    // Patrol 복귀 시 의심도 하락 배율 복원
+                    if (suspicionSystem != null)
+                    {
+                        suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                    }
                     // Patrol: 매복 모드 (거리 전용 360도)
                     if (_activeGimmick is AmbushGimmick && visionSensor != null)
                     {
@@ -628,6 +639,12 @@ namespace HideAndInk.Core.Enemy.Boss
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
                     if (bossAnimator != null) bossAnimator.SetBool("IsChase", true);
+                    // Chase 진입 시 의심도 100% 설정
+                    if (suspicionSystem != null)
+                    {
+                        suspicionSystem.SetSuspicion(chaseStartSuspicion);
+                        suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
+                    }
                     // Chase: 360도 감지 (매복 보스는 Player 위치 이미 파악)
                     if (_activeGimmick is AmbushGimmick && visionSensor != null)
                     {
