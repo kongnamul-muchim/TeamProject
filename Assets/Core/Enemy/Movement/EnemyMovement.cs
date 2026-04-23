@@ -282,54 +282,120 @@ namespace HideAndInk.Core.Enemy.Movement
 
         /// <summary>
         /// X축 경계 스캔 (방향: -1=왼쪽, 1=오른쪽)
+        /// 이진 탐색으로 Raycast 횟수 최소화 (~50회 → ~15회)
         /// </summary>
         private float ScanBoundaryX(Vector3 startPos, float direction, float maxDistance, float step)
         {
-            float lastValidX = startPos.x;
-            int steps = Mathf.FloorToInt(maxDistance / step);
+            if (_groundLayer == 0) return startPos.x + direction * maxDistance;
 
-            for (int i = 1; i <= steps; i++)
+            // 1단계: 지수 탐색으로 경계 범위 찾기 (1, 2, 4, 8, 16, 32...)
+            int lastValidStep = 0;
+            int firstInvalidStep = -1;
+            int currentStep = 1;
+
+            while (currentStep * step <= maxDistance)
             {
-                float checkX = startPos.x + direction * step * i;
+                float checkX = startPos.x + direction * currentStep * step;
                 Vector3 checkPoint = new Vector3(checkX, startPos.y + 0.1f, startPos.z);
 
-                if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+                if (Physics.Raycast(checkPoint, Vector3.down, out _, 2f, _groundLayer))
                 {
-                    lastValidX = checkX;
+                    lastValidStep = currentStep;
+                    currentStep *= 2;
                 }
                 else
                 {
-                    break; // Ground 없음
+                    firstInvalidStep = currentStep;
+                    break;
                 }
             }
 
-            return lastValidX;
+            // 끝까지 Ground가 있으면 최대 거리 반환
+            if (firstInvalidStep == -1)
+            {
+                return startPos.x + direction * maxDistance;
+            }
+
+            // 2단계: 이진 탐색으로 정확한 경계 찾기
+            int low = lastValidStep;
+            int high = firstInvalidStep;
+
+            while (high - low > 1)
+            {
+                int mid = (low + high) / 2;
+                float checkX = startPos.x + direction * mid * step;
+                Vector3 checkPoint = new Vector3(checkX, startPos.y + 0.1f, startPos.z);
+
+                if (Physics.Raycast(checkPoint, Vector3.down, out _, 2f, _groundLayer))
+                {
+                    low = mid;
+                }
+                else
+                {
+                    high = mid;
+                }
+            }
+
+            return startPos.x + direction * low * step;
         }
 
         /// <summary>
         /// Z축 경계 스캔 (방향: -1=앞쪽, 1=뒤쪽)
+        /// 이진 탐색으로 Raycast 횟수 최소화 (~50회 → ~15회)
         /// </summary>
         private float ScanBoundaryZ(Vector3 startPos, float direction, float maxDistance, float step)
         {
-            float lastValidZ = startPos.z;
-            int steps = Mathf.FloorToInt(maxDistance / step);
+            if (_groundLayer == 0) return startPos.z + direction * maxDistance;
 
-            for (int i = 1; i <= steps; i++)
+            // 1단계: 지수 탐색으로 경계 범위 찾기
+            int lastValidStep = 0;
+            int firstInvalidStep = -1;
+            int currentStep = 1;
+
+            while (currentStep * step <= maxDistance)
             {
-                float checkZ = startPos.z + direction * step * i;
+                float checkZ = startPos.z + direction * currentStep * step;
                 Vector3 checkPoint = new Vector3(startPos.x, startPos.y + 0.1f, checkZ);
 
-                if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+                if (Physics.Raycast(checkPoint, Vector3.down, out _, 2f, _groundLayer))
                 {
-                    lastValidZ = checkZ;
+                    lastValidStep = currentStep;
+                    currentStep *= 2;
                 }
                 else
                 {
-                    break; // Ground 없음
+                    firstInvalidStep = currentStep;
+                    break;
                 }
             }
 
-            return lastValidZ;
+            // 끝까지 Ground가 있으면 최대 거리 반환
+            if (firstInvalidStep == -1)
+            {
+                return startPos.z + direction * maxDistance;
+            }
+
+            // 2단계: 이진 탐색으로 정확한 경계 찾기
+            int low = lastValidStep;
+            int high = firstInvalidStep;
+
+            while (high - low > 1)
+            {
+                int mid = (low + high) / 2;
+                float checkZ = startPos.z + direction * mid * step;
+                Vector3 checkPoint = new Vector3(startPos.x, startPos.y + 0.1f, checkZ);
+
+                if (Physics.Raycast(checkPoint, Vector3.down, out _, 2f, _groundLayer))
+                {
+                    low = mid;
+                }
+                else
+                {
+                    high = mid;
+                }
+            }
+
+            return startPos.z + direction * low * step;
         }
 
         #endregion
