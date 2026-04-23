@@ -72,6 +72,15 @@ namespace HideAndInk.ParallaxSystem
                 _originLayerPos = transform.position;
                 _originCameraPos = targetCamera.transform.position;
                 _isInitialized = true;
+
+                Debug.Log($"[ParallaxLayer] '{name}' 초기화 | " +
+                          $"mode={anchorMode} | rate={rate:F2} | " +
+                          $"originLayer={_originLayerPos} | originCamera={_originCameraPos} | " +
+                          $"camera={targetCamera.name}");
+            }
+            else
+            {
+                Debug.LogWarning($"[ParallaxLayer] '{name}' 카메라를 찾을 수 없음!");
             }
         }
 
@@ -122,6 +131,22 @@ namespace HideAndInk.ParallaxSystem
             return new Vector3(newX, newY, transform.position.z);
         }
 
+        // ── 디버그 로그 ──
+
+        private float _logInterval;
+        private float _lastLogTime;
+
+        private void LogPosition(Vector3 cameraPos, Vector3 newPos)
+        {
+            if (Time.time - _lastLogTime < _logInterval) return;
+            _lastLogTime = Time.time;
+
+            float originOffsetX = _originLayerPos.x - _originCameraPos.x;
+            Debug.Log($"[ParallaxLayer] '{name}' | mode={anchorMode} | rate={rate:F2} | " +
+                      $"camX={cameraPos.x:F2} | originCamX={_originCameraPos.x:F2} | " +
+                      $"offsetX={originOffsetX:F2} | resultX={newPos.x:F2}");
+        }
+
         /// <summary>Controller로부터 delta를 받아 위치를 갱신한다.</summary>
         public void ApplyOffset(Vector3 delta)
         {
@@ -142,6 +167,7 @@ namespace HideAndInk.ParallaxSystem
         private void Start()
         {
             Initialize();
+            _logInterval = 1f; // 1초마다 로그 출력
         }
 
         private void LateUpdate()
@@ -158,12 +184,16 @@ namespace HideAndInk.ParallaxSystem
                 // 카메라가 전환되었으므로 원점 재설정
                 _originLayerPos = transform.position;
                 _originCameraPos = targetCamera.transform.position;
+                Debug.Log($"[ParallaxLayer] '{name}' 카메라 전환 → {targetCamera.name} | origin 재설정");
             }
 
             if (!_isInitialized) return;
 
             Vector3 cameraPos = targetCamera.transform.position;
-            transform.position = CalculatePosition(cameraPos);
+            Vector3 newPos = CalculatePosition(cameraPos);
+            transform.position = newPos;
+
+            LogPosition(cameraPos, newPos);
         }
     }
 }
