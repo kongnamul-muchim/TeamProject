@@ -48,6 +48,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [Tooltip("Chase 진입 후 돌진 전 대기 시간 (초). 이동 정지 상태")]
         [SerializeField] private float dashPreDelay = 0.3f;
 
+        [Header("호밍 돌진 설정")]
+        [Tooltip("호밍 구간 비율 (0.5 = 돌진 거리의 50%까지 호밍, 이후 직선)")]
+        [SerializeField, Range(0f, 1f)] private float dashHomingPhase = 0.5f;
+        [Tooltip("호밍 강도 (0=호밍없음, 1=완벽추적). 중간 값으로 Player가 피할 수 있게")]
+        [SerializeField, Range(0f, 1f)] private float dashHomingStrength = 0.6f;
+
         [Header("돌진 쿨타임")]
         [Tooltip("돌진 후 다음 돌진까지 대기 시간 (초)")]
         [SerializeField] private float dashCooldown = 2f;
@@ -65,6 +71,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private float _preDelayTimer;
         private float _cooldownTimer; // 쿨타임 타이머
         private Vector3 _dashTarget;
+        private Vector3 _dashDirection; // 돌진 방향 (중간 지점 이후 고정)
+        private float _dashStartDistance; // 돌진 시작 시 Player와의 거리
+        private float _dashDistanceTraveled; // 돌진 중 이동한 거리
         private SpriteRenderer _spriteRenderer;
         private Sprite _originalSprite;
         private GroundBounds _groundBounds; // Ground Bounds 캐싱
@@ -220,6 +229,50 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_isDashing)
             {
                 _dashTimer -= deltaTime;
+                
+                // 이동 거리 누적 (속도 × 시간)
+                _dashDistanceTraveled += dashSpeed * deltaTime;
+                
+                // 호밍 구간인지 확인
+                float homingDistance = _dashStartDistance * dashHomingPhase;
+                bool isInHomingPhase = _dashDistanceTraveled < homingDistance;
+                
+                if (isInHomingPhase && _playerTransform != null)
+                {
+                    // 호밍 구간: Player 예측 위치로 방향 보정
+                    Vector3 playerPos = _playerTransform.position;
+                    Vector3 playerVelocity = Vector3.zero;
+                    if (_playerMovementAdapter != null)
+                    {
+                        Vector2 vel2D = _playerMovementAdapter.CurrentVelocity;
+                        playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
+                    }
+                    
+                    // 짧은 예측 시간 (즉시 반응)
+                    float predictionTime = 0.2f;
+                    Vector3 predictedPos = playerPos + (playerVelocity * predictionTime);
+                    
+                    // 현재 위치에서 예측 위치까지 방향
+                    Vector3 toPlayer = (predictedPos - _bossTransform.position).normalized;
+                    
+                    // 기존 방향과 호밍 방향을 강도에 따라 보간
+                    _dashDirection = Vector3.Lerp(_dashDirection, toPlayer, dashHomingStrength);
+                    _dashDirection.y = 0f;
+                    _dashDirection.Normalize();
+                    
+                    // 목표 위치 업데이트 (현재 위치 + 방향 × 남은 거리)
+                    float remainingDistance = dashSpeed * _dashTimer;
+                    _dashTarget = _bossTransform.position + _dashDirection * remainingDistance;
+                    
+                    if (_hasGroundBounds && (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ))
+                    {
+                        _dashTarget = _groundBounds.ClampXZ(_dashTarget);
+                    }
+                    
+                    OnDashMoveTo?.Invoke(_dashTarget);
+                }
+                // 호밍 구간 벗어난 후엔 _dashDirection 고정 (직선 돌진)
+                
                 if (_dashTimer <= 0f)
                 {
                     EndDash();
@@ -459,13 +512,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 기습 돌진 시작 (1회) - 플레이어 이동 예측 적용
+        /// 기습 돌진 시작 (1회) - 호밍 + 직선 2단계 돌진
         /// </summary>
         private void StartDash()
         {
             _isDashPreDelay = false;
             _isDashing = true;
             _dashTimer = dashDuration;
+            _dashDistanceTraveled = 0f;
 
             // 돌진 방향: 매복 위치 → Player 예측 위치
             if (_playerTransform != null)
@@ -498,11 +552,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 }
 
                 _dashTarget = predictedPos;
+                _dashDirection = (predictedPos - _bossTransform.position).normalized;
+                _dashStartDistance = distanceToPlayer;
             }
             else if (_bossTransform != null)
             {
                 // Player 없으면 현재 위치를 목표로 (fallback)
                 _dashTarget = _bossTransform.position;
+                _dashDirection = _bossTransform.forward;
+                _dashStartDistance = 0f;
 #if UNITY_EDITOR
                 Debug.LogWarning("[AmbushGimmick] StartDash: Player Transform is NULL, using current position as fallback.");
 #endif
@@ -517,7 +575,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnDashAnimationTrigger?.Invoke(dashDuration);
 
 #if UNITY_EDITOR
-            Debug.Log($"[AmbushGimmick] 기습 돌진 시작! 목표: {_dashTarget} (예측 기반)");
+            Debug.Log($"[AmbushGimmick] 기습 돌진 시작! 목표: {_dashTarget} (호밍구간:{dashHomingPhase * 100:F0}%, 강도:{dashHomingStrength:F2})");
 #endif
         }
 
