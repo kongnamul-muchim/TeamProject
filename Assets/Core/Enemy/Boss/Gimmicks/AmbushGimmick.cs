@@ -323,57 +323,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 의심도 업데이트 (직사각형 거리 기반 가중치 적용)
-        /// 중심에 가까울수록 의심도 상승률 증가
-        /// </summary>
-        private void UpdateSuspicion(float deltaTime)
-        {
-            if (_playerTransform == null) return;
-
-            // 0 나누기 방어
-            float nearX = Mathf.Max(nearSuspicionRadius.x, Mathf.Epsilon);
-            float farX = Mathf.Max(farSuspicionRadius.x, Mathf.Epsilon);
-
-            Vector3 playerPos = _playerTransform.position;
-            Vector3 bossPos = _bossTransform.position;
-            Vector3 delta = playerPos - bossPos;
-            float absX = Mathf.Abs(delta.x);
-            float absZ = Mathf.Abs(delta.z);
-
-            // lockZAxis가 true면 Z축 거리 체크를 무시 (X축만 고려)
-            float checkZ = lockZAxis ? 0f : absZ;
-            float farZ = lockZAxis ? float.MaxValue : Mathf.Max(farSuspicionRadius.y, Mathf.Epsilon);
-            float nearZ = lockZAxis ? float.MaxValue : Mathf.Max(nearSuspicionRadius.y, Mathf.Epsilon);
-
-            // 근접 범위 체크 (직사각형)
-            bool inNearZone = absX <= nearX && checkZ <= nearZ;
-            // 원거리 범위 체크 (직사각형)
-            bool inFarZone = absX <= farX && checkZ <= farZ;
-
-            if (inNearZone)
-            {
-                // 거리 가중치: 중심 1.0 → 가장자리 0.3
-                float xFactor = 1f - (absX / nearX);
-                float zFactor = lockZAxis ? 1f : (1f - (checkZ / nearZ));
-                float distanceFactor = Mathf.Min(xFactor, zFactor);
-                float weightedRate = nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
-
-                OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
-            }
-            else if (inFarZone)
-            {
-                // 거리 가중치: 중심 1.0 → 가장자리 0.2
-                float xFactor = 1f - (absX / farX);
-                float zFactor = lockZAxis ? 1f : (1f - (checkZ / farZ));
-                float distanceFactor = Mathf.Min(xFactor, zFactor);
-                float weightedRate = farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
-
-                OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
-            }
-            // 범위 밖이면 의심도 상승 없음 (자연 하락에 맡김)
-        }
-
-        /// <summary>
         /// 매복 위치 재설정 요청 (Player 근처 랜덤 위치)
         /// </summary>
         private void RequestRelocateAmbush()
