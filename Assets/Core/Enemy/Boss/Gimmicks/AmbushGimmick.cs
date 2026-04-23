@@ -155,12 +155,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             if (distanceToAmbush > 1f)
             {
-                // 아직 매복 위치로 이동 중 (상태 변경 시에만 콜백 호출)
+                // 아직 매복 위치로 이동 중 (상태 변경 시에만 플래그 업데이트)
+                // 이동은 PatrolBehavior.GetPatrolTarget()에서 처리됨
                 if (!_isMovingToAmbush)
                 {
                     _isMovingToAmbush = true;
                     _isStoppedAtAmbush = false;
-                    OnRelocateAmbush?.Invoke(_ambushPoint);
                 }
                 return;
             }
