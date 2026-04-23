@@ -50,6 +50,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private Transform _bossTransform;
         private Transform _playerTransform;
         private Vector3 _ambushPoint;
+        private bool _isAmbushPointSet; // _ambushPoint 유효성 플래그 (Vector3.zero 비교 대체)
         private bool _isAmbushing;
         private float _ambushTimer;
         private bool _hasDashed; // 돌진 1회 체크
@@ -59,6 +60,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private SpriteRenderer _spriteRenderer;
         private Sprite _originalSprite;
         private GroundBounds _groundBounds; // Ground Bounds 캐싱
+
+        // PatrolUpdate 상태 플래그 (매 프레임 콜백 최적화)
+        private bool _isMovingToAmbush;
+        private bool _isStoppedAtAmbush;
 
         // 외부 연동 콜백
         public System.Action<float> OnSpeedOverride;
@@ -77,7 +82,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = false;
             _hasDashed = false;
             _isDashing = false;
+            _isAmbushPointSet = false;
             _ambushTimer = ambushDuration;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
 
             // Player Transform 캐싱
             CachePlayerTransform();
@@ -90,9 +98,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isAmbushing = false;
             _isDashing = false;
+            _isAmbushPointSet = false;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
+
             OnMovementResume?.Invoke();
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
             OnPatrolBehaviorOverride?.Invoke(false);
+
+            // 이벤트 콜백 구독 해제 (메모리 누수 방지)
+            ClearCallbacks();
         }
 
         #region Patrol
@@ -102,7 +117,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = true;
             _hasDashed = false;
             _isDashing = false;
+            _isAmbushPointSet = false;
             _ambushTimer = ambushDuration;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
 
             // PatrolBehavior 이동 제어권 넘김
             OnPatrolBehaviorOverride?.Invoke(true);
@@ -124,36 +142,38 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return;
             }
 
+            // Boss Transform null 체크
+            if (_bossTransform == null) return;
+
             // Player 캐싱 재시도
             if (_playerTransform == null) CachePlayerTransform();
 
-#if UNITY_EDITOR
-            if (_playerTransform == null)
-            {
-                Debug.LogWarning("[AmbushGimmick] Player Transform is NULL!");
-            }
-#endif
+            // 매복 위치가 설정되지 않았으면 대기
+            if (!_isAmbushPointSet) return;
 
             // 매복 위치로 이동 중인지 체크 (도달 전까지 이동 계속)
             float distanceToAmbush = Vector3.Distance(_bossTransform.position, _ambushPoint);
 
-#if UNITY_EDITOR
-            Debug.Log($"[AmbushGimmick] OnPatrolUpdate: distanceToAmbush={distanceToAmbush:F2}, _ambushPoint={_ambushPoint}");
-#endif
-
             if (distanceToAmbush > 1f)
             {
-                // 아직 매복 위치로 이동 중
-#if UNITY_EDITOR
-                Debug.Log("[AmbushGimmick] Moving to ambush point, skipping suspicion check");
-#endif
-                OnRelocateAmbush?.Invoke(_ambushPoint);
+                // 아직 매복 위치로 이동 중 (상태 변경 시에만 콜백 호출)
+                if (!_isMovingToAmbush)
+                {
+                    _isMovingToAmbush = true;
+                    _isStoppedAtAmbush = false;
+                    OnRelocateAmbush?.Invoke(_ambushPoint);
+                }
                 return;
             }
 
-            // 매복 위치 도착 → 이동 멈춤 + 거리 전용 모드
-            OnMovementStop?.Invoke();
-            OnVisibilityToggle?.Invoke(true); // 거리 전용 모드 ON
+            // 매복 위치 도착 → 상태 변경 시에만 콜백 호출
+            if (!_isStoppedAtAmbush)
+            {
+                _isMovingToAmbush = false;
+                _isStoppedAtAmbush = true;
+                OnMovementStop?.Invoke();
+                OnVisibilityToggle?.Invoke(true); // 거리 전용 모드 ON
+            }
 
             // 매복 대기 타이머
             _ambushTimer -= deltaTime;
@@ -161,16 +181,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // Player가 있으면 의심도 체크
             if (_playerTransform != null)
             {
-#if UNITY_EDITOR
-                Debug.Log($"[AmbushGimmick] ✅ Calling UpdateSuspicion! PlayerPos={_playerTransform.position}, BossPos={_bossTransform.position}");
-#endif
                 UpdateSuspicion(deltaTime);
-            }
-            else
-            {
-#if UNITY_EDITOR
-                Debug.LogError("[AmbushGimmick] ❌ _playerTransform is NULL! Cannot check suspicion. Player 태그 확인 필요.");
-#endif
             }
 
             // 대기시간 끝나면 새 위치로 재매복
@@ -178,14 +189,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 RequestRelocateAmbush();
                 _ambushTimer = ambushDuration;
+                _isStoppedAtAmbush = false; // 새 위치로 이동하므로 상태 리셋
             }
         }
 
         public void OnPatrolExit()
         {
             _isAmbushing = false;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
+            _ambushTimer = ambushDuration; // 타이머 초기화 (복귀 시 정상 동작 보장)
+
             OnMovementResume?.Invoke();
-            // OnVisibilityToggle은 ChaseEnter에서 false로 설정하므로 여기선 제거
             OnPatrolBehaviorOverride?.Invoke(false); // PatrolBehavior 제어권 반환
         }
 
@@ -196,6 +211,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnChaseEnter()
         {
             _isAmbushing = false;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
 
             // 원래 스프라이트로 복원
@@ -208,9 +225,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
             else
             {
-                // 이미 돌진했으면 일반 추격
+                // 이미 돌진했으면 일반 추격 (속도 오버라이드 해제)
                 OnMovementResume?.Invoke();
-                OnSpeedOverride?.Invoke(0f); // 속도 리셋 (ChaseBehavior가 제어)
             }
         }
 
@@ -229,6 +245,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isDashing = false;
             _isAmbushing = false;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
             OnMovementResume?.Invoke();
         }
 
@@ -239,6 +257,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnSearchEnter()
         {
             _isAmbushing = false;
+            _isMovingToAmbush = false;
+            _isStoppedAtAmbush = false;
+            _ambushTimer = ambushDuration; // 타이머 초기화 (Patrol 복귀 시 정상 동작 보장)
             OnMovementResume?.Invoke();
         }
 
@@ -313,54 +334,47 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (_playerTransform == null) return;
 
-            Vector3 delta = _playerTransform.position - _bossTransform.position;
+            // 0 나누기 방어
+            float nearX = Mathf.Max(nearSuspicionRadius.x, Mathf.Epsilon);
+            float farX = Mathf.Max(farSuspicionRadius.x, Mathf.Epsilon);
+
+            Vector3 playerPos = _playerTransform.position;
+            Vector3 bossPos = _bossTransform.position;
+            Vector3 delta = playerPos - bossPos;
             float absX = Mathf.Abs(delta.x);
             float absZ = Mathf.Abs(delta.z);
 
             // lockZAxis가 true면 Z축 거리 체크를 무시 (X축만 고려)
             float checkZ = lockZAxis ? 0f : absZ;
-            float farZ = lockZAxis ? float.MaxValue : farSuspicionRadius.y;
-            float nearZ = lockZAxis ? float.MaxValue : nearSuspicionRadius.y;
-
-#if UNITY_EDITOR
-            Debug.Log($"[AmbushGimmick] Player Distance: X={absX:F2}, Z={absZ:F2} | Near=({nearSuspicionRadius.x:F2}, {nearZ:F2}) | Far=({farSuspicionRadius.x:F2}, {farZ:F2})");
-#endif
+            float farZ = lockZAxis ? float.MaxValue : Mathf.Max(farSuspicionRadius.y, Mathf.Epsilon);
+            float nearZ = lockZAxis ? float.MaxValue : Mathf.Max(nearSuspicionRadius.y, Mathf.Epsilon);
 
             // 근접 범위 체크 (직사각형)
-            if (absX <= nearSuspicionRadius.x && checkZ <= nearZ)
+            bool inNearZone = absX <= nearX && checkZ <= nearZ;
+            // 원거리 범위 체크 (직사각형)
+            bool inFarZone = absX <= farX && checkZ <= farZ;
+
+            if (inNearZone)
             {
                 // 거리 가중치: 중심 1.0 → 가장자리 0.3
-                float xFactor = 1f - (absX / nearSuspicionRadius.x);
+                float xFactor = 1f - (absX / nearX);
                 float zFactor = lockZAxis ? 1f : (1f - (checkZ / nearZ));
                 float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
 
-#if UNITY_EDITOR
-                Debug.Log($"[AmbushGimmick] NEAR Zone! Rate={weightedRate:F2}, DeltaTime={deltaTime:F3}");
-#endif
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
-            // 원거리 범위 체크 (직사각형)
-            else if (absX <= farSuspicionRadius.x && checkZ <= farZ)
+            else if (inFarZone)
             {
                 // 거리 가중치: 중심 1.0 → 가장자리 0.2
-                float xFactor = 1f - (absX / farSuspicionRadius.x);
+                float xFactor = 1f - (absX / farX);
                 float zFactor = lockZAxis ? 1f : (1f - (checkZ / farZ));
                 float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
 
-#if UNITY_EDITOR
-                Debug.Log($"[AmbushGimmick] FAR Zone! Rate={weightedRate:F2}, DeltaTime={deltaTime:F3}");
-#endif
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
             // 범위 밖이면 의심도 상승 없음 (자연 하락에 맡김)
-            else
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[AmbushGimmick] OUT OF RANGE - No suspicion increase");
-#endif
-            }
         }
 
         /// <summary>
@@ -369,6 +383,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private void RequestRelocateAmbush()
         {
             if (_playerTransform == null) return;
+            if (_bossTransform == null) return;
 
             Vector3 playerPos = _playerTransform.position;
 
@@ -400,13 +415,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // Ground Bounds 내에서 위치 보정
-            if (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ)
+            if (_groundBounds != null && (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ))
             {
                 newAmbushPoint = _groundBounds.ClampXZ(newAmbushPoint);
             }
 
             OnRelocateAmbush?.Invoke(newAmbushPoint);
             _ambushPoint = newAmbushPoint;
+            _isAmbushPointSet = true;
         }
 
         /// <summary>
@@ -422,6 +438,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_playerTransform != null)
             {
                 _dashTarget = _playerTransform.position;
+            }
+            else if (_bossTransform != null)
+            {
+                // Player 없으면 현재 위치를 목표로 (fallback)
+                _dashTarget = _bossTransform.position;
+#if UNITY_EDITOR
+                Debug.LogWarning("[AmbushGimmick] StartDash: Player Transform is NULL, using current position as fallback.");
+#endif
             }
 
             OnDashModeToggle?.Invoke(true);
@@ -445,6 +469,22 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 #if UNITY_EDITOR
             Debug.Log("[AmbushGimmick] 기습 돌진 종료 → 일반 추격 전환");
 #endif
+        }
+
+        /// <summary>
+        /// 이벤트 콜백 구독 해제 (메모리 누수 방지)
+        /// </summary>
+        private void ClearCallbacks()
+        {
+            OnSpeedOverride = null;
+            OnMovementStop = null;
+            OnMovementResume = null;
+            OnVisibilityToggle = null;
+            OnDashCompleted = null;
+            OnSuspicionIncrease = null;
+            OnRelocateAmbush = null;
+            OnDashModeToggle = null;
+            OnPatrolBehaviorOverride = null;
         }
 
         #endregion
@@ -483,12 +523,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
             // 매복 위치가 설정되어 있으면 그곳으로 이동
-            if (_ambushPoint != Vector3.zero)
+            if (_isAmbushPointSet)
             {
                 Vector3 target = _ambushPoint;
 
                 // Ground 범위 내로 제한
-                if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+                if (bounds != null && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
                 {
                     target = bounds.ClampXZ(target);
                 }
@@ -542,7 +582,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // Ground 범위 내로 제한
-            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            if (bounds != null && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
             {
                 target = bounds.ClampXZ(target);
             }
