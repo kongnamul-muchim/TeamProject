@@ -87,6 +87,17 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 의심 범위 바닥 가시성 설정
+        /// </summary>
+        public void SetFloorVisibility(bool visible)
+        {
+            if (_floorRenderObject != null)
+            {
+                _floorRenderObject.SetActive(visible);
+            }
+        }
+
+        /// <summary>
         /// 의심도 계산 모듈 설정 (기믹별 로직 주입)
         /// </summary>
         public void SetSuspicionModule(ISuspicionModule module)

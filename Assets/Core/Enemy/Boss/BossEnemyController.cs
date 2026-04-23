@@ -437,21 +437,35 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// 시야각 가시성 업데이트 (상태 기반)
-        /// Chase: 시야각 ON (Player 추적 중)
-        /// Patrol/Search: 시야각 OFF (매복 중에는 숨김)
+        /// 시야각 및 의심 범위 바닥 가시성 업데이트 (상태 기반)
+        /// Patrol (Ambush): SuspicionRadiusFloor ON, VisionConeFloor OFF
+        /// Chase: SuspicionRadiusFloor OFF, VisionConeFloor ON
+        /// Search: 둘 다 OFF
         /// </summary>
         private void UpdateVisionConeVisibility()
         {
-            if (visionConeRenderer == null || _stateMachine == null) return;
+            if (_stateMachine == null) return;
 
-            bool shouldBeVisible = _stateMachine.CurrentState == EnemyAIState.Chase;
+            var currentState = _stateMachine.CurrentState;
+            bool isAmbush = _activeGimmick is AmbushGimmick;
 
-            if (visionConeRenderer.enabled != shouldBeVisible)
+            // VisionConeFloor: Chase일 때만 ON
+            bool showVisionCone = (currentState == EnemyAIState.Chase);
+            if (visionConeRenderer != null && visionConeRenderer.enabled != showVisionCone)
             {
-                visionConeRenderer.enabled = shouldBeVisible;
+                visionConeRenderer.enabled = showVisionCone;
 #if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] VisionCone: {(shouldBeVisible ? "ON" : "OFF")} (State={_stateMachine.CurrentState})");
+                Debug.Log($"[BossEnemyController] VisionCone: {(showVisionCone ? "ON" : "OFF")} (State={currentState})");
+#endif
+            }
+
+            // SuspicionRadiusFloor: Ambush Patrol일 때만 ON
+            bool showSuspicionFloor = (isAmbush && currentState == EnemyAIState.Patrol);
+            if (suspicionSystem != null)
+            {
+                suspicionSystem.SetFloorVisibility(showSuspicionFloor);
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] SuspicionFloor: {(showSuspicionFloor ? "ON" : "OFF")} (State={currentState})");
 #endif
             }
         }
