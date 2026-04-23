@@ -173,7 +173,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
       propertyPath: m_LocalPosition.y
@@ -181,7 +181,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -2
       objectReference: {fileID: 0}
     - target: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
       propertyPath: m_LocalRotation.w
@@ -575,7 +575,7 @@ Transform:
   m_GameObject: {fileID: 710864461}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.05, y: 0.5, z: -1.83}
+  m_LocalPosition: {x: 0, y: 0.5, z: -2}
   m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -854,18 +854,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::ChichiFollower
   stateMachine: {fileID: 1253547421}
   spriteRenderer: {fileID: 0}
+  playerMovement: {fileID: 0}
   spriteFront: {fileID: 21300000, guid: e9c6b1fa4e0be2843b1bd0bec0019381, type: 3}
   spriteBack: {fileID: 21300000, guid: 34fe3fbeb98390e4d903598ce23a5e7b, type: 3}
   spriteSide: {fileID: 21300000, guid: 282f6903e3fcc164ab45cc468104db51, type: 3}
-  sideOffset: 0.8
   liftOffset: {x: 0, y: 0.5, z: 0}
   guideOffset: {x: 0, y: 0}
+  idleSmoothTime: 0.3
   followSmoothTime: 0.4
   catchUpSmoothTime: 0.25
-  chargeSmoothTime: 0.2
   turnSpeed: 6
-  minSpriteChangeInterval: 0.15
   directionAngleThreshold: 30
+  minSpriteChangeInterval: 0.15
 --- !u!114 &1253547421
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -881,7 +881,8 @@ MonoBehaviour:
   target: {fileID: 1270047854}
   playerInk: {fileID: 0}
   listenerTarget: {fileID: 0}
-  maxFollowDistance: 1
+  stopDistance: {x: 1, y: 0.2}
+  followDistance: {x: 2, y: 0.5}
   chargeDistance: 0.3
   currentState: 0
   isTouchingTank: 0

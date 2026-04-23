@@ -18,10 +18,10 @@ MonoBehaviour:
   lockZAxis: 1
   ambushSprite: {fileID: -1333484347, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
   targetSpriteRenderer: {fileID: 0}
-  farSuspicionRadius: {x: 2, y: 1}
+  farSuspicionRadius: {x: 5, y: 1}
   nearSuspicionRadius: {x: 1, y: 0.5}
   farSuspicionRate: 10
   nearSuspicionRate: 40
-  suspicionDropThreshold: 20
+  suspicionDropThreshold: 30
   dashSpeed: 8
   dashDuration: 1.5

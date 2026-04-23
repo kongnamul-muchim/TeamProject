@@ -47,6 +47,9 @@ namespace HideAndInk.Core.Perception
         private Vector2 _farSuspicionRadius = new Vector2(10f, 10f);
         private Vector2 _nearSuspicionRadius = new Vector2(3f, 3f);
 
+        // 의심도 모듈 (기믹별 계산 로직)
+        private ISuspicionModule _suspicionModule;
+
         /// <summary>
         /// 의심도 범위 설정 (AmbushGimmick에서 호출)
         /// </summary>
@@ -54,6 +57,35 @@ namespace HideAndInk.Core.Perception
         {
             _farSuspicionRadius = farRadius;
             _nearSuspicionRadius = nearRadius;
+        }
+
+        /// <summary>
+        /// 의심도 계산 모듈 설정 (기믹별 로직 주입)
+        /// </summary>
+        public void SetSuspicionModule(ISuspicionModule module)
+        {
+            // 기존 모듈 해제
+            if (_suspicionModule != null)
+            {
+                _suspicionModule.OnSuspicionIncrease -= OnModuleSuspicionIncrease;
+                _suspicionModule.OnDeactivate();
+            }
+
+            _suspicionModule = module;
+
+            if (_suspicionModule != null)
+            {
+                _suspicionModule.OnSuspicionIncrease += OnModuleSuspicionIncrease;
+                _suspicionModule.OnActivate();
+            }
+        }
+
+        /// <summary>
+        /// 모듈에서 발생한 의심도 상승 처리
+        /// </summary>
+        private void OnModuleSuspicionIncrease(float rate, float deltaTime)
+        {
+            AddSuspicion(rate, deltaTime);
         }
 
 #if UNITY_EDITOR
@@ -79,6 +111,13 @@ namespace HideAndInk.Core.Perception
 
         private void Update()
         {
+            // 의심도 모듈 업데이트 (기믹별 계산)
+            if (_suspicionModule != null)
+            {
+                Vector3? playerPos = FindPlayerPosition();
+                _suspicionModule.Update(Time.deltaTime, transform.position, playerPos);
+            }
+
             // 발각 상태 체크
             if (_currentValue >= detectedThreshold && !_wasDetected)
             {
@@ -101,6 +140,19 @@ namespace HideAndInk.Core.Perception
 
             // 이벤트 발생
             OnValueChanged?.Invoke(CurrentValue);
+        }
+
+        /// <summary>
+        /// Player 위치 탐색 (Tag 기반)
+        /// </summary>
+        private Vector3? FindPlayerPosition()
+        {
+            GameObject playerObj = GameObject.FindWithTag("Player");
+            if (playerObj != null)
+            {
+                return playerObj.transform.position;
+            }
+            return null;
         }
 
         /// <summary>

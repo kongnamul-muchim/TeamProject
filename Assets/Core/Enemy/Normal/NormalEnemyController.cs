@@ -2,12 +2,13 @@ using System.Collections;
 using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
+using HideAndInk.Core.Interfaces;
 
 namespace HideAndInk.Core.Enemy.Normal
 {
     /// <summary>
     /// 일반 몬스터 컨트롤러
-    /// 단순 이동 + Player 접촉 시 보스에게 위치 알림
+    /// 부채꼴 시야(ConeVisionSensor)로 Player 감지 → Boss에게 위치 알림
     /// X-Z 평면 이동
     /// </summary>
     public class NormalEnemyController : EnemyAIController
@@ -20,11 +21,21 @@ namespace HideAndInk.Core.Enemy.Normal
         [SerializeField] private float moveDistance = 2f;
         [SerializeField] private float idleTime = 1f;
 
+        [Header("시야 설정")]
+        [Tooltip("부채꼴 시야 센서 (IVisionSensor 구현체)")]
+        [SerializeField] private IVisionSensor visionSensor;
+
+        [Header("보스 알림 설정")]
+        [Tooltip("알림 대상 보스 (비워두면 자동 탐색)")]
+        [SerializeField] private Boss.BossEnemyController bossTarget;
+        [Tooltip("알림 쿨타임 (초)")]
+        [SerializeField] private float alertCooldown = 3f;
+
         // 상태
         private float _stateTimer;
         private Vector3 _targetPosition;
         private bool _isMoving;
-        private bool _isAlerted;
+        private float _alertTimer; // 알림 쿨타임
 
         protected override void InitializeMovement()
         {
@@ -39,8 +50,29 @@ namespace HideAndInk.Core.Enemy.Normal
                 groundCheckRadius: groundCheckRadius);
         }
 
+        protected override void Start()
+        {
+            base.Start();
+
+            // Boss 자동 탐색 (할당되지 않은 경우)
+            if (bossTarget == null)
+            {
+                bossTarget = FindObjectOfType<Boss.BossEnemyController>();
+            }
+
+            // VisionSensor 자동 탐색 (할당되지 않은 경우)
+            if (visionSensor == null)
+            {
+                visionSensor = GetComponent<IVisionSensor>();
+            }
+        }
+
         protected override void UpdateAI(float deltaTime)
         {
+            // 시야 기반 Player 감지
+            CheckVision();
+
+            // 이동 상태 머신
             _stateTimer -= deltaTime;
 
             if (_stateTimer <= 0f)
@@ -68,6 +100,24 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
+        /// 시야 기반 Player 감지 (부채꼴 센서)
+        /// </summary>
+        private void CheckVision()
+        {
+            if (visionSensor == null || _playerTransform == null) return;
+            if (_alertTimer > 0f)
+            {
+                _alertTimer -= Time.deltaTime;
+                return;
+            }
+
+            if (visionSensor.CanSee(_playerTransform.gameObject))
+            {
+                AlertBoss(_playerTransform.position);
+            }
+        }
+
+        /// <summary>
         /// 새로운 이동 목표 지점 선택 (X-Z 평면)
         /// Ground 범위 내에서만 목표 설정
         /// </summary>
@@ -85,45 +135,19 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// Player 접촉 감지 (3D)
-        /// </summary>
-        private void OnTriggerEnter(Collider other)
-        {
-            if (_isAlerted) return;
-
-            // Player Layer 체크
-            if (other.gameObject.layer == LayerMask.NameToLayer("Player"))
-            {
-                AlertBoss(other.transform.position);
-            }
-        }
-
-        /// <summary>
         /// 보스에게 Player 위치 알림
         /// </summary>
         private void AlertBoss(Vector3 playerPosition)
         {
-            _isAlerted = true;
+            _alertTimer = alertCooldown;
 
-            // 보스 찾기
-            var boss = FindObjectOfType<Boss.BossEnemyController>();
-            if (boss != null)
+            if (bossTarget != null)
             {
-                // 보스의 AI 상태를 Chase로 전환하고 위치 전달
-                boss.AlertPlayerPosition(playerPosition);
+                bossTarget.AlertPlayerPosition(playerPosition);
+#if UNITY_EDITOR
+                Debug.Log($"[NormalEnemy] Alerted boss: Player at {playerPosition}");
+#endif
             }
-
-            // 알림 후 일정 시간 후 재활성화 (코루틴 사용)
-            StartCoroutine(ResetAlertAfterDelay(3f));
-        }
-
-        /// <summary>
-        /// 지연 후 알림 상태 초기화
-        /// </summary>
-        private IEnumerator ResetAlertAfterDelay(float delay)
-        {
-            yield return new WaitForSeconds(delay);
-            _isAlerted = false;
         }
     }
 }

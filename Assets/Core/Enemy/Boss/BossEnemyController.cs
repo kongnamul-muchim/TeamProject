@@ -142,13 +142,17 @@ namespace HideAndInk.Core.Enemy.Boss
                 ConnectGimmickCallbacks();
                 _activeGimmick.OnActivate(transform);
 
-                // AmbushGimmick일 경우 의심도 범위를 BossSuspicionSystem에 전달
+                // AmbushGimmick일 경우 의심도 모듈을 BossSuspicionSystem에 주입
                 if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
                 {
                     suspicionSystem.SetSuspicionRadius(ambush.FarSuspicionRadius, ambush.NearSuspicionRadius);
 #if UNITY_EDITOR
                     suspicionSystem.linkedGimmick = ambush; // 에디터에서 OnValidate용
 #endif
+                    // 의심도 모듈 주입 (거리 기반 계산)
+                    var suspicionModule = new AmbushSuspicionModule(ambush);
+                    suspicionSystem.SetSuspicionModule(suspicionModule);
+
                     // Ground Bounds 전달 (매복 위치 생성 시 사용)
                     if (_isGroundBoundsScanned)
                     {
@@ -207,6 +211,7 @@ namespace HideAndInk.Core.Enemy.Boss
             };
 
             // 의심도 상승 (AmbushGimmick → BossSuspicionSystem 연동)
+            // 참고: 의심도 계산은 AmbushSuspicionModule에서 처리됨 (하위 호환용 콜백 유지)
             ambush.OnSuspicionIncrease = (rate, deltaTime) =>
             {
                 if (suspicionSystem != null)
