@@ -181,7 +181,8 @@ namespace HideAndInk.Core.Enemy.Elite
             
             if (isInDirection && isInXRange && isInZRange)
             {
-                _behavior?.OnPlayerApproached(distanceX, _playerTransform.position);
+                Vector3 directionToPlayer = toPlayer.normalized;
+                _behavior?.OnPlayerApproached(distanceX, _playerTransform.position, directionToPlayer);
             }
         }
 

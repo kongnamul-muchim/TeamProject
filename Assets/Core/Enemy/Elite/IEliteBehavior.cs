@@ -23,7 +23,8 @@ namespace HideAndInk.Core.Enemy.Elite
         /// </summary>
         /// <param name="distance">Player까지의 거리</param>
         /// <param name="playerPos">Player 위치</param>
-        void OnPlayerApproached(float distance, Vector3 playerPos);
+        /// <param name="directionToPlayer">Elite → Player 방향 벡터 (정규화됨)</param>
+        void OnPlayerApproached(float distance, Vector3 playerPos, Vector3 directionToPlayer);
 
         /// <summary>
         /// 행동 패턴 업데이트 (매 프레임)

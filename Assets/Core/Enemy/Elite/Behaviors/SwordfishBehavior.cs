@@ -71,7 +71,7 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
             _currentState = State.Idle;
         }
 
-        public void OnPlayerApproached(float distance, Vector3 playerPos)
+        public void OnPlayerApproached(float distance, Vector3 playerPos, Vector3 directionToPlayer)
         {
             // Player가 감지 반경 내에 있을 때 호출됨
             // 돌진 가능 상태면 돌진 시작
