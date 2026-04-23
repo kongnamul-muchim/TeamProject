@@ -14,12 +14,10 @@ namespace HideAndInk.Core.Perception
 
         private readonly AmbushGimmick _gimmick;
 
-        // 의심도 설정 (가자미 기믹에서 가져옴)
-        private readonly Vector2 _farSuspicionRadius;
-        private readonly Vector2 _nearSuspicionRadius;
-        private readonly float _farSuspicionRate;
-        private readonly float _nearSuspicionRate;
-        private readonly bool _lockZAxis;
+        // 의심도 설정 (단일 거리 기반)
+        private readonly Vector2 _suspicionRadius;
+        private readonly float _suspicionRate;
+        private readonly float _curveExponent;
 
         // 이벤트
         public event Action<float, float> OnSuspicionIncrease;
@@ -27,11 +25,9 @@ namespace HideAndInk.Core.Perception
         public AmbushSuspicionModule(AmbushGimmick gimmick)
         {
             _gimmick = gimmick;
-            _farSuspicionRadius = gimmick.FarSuspicionRadius;
-            _nearSuspicionRadius = gimmick.NearSuspicionRadius;
-            _farSuspicionRate = gimmick.FarSuspicionRate;
-            _nearSuspicionRate = gimmick.NearSuspicionRate;
-            _lockZAxis = gimmick.LockZAxis;
+            _suspicionRadius = gimmick.FarSuspicionRadius; // 단일 반경으로 사용
+            _suspicionRate = gimmick.FarSuspicionRate;
+            _curveExponent = gimmick.SuspicionCurveExponent;
         }
 
         public void OnActivate()
@@ -59,8 +55,8 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의심도 계산 및 상승 (타원형 거리 기반)
-        /// (x/rx)² + (z/rz)² <= 1 공식으로 타원형 영역 판정
+        /// 의심도 계산 및 상승 (단일 거리 기반 커브)
+        /// 거리에 따라 지수 함수로 의심도 상승률 조정 (중심에 가까울수록 급격히 상승)
         /// </summary>
         private void CalculateAndRaiseSuspicion(float deltaTime, Vector3 bossPos, Vector3 playerPos)
         {
@@ -69,36 +65,26 @@ namespace HideAndInk.Core.Perception
             float absZ = Mathf.Abs(delta.z);
 
             // 0 나누기 방어
-            float nearX = Mathf.Max(_nearSuspicionRadius.x, Mathf.Epsilon);
-            float nearZ = Mathf.Max(_nearSuspicionRadius.y, Mathf.Epsilon);
-            float farX = Mathf.Max(_farSuspicionRadius.x, Mathf.Epsilon);
-            float farZ = Mathf.Max(_farSuspicionRadius.y, Mathf.Epsilon);
+            float radiusX = Mathf.Max(_suspicionRadius.x, Mathf.Epsilon);
+            float radiusZ = Mathf.Max(_suspicionRadius.y, Mathf.Epsilon);
 
             // 타원형 정규화 거리 계산: sqrt((x/rx)² + (z/rz)²)
-            float nearNormalizedDist = Mathf.Sqrt(Mathf.Pow(absX / nearX, 2) + Mathf.Pow(absZ / nearZ, 2));
-            float farNormalizedDist = Mathf.Sqrt(Mathf.Pow(absX / farX, 2) + Mathf.Pow(absZ / farZ, 2));
+            float normalizedDist = Mathf.Sqrt(Mathf.Pow(absX / radiusX, 2) + Mathf.Pow(absZ / radiusZ, 2));
 
-            // 영역 판정 (정규화 거리 <= 1.0 이면 영역 내)
-            bool inNearZone = nearNormalizedDist <= 1.0f;
-            bool inFarZone = farNormalizedDist <= 1.0f;
+            // 최대 거리 밖이면 무시
+            if (normalizedDist > 1.0f) return;
 
-            if (inNearZone)
-            {
-                // 거리 가중치: 중심(1.0) → 가장자리(0.3)
-                float distanceFactor = 1f - nearNormalizedDist;
-                float weightedRate = _nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
+            // 거리 계수: 중심(1.0) → 경계(0.0)
+            float distanceFactor = 1f - normalizedDist;
 
-                OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
-            }
-            else if (inFarZone)
-            {
-                // 거리 가중치: 중심(1.0) → 가장자리(0.2)
-                float distanceFactor = 1f - farNormalizedDist;
-                float weightedRate = _farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
+            // 지수 커브 적용: 중심에 가까울수록 급격히 상승
+            // curveExponent=2: 2차 곡선, curveExponent=3: 3차 곡선
+            float curveFactor = Mathf.Pow(distanceFactor, _curveExponent);
 
-                OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
-            }
-            // 범위 밖이면 의심도 상승 없음 (자연 하락에 맡김)
+            // 최종 의심도 상승률
+            float weightedRate = _suspicionRate * curveFactor;
+
+            OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
         }
     }
 }

@@ -44,8 +44,7 @@ namespace HideAndInk.Core.Perception
         private float _lastDetectedTime;
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
-        private Vector2 _farSuspicionRadius = new Vector2(10f, 10f);
-        private Vector2 _nearSuspicionRadius = new Vector2(3f, 3f);
+        private Vector2 _suspicionRadius = new Vector2(10f, 10f);
 
         // 의심도 모듈 (기믹별 계산 로직)
         private ISuspicionModule _suspicionModule;
@@ -58,10 +57,9 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의심도 범위 설정 (AmbushGimmick에서 호출)
         /// </summary>
-        public void SetSuspicionRadius(Vector2 farRadius, Vector2 nearRadius)
+        public void SetSuspicionRadius(Vector2 radius)
         {
-            _farSuspicionRadius = farRadius;
-            _nearSuspicionRadius = nearRadius;
+            _suspicionRadius = radius;
         }
 
         /// <summary>
@@ -98,8 +96,7 @@ namespace HideAndInk.Core.Perception
         {
             if (linkedGimmick != null)
             {
-                _farSuspicionRadius = linkedGimmick.FarSuspicionRadius;
-                _nearSuspicionRadius = linkedGimmick.NearSuspicionRadius;
+                _suspicionRadius = linkedGimmick.SuspicionRadius;
             }
         }
 #endif
@@ -258,31 +255,23 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의심도 상승 범위 Gizmos 표시 (타원형)
-        /// - 외부 타원 (Far Radius): 주황색 와이어프레임
-        /// - 내부 타원 (Near Radius): 붉은색 와이어프레임
+        /// 의심도 상승 범위 Gizmos 표시 (단일 타원형)
+        /// - 타원형 영역: 주황색 와이어프레임 (SuspicionRadius 기준)
         /// </summary>
         private void OnDrawGizmosSelected()
         {
-            Vector2 farRadius = _farSuspicionRadius;
-            Vector2 nearRadius = _nearSuspicionRadius;
+            Vector2 radius = _suspicionRadius;
 
 #if UNITY_EDITOR
             if (linkedGimmick != null)
             {
-                farRadius = linkedGimmick.FarSuspicionRadius;
-                nearRadius = linkedGimmick.NearSuspicionRadius;
+                radius = linkedGimmick.SuspicionRadius;
             }
 #endif
 
-            // 외부 타원 (Far Radius) - 주황색
+            // 타원형 영역 - 주황색
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
-            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(farRadius.x, 0.05f, farRadius.y));
-            Gizmos.DrawWireSphere(Vector3.zero, 1f);
-
-            // 내부 타원 (Near Radius) - 붉은색
-            Gizmos.color = new Color(1f, 0f, 0f, 0.4f);
-            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(nearRadius.x, 0.05f, nearRadius.y));
+            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(radius.x, 0.05f, radius.y));
             Gizmos.DrawWireSphere(Vector3.zero, 1f);
 
             // 중심점 표시

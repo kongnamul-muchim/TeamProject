@@ -29,14 +29,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private SpriteRenderer targetSpriteRenderer;
 
         [Header("의심도 설정")]
-        [Tooltip("원거리 의심도 범위 (X, Z). 이 거리 내에서 서서히 의심도 상승")]
-        [SerializeField] private Vector2 farSuspicionRadius = new Vector2(10f, 10f);
-        [Tooltip("근접 의심도 범위 (X, Z). 이 거리 내에서 급격히 의심도 상승")]
-        [SerializeField] private Vector2 nearSuspicionRadius = new Vector2(3f, 3f);
-        [Tooltip("원거리 의심도 상승률 (초당)")]
-        [SerializeField] private float farSuspicionRate = 5f;
-        [Tooltip("근접 의심도 상승률 (초당)")]
-        [SerializeField] private float nearSuspicionRate = 15f;
+        [Tooltip("의심도 감지 범위 (X, Z). 타원형 영역으로 계산")]
+        [SerializeField] private Vector2 suspicionRadius = new Vector2(10f, 10f);
+        [Tooltip("의심도 상승률 (초당, 중심 기준 최대값)")]
+        [SerializeField] private float suspicionRate = 15f;
+        [Tooltip("의심도 커브 지수. 높을수록 중심에 가까울수록 급격히 상승 (2=2차곡선, 3=3차곡선)")]
+        [SerializeField, Range(1f, 5f)] private float suspicionCurveExponent = 2f;
         [Tooltip("추적 취소 의심도 기준. 이 값 이하로 떨어지면 매복 복귀")]
         [SerializeField] private float suspicionDropThreshold = 20f;
 
@@ -494,10 +492,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public bool HasDashed => _hasDashed;
         public Vector3 AmbushPoint => _ambushPoint;
         public float SuspicionDropThreshold => suspicionDropThreshold;
-        public Vector2 FarSuspicionRadius => farSuspicionRadius;
-        public Vector2 NearSuspicionRadius => nearSuspicionRadius;
-        public float FarSuspicionRate => farSuspicionRate;
-        public float NearSuspicionRate => nearSuspicionRate;
+        public Vector2 SuspicionRadius => suspicionRadius;
+        public float SuspicionRate => suspicionRate;
+        public float SuspicionCurveExponent => suspicionCurveExponent;
         public bool LockZAxis => lockZAxis;
 
         /// <summary>

@@ -145,7 +145,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 // AmbushGimmick일 경우 의심도 모듈을 BossSuspicionSystem에 주입
                 if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
                 {
-                    suspicionSystem.SetSuspicionRadius(ambush.FarSuspicionRadius, ambush.NearSuspicionRadius);
+                    suspicionSystem.SetSuspicionRadius(ambush.SuspicionRadius);
 #if UNITY_EDITOR
                     suspicionSystem.linkedGimmick = ambush; // 에디터에서 OnValidate용
 #endif
