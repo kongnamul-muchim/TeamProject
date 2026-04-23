@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace HideAndInk.ParallaxSystem
@@ -7,41 +6,69 @@ namespace HideAndInk.ParallaxSystem
     /// <summary>
     /// Y축 깊이 패럴랙스 중앙 제어기.
     /// 
-    /// 캐릭터의 Y축 위치를 1회만 읽고, 모든 레이어에 깊이 오프셋을 전달한다.
+    /// 캐릭터의 Y축 위치를 읽고, 각 레이어의 깊이 비율에 따라
+    /// 위치와 스케일을 조절하여 2D 게임에서 입체감을 표현한다.
     /// 
-    /// ┌──────────────────────────────────────────────────────────┐
-    /// │  작동 구조                                               │
-    /// │                                                          │
-    /// │  Character (Y축 이동)                                    │
-    /// │       │                                                   │
-    /// │       ▼                                                   │
-    /// │  DepthParallaxController                                  │
-    /// │   ├─ characterY 계산 (1회)                               │
-    /// │   ├─ deltaFromOrigin 계산 (1회)                          │
-    /// │   │                                                      │
-    /// │   ├─→ Layer 0 (원경, depthRatio=0.1)                     │
-    /// │   ├─→ Layer 1 (중경, depthRatio=0.4)                     │
-    /// │   ├─→ Layer 2 (근경, depthRatio=0.7)                     │
-    /// │   └─→ Layer 3 (전경, depthRatio=1.0)                     │
-    /// │                                                          │
-    /// │  각 레이어가 자신의 depthRatio에 따라                      │
-    /// │  Y위치, 스케일(Ortho) 또는 Z위치(Persp)를 조절            │
-    /// └──────────────────────────────────────────────────────────┘
-    /// 
-    /// SRP: 캐릭터 Y축 추적 및 깊이 오프셋 발행만 담당
-    /// DI: [SerializeField]로 타겟 참조, 레이어는 자동/수동 혼합 가능
+    /// SRP: 캐릭터 Y축 추적 및 깊이 오프셋 계산만 담당
+    /// DI: [SerializeField]로 타겟 참조
     /// </summary>
     public sealed class DepthParallaxController : MonoBehaviour
     {
+        // ── 열거형 ──
+
+        /// <summary>깊이 패럴랙스 모드</summary>
+        public enum DepthMode
+        {
+            /// <summary>직교 카메라: Y 위치와 스케일로 깊이감 표현</summary>
+            Orthographic,
+
+            /// <summary>원근 카메라: Z 위치로 깊이감 표현</summary>
+            Perspective
+        }
+
+        // ── 레이어 데이터 ──
+
+        [System.Serializable]
+        public class DepthLayerData
+        {
+            [Tooltip("깊이 패럴랙스를 적용할 Transform")]
+            public Transform target;
+
+            [Header("깊이 비율 (0=원경, 1=전경)")]
+            [Range(0f, 1f)]
+            public float depthRatio = 0.5f;
+
+            [Header("깊이 모드")]
+            public DepthMode mode = DepthMode.Orthographic;
+
+            [Header("Orthographic - Y축 깊이 이동 배율")]
+            public float yDepthFactor = 0.3f;
+
+            [Header("Orthographic - 깊이에 따른 스케일 증가량")]
+            public float scaleBoost = 0.15f;
+
+            [Header("Perspective - Z축 깊이 이동 배율")]
+            public float zDepthFactor = 2f;
+
+            [Header("X축에도 깊이 이동 적용")]
+            public bool applyXDepth;
+
+            [Header("X축 깊이 이동 배율")]
+            public float xDepthFactor = 0.15f;
+
+            // 런타임 전용
+            [System.NonSerialized] public Vector3 originPos;
+            [System.NonSerialized] public Vector3 originScale;
+            [System.NonSerialized] public bool initialized;
+        }
+
         // ── DI ──
 
         [Header("DI - 추적할 대상 (캐릭터 Transform)")]
         [SerializeField] private Transform target;
 
-        [Header("DI - 깊이 패럴랙스 레이어 (비어있으면 자동 탐색)")]
-        [SerializeField] private List<DepthParallaxLayer> layers = new List<DepthParallaxLayer>();
-
-        // ── 설정 ──
+        [Header("깊이 패럴랙스 레이어 목록")]
+        [SerializeField] private DepthLayerData[] layers = new DepthLayerData[0];
 
         [Header("원점 Y (캐릭터 시작 높이, 0이면 자동)")]
         [SerializeField] private float originY;
@@ -50,35 +77,11 @@ namespace HideAndInk.ParallaxSystem
         [Range(0f, 3f)]
         [SerializeField] private float globalDepthMultiplier = 1f;
 
-        [Header("자동 탐색 범위")]
-        [SerializeField] private AutoDiscoveryMode discoveryMode = AutoDiscoveryMode.Scene;
-
-        // ── 공개 ──
-
-        public event Action<float, float> OnDepthChanged;
-        public IReadOnlyList<DepthParallaxLayer> Layers => layers;
-        public float GlobalDepthMultiplier => globalDepthMultiplier;
-
         // ── 내부 상태 ──
 
         private bool _originSet;
-        private bool _isInitialized;
-
-        // ── 열거형 ──
-
-        public enum AutoDiscoveryMode
-        {
-            None,
-            Children,
-            Scene
-        }
 
         // ── Unity 라이프사이클 ──
-
-        private void Awake()
-        {
-            AutoDiscoverLayers();
-        }
 
         private void Start()
         {
@@ -88,30 +91,32 @@ namespace HideAndInk.ParallaxSystem
                 _originSet = true;
             }
 
-            foreach (var layer in layers)
-            {
-                if (layer == null) continue;
-                layer.Initialize();
-                layer.SetControllerDriven(true);
-            }
-
-            _isInitialized = true;
+            InitializeLayers();
         }
 
         private void LateUpdate()
         {
-            if (!_isInitialized || target == null) return;
+            if (target == null) return;
 
             float characterY = target.position.y;
             float deltaFromOrigin = (characterY - originY) * globalDepthMultiplier;
 
-            for (int i = 0; i < layers.Count; i++)
+            for (int i = 0; i < layers.Length; i++)
             {
-                if (layers[i] != null)
-                    layers[i].ApplyDepthOffset(characterY, deltaFromOrigin);
-            }
+                var layer = layers[i];
+                if (layer.target == null || !layer.initialized) continue;
 
-            OnDepthChanged?.Invoke(characterY, deltaFromOrigin);
+                switch (layer.mode)
+                {
+                    case DepthMode.Orthographic:
+                        ApplyOrthographic(layer, deltaFromOrigin);
+                        break;
+
+                    case DepthMode.Perspective:
+                        ApplyPerspective(layer, deltaFromOrigin);
+                        break;
+                }
+            }
         }
 
         // ── 공개 메서드 ──
@@ -140,54 +145,54 @@ namespace HideAndInk.ParallaxSystem
             globalDepthMultiplier = Mathf.Max(0f, multiplier);
         }
 
-        /// <summary>런타임에 레이어를 동적으로 추가한다.</summary>
-        public void AddLayer(DepthParallaxLayer layer)
+        /// <summary>모든 레이어의 원점을 현재 위치로 재설정한다.</summary>
+        public void ResetOrigins()
         {
-            if (layer != null && !layers.Contains(layer))
-            {
-                layers.Add(layer);
-                layer.Initialize();
-                layer.SetControllerDriven(true);
-            }
-        }
-
-        /// <summary>런타임에 레이어를 제거한다.</summary>
-        public void RemoveLayer(DepthParallaxLayer layer)
-        {
-            if (layer != null && layers.Remove(layer))
-                layer.SetControllerDriven(false);
+            InitializeLayers();
         }
 
         // ── 내부 메서드 ──
 
-        private void AutoDiscoverLayers()
+        private void InitializeLayers()
         {
-            if (layers.Count > 0)
+            for (int i = 0; i < layers.Length; i++)
             {
-                layers.RemoveAll(l => l == null);
-                return;
+                var layer = layers[i];
+                if (layer.target == null) continue;
+
+                layer.originPos = layer.target.position;
+                layer.originScale = layer.target.localScale;
+                layer.initialized = true;
             }
+        }
 
-            switch (discoveryMode)
-            {
-                case AutoDiscoveryMode.Children:
-                    GetComponentsInChildren(layers);
-                    break;
+        private void ApplyOrthographic(DepthLayerData layer, float deltaFromOrigin)
+        {
+            float yOffset = deltaFromOrigin * layer.depthRatio * layer.yDepthFactor;
+            float newY = layer.originPos.y + yOffset;
 
-                case AutoDiscoveryMode.Scene:
-                    foreach (var layer in FindObjectsOfType<DepthParallaxLayer>())
-                    {
-                        if (!layers.Contains(layer))
-                            layers.Add(layer);
-                    }
-                    break;
+            float newX = layer.originPos.x;
+            if (layer.applyXDepth)
+                newX += deltaFromOrigin * layer.depthRatio * layer.xDepthFactor;
 
-                case AutoDiscoveryMode.None:
-                default:
-                    break;
-            }
+            float scaleMultiplier = 1f + layer.depthRatio * layer.scaleBoost * (deltaFromOrigin * 0.1f);
+            scaleMultiplier = Mathf.Clamp(scaleMultiplier, 0.8f, 1.3f);
 
-            layers.RemoveAll(l => l == this);
+            layer.target.position = new Vector3(newX, newY, layer.originPos.z);
+            layer.target.localScale = Vector3.Scale(layer.originScale, new Vector3(scaleMultiplier, scaleMultiplier, 1f));
+        }
+
+        private void ApplyPerspective(DepthLayerData layer, float deltaFromOrigin)
+        {
+            float zOffset = deltaFromOrigin * layer.depthRatio * layer.zDepthFactor;
+            float newZ = layer.originPos.z + zOffset;
+
+            float newX = layer.originPos.x;
+            if (layer.applyXDepth)
+                newX += deltaFromOrigin * layer.depthRatio * layer.xDepthFactor;
+
+            layer.target.position = new Vector3(newX, layer.originPos.y, newZ);
+            layer.target.localScale = layer.originScale;
         }
     }
 }

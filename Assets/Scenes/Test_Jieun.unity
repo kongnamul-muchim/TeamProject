@@ -129,7 +129,6 @@ GameObject:
   m_Component:
   - component: {fileID: 3734797}
   - component: {fileID: 3734796}
-  - component: {fileID: 3734795}
   - component: {fileID: 3734798}
   m_Layer: 0
   m_Name: midground
@@ -138,22 +137,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &3734795
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3734794}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.3
-  applyY: 0
-  yRate: 0.2
 --- !u!212 &3734796
 SpriteRenderer:
   serializedVersion: 2
@@ -411,7 +394,6 @@ GameObject:
   m_Component:
   - component: {fileID: 238101248}
   - component: {fileID: 238101247}
-  - component: {fileID: 238101246}
   - component: {fileID: 238101249}
   m_Layer: 0
   m_Name: midground_02
@@ -420,22 +402,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &238101246
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 238101245}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.35
-  applyY: 0
-  yRate: 0.2
 --- !u!212 &238101247
 SpriteRenderer:
   serializedVersion: 2
@@ -931,7 +897,6 @@ GameObject:
   m_Component:
   - component: {fileID: 621011703}
   - component: {fileID: 621011702}
-  - component: {fileID: 621011701}
   - component: {fileID: 621011704}
   m_Layer: 0
   m_Name: foreground (2)
@@ -940,22 +905,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &621011701
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 621011700}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.7
-  applyY: 0
-  yRate: 0.7
 --- !u!212 &621011702
 SpriteRenderer:
   serializedVersion: 2
@@ -1244,7 +1193,6 @@ GameObject:
   m_Component:
   - component: {fileID: 802012487}
   - component: {fileID: 802012486}
-  - component: {fileID: 802012485}
   - component: {fileID: 802012488}
   m_Layer: 0
   m_Name: foreground
@@ -1253,22 +1201,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &802012485
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 802012484}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.7
-  applyY: 0
-  yRate: 0.7
 --- !u!212 &802012486
 SpriteRenderer:
   serializedVersion: 2
@@ -1487,7 +1419,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1139082876}
   - component: {fileID: 1139082875}
-  - component: {fileID: 1139082874}
   - component: {fileID: 1139082877}
   m_Layer: 0
   m_Name: Background
@@ -1496,22 +1427,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1139082874
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1139082873}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.05
-  applyY: 0
-  yRate: 0.1
 --- !u!212 &1139082875
 SpriteRenderer:
   serializedVersion: 2
@@ -1829,7 +1744,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1267543512}
   - component: {fileID: 1267543511}
-  - component: {fileID: 1267543510}
   - component: {fileID: 1267543513}
   m_Layer: 0
   m_Name: distant
@@ -1838,22 +1752,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1267543510
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1267543509}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.1
-  applyY: 0
-  yRate: 0.4
 --- !u!212 &1267543511
 SpriteRenderer:
   serializedVersion: 2
@@ -2004,7 +1902,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1374465333}
   - component: {fileID: 1374465332}
-  - component: {fileID: 1374465331}
   - component: {fileID: 1374465334}
   m_Layer: 0
   m_Name: midground_03
@@ -2013,22 +1910,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1374465331
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1374465330}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.4
-  applyY: 0
-  yRate: 0.2
 --- !u!212 &1374465332
 SpriteRenderer:
   serializedVersion: 2
@@ -2749,7 +2630,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1911654269}
   - component: {fileID: 1911654268}
-  - component: {fileID: 1911654267}
   - component: {fileID: 1911654270}
   m_Layer: 0
   m_Name: foreground (1)
@@ -2758,22 +2638,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1911654267
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1911654266}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f94b8f97b3639d2478e022522e8d7a48, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.ParallaxSystem.ParallaxLayer
-  targetCamera: {fileID: 2126032562}
-  rate: 0.7
-  applyY: 0
-  yRate: 0.7
 --- !u!212 &1911654268
 SpriteRenderer:
   serializedVersion: 2
