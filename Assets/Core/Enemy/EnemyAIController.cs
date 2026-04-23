@@ -14,10 +14,14 @@ namespace HideAndInk.Core.Enemy
     /// </summary>
     public abstract class EnemyAIController : MonoBehaviour, IEnemy
     {
-        [Header("기본 설정")]
+        [Header("이동 물리 설정 (공통)")]
+        [Tooltip("기본 이동 속도")]
         [SerializeField] protected float moveSpeed = 3f;
+        [Tooltip("가속도 (값이 클수록 빠르게 최고속도 도달)")]
         [SerializeField] protected float acceleration = 8f;
+        [Tooltip("마찰력 (0~1, 1에 가까울수록 미끄러짐)")]
         [SerializeField] protected float friction = 0.9f;
+        [Tooltip("최대 이동 속도 제한")]
         [SerializeField] protected float maxSpeed = 5f;
 
         [Header("시야 설정")]
