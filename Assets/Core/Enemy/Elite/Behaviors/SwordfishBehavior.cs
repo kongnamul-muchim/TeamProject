@@ -33,12 +33,14 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
         [SerializeField] private float chargeAnimationLength = 1f;
 
         // 상태
-        private enum State { Idle, Charging, Cooldown }
+        private enum State { Idle, Charging, Cooldown, PostChargePatrol }
         private State _currentState = State.Idle;
         private float _stateTimer;
         private Vector3 _chargeTarget;
         private Vector3 _chargeStartPos;
         private Vector3 _chargeDirection;
+        private Vector3 _lastChargeTarget; // 돌진 목표 위치 기억 (쿨타임 후 이동용)
+        private bool _hasPostChargeTarget; // 기억된 목표 위치 유효 여부
 
         /// <summary>
         /// 현재 돌진 중인지 여부 (컨트롤러에서 확인용)
@@ -46,9 +48,9 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
         public bool IsCharging => _currentState == State.Charging;
 
         /// <summary>
-        /// 이동 제어권 보유 여부 (돌진 중일 때만 true, 쿨타임 중에는 순찰 허용)
+        /// 이동 제어권 보유 여부 (돌진 중 + 돌진 후 기억된 위치 이동 중)
         /// </summary>
-        public bool IsControllingMovement => _currentState == State.Charging;
+        public bool IsControllingMovement => _currentState == State.Charging || _currentState == State.PostChargePatrol;
 
         // 외부 참조
         private EliteEnemyController _controller;
@@ -109,7 +111,32 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
                     _stateTimer -= deltaTime;
                     if (_stateTimer <= 0f)
                     {
-                        _currentState = State.Idle;
+                        // 쿨타임 종료 → 돌진했던 위치로 먼저 이동
+                        StartPostChargePatrol();
+                    }
+                    break;
+
+                case State.PostChargePatrol:
+                    // 돌진 후 기억된 위치로 이동 중
+                    _stateTimer -= deltaTime;
+                    
+                    // 목표 도달 확인
+                    if (_controller != null && _hasPostChargeTarget)
+                    {
+                        Vector3 currentPos = transform.position;
+                        float distanceToTarget = Vector3.Distance(
+                            new Vector3(currentPos.x, 0, currentPos.z),
+                            new Vector3(_lastChargeTarget.x, 0, _lastChargeTarget.z));
+                        
+                        if (distanceToTarget < 1f || _stateTimer <= 0f)
+                        {
+                            // 목표 도달 또는 시간 초과 → 일반 Idle로 복귀
+                            _currentState = State.Idle;
+                            _hasPostChargeTarget = false;
+                            
+                            // 순찰 재개
+                            _controller?.SetSpeed(_controller.GetDefaultSpeed());
+                        }
                     }
                     break;
             }
@@ -192,6 +219,10 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
             _currentState = State.Cooldown;
             _stateTimer = chargeCooldown;
 
+            // 돌진 목표 위치 기억 (쿨타임 후 이동용)
+            _lastChargeTarget = _chargeTarget;
+            _hasPostChargeTarget = true;
+
             // 정지 및 속도 복원
             if (_controller != null)
             {
@@ -203,7 +234,33 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
             ResetAnimation();
 
 #if UNITY_EDITOR
-            Debug.Log($"[SwordfishBehavior] 돌진 종료 → 쿨타임 ({chargeCooldown:F1}초)");
+            Debug.Log($"[SwordfishBehavior] 돌진 종료 → 쿨타임 ({chargeCooldown:F1}초) → 기억된 위치: {_lastChargeTarget}");
+#endif
+        }
+
+        /// <summary>
+        /// 돌진 후 기억된 위치로 이동 시작
+        /// </summary>
+        private void StartPostChargePatrol()
+        {
+            if (!_hasPostChargeTarget)
+            {
+                _currentState = State.Idle;
+                return;
+            }
+
+            _currentState = State.PostChargePatrol;
+            _stateTimer = 5f; // 최대 5초 동안 이동 시도
+
+            // 기억된 위치로 이동
+            if (_controller != null)
+            {
+                _controller.SetSpeed(_controller.GetDefaultSpeed() * 1.2f); // 약간 빠르게
+                _controller.MoveTo(_lastChargeTarget);
+            }
+
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishBehavior] 쿨타임 종료 → 기억된 위치로 이동: {_lastChargeTarget}");
 #endif
         }
 
