@@ -152,30 +152,26 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// 순찰 상태 업데이트
+        /// 순찰 상태 업데이트 (끊김 없이 지속 이동)
         /// </summary>
         private void UpdatePatrol(float deltaTime)
         {
-            _stateTimer -= deltaTime;
+            // 목표 도달 감지 (EnemyMovement 내부 distance < 0.5f 기준)
+            // Velocity가 거의 0이고 목표가 설정되어 있으면 도달한 것으로 간주
+            bool hasReachedTarget = _movement != null && 
+                                    !_movement.IsMoving && 
+                                    _movement.Velocity.sqrMagnitude < 0.01f;
 
-            if (_stateTimer <= 0f)
+            if (hasReachedTarget)
             {
-                if (_isMoving)
-                {
-                    _movement.Stop();
-                    _isMoving = false;
-                    _stateTimer = idleTime;
-                }
-                else
-                {
-                    PickNewTarget();
-                    _isMoving = true;
-                    _stateTimer = moveInterval;
-                }
+                // 즉시 새 목표 설정 (대기 시간 없이)
+                PickNewTarget();
+                _movement.MoveTo(_targetPosition);
             }
-
-            if (_isMoving)
+            else if (!_movement.IsMoving)
             {
+                // 초기 시작 시 목표 설정
+                PickNewTarget();
                 _movement.MoveTo(_targetPosition);
             }
         }
