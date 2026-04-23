@@ -71,10 +71,10 @@ namespace HideAndInk.Core.Perception
             float nearX = Mathf.Max(_nearSuspicionRadius.x, Mathf.Epsilon);
             float farX = Mathf.Max(_farSuspicionRadius.x, Mathf.Epsilon);
 
-            // lockZAxis가 true면 Z축 거리 체크를 무시 (X축만 고려)
-            float checkZ = _lockZAxis ? 0f : absZ;
-            float farZ = _lockZAxis ? float.MaxValue : Mathf.Max(_farSuspicionRadius.y, Mathf.Epsilon);
-            float nearZ = _lockZAxis ? float.MaxValue : Mathf.Max(_nearSuspicionRadius.y, Mathf.Epsilon);
+            // 의심도 계산은 항상 X/Z 축 거리를 모두 고려 (lockZAxis는 이동 전용)
+            float checkZ = absZ;
+            float farZ = Mathf.Max(_farSuspicionRadius.y, Mathf.Epsilon);
+            float nearZ = Mathf.Max(_nearSuspicionRadius.y, Mathf.Epsilon);
 
             // 근접 범위 체크 (직사각형)
             bool inNearZone = absX <= nearX && checkZ <= nearZ;
@@ -85,7 +85,7 @@ namespace HideAndInk.Core.Perception
             {
                 // 거리 가중치: 중심 1.0 → 가장자리 0.3
                 float xFactor = 1f - (absX / nearX);
-                float zFactor = _lockZAxis ? 1f : (1f - (checkZ / nearZ));
+                float zFactor = 1f - (checkZ / nearZ);
                 float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = _nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
 
@@ -95,7 +95,7 @@ namespace HideAndInk.Core.Perception
             {
                 // 거리 가중치: 중심 1.0 → 가장자리 0.2
                 float xFactor = 1f - (absX / farX);
-                float zFactor = _lockZAxis ? 1f : (1f - (checkZ / farZ));
+                float zFactor = 1f - (checkZ / farZ);
                 float distanceFactor = Mathf.Min(xFactor, zFactor);
                 float weightedRate = _farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
 

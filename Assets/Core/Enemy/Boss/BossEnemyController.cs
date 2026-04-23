@@ -210,15 +210,8 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
 
-            // 의심도 상승 (AmbushGimmick → BossSuspicionSystem 연동)
-            // 참고: 의심도 계산은 AmbushSuspicionModule에서 처리됨 (하위 호환용 콜백 유지)
-            ambush.OnSuspicionIncrease = (rate, deltaTime) =>
-            {
-                if (suspicionSystem != null)
-                {
-                    suspicionSystem.AddSuspicion(rate, deltaTime);
-                }
-            };
+            // 의심도 상승 (AmbushSuspicionModule에서 전담 처리하므로 콜백 연결 제거 - 이중 상승 방지)
+            // ambush.OnSuspicionIncrease = (rate, deltaTime) => ...
 
             // 매복 위치 재설정 (Player 근처 랜덤 위치로 이동)
             ambush.OnRelocateAmbush = (targetPosition) =>

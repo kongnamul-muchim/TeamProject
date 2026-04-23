@@ -179,11 +179,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 매복 대기 타이머
             _ambushTimer -= deltaTime;
 
-            // Player가 있으면 의심도 체크
-            if (_playerTransform != null)
-            {
-                UpdateSuspicion(deltaTime);
-            }
+            // Player가 있으면 의심도 체크 (의심도 계산은 BossSuspicionSystem/AmbushSuspicionModule에서 전담)
+            // UpdateSuspicion(deltaTime); // 중복 호출 방지: 모듈에서 통합 처리
 
             // 대기시간 끝나면 새 위치로 재매복
             if (_ambushTimer <= 0f)
