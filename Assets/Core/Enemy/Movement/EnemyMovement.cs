@@ -15,7 +15,7 @@ namespace HideAndInk.Core.Enemy.Movement
         private readonly IEnemy _enemy;
         private readonly float _acceleration;
         private readonly float _friction;
-        private readonly float _maxSpeed;
+        private float _maxSpeed; // 돌진 시 동적 변경 가능하도록 readonly 제거
 
         // Ground 검증 설정
         private readonly LayerMask _groundLayer;
@@ -50,6 +50,20 @@ namespace HideAndInk.Core.Enemy.Movement
         {
             get => _speed;
             set => _speed = Mathf.Max(0f, value);
+        }
+
+        /// <summary>
+        /// 최대 속도 설정 (돌진 등 임시 속도 증가용)
+        /// Speed와 MaxSpeed를 동시에 설정하여 속도 제한 해제
+        /// </summary>
+        public void SetMaxSpeed(float maxSpeed)
+        {
+            _maxSpeed = Mathf.Max(0f, maxSpeed);
+            // Speed가 기존 MaxSpeed보다 크면 함께 조정
+            if (_speed > _maxSpeed)
+            {
+                _speed = _maxSpeed;
+            }
         }
 
         /// <summary>

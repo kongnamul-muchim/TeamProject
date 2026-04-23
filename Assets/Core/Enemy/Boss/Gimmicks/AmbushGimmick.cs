@@ -13,14 +13,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public GimmickType Type => GimmickType.Ambush;
 
         [Header("매복 설정")]
-        [Tooltip("매복 대기 시간 (초). 이 시간 동안 매복 유지 후 Player 방향으로 이동")]
-        [SerializeField] private float ambushDuration = 3f;
-        [Tooltip("매복 중 Player 방향 접근 최소 거리 (m)")]
-        [SerializeField] private float ambushMoveRadiusMin = 2f;
-        [Tooltip("매복 중 Player 방향 접근 최대 거리 (m)")]
-        [SerializeField] private float ambushMoveRadiusMax = 5f;
+        [Tooltip("매복 중 Player 추적 속도 (patrolSpeed와 별도)")]
+        [SerializeField] private float patrolTrackSpeed = 2f;
+        [Tooltip("순간이동 시 Player 뒤쪽 거리 (m)")]
+        [SerializeField] private float teleportBehindDistance = 8f;
+        [Tooltip("순간이동 시 Player 시야각 밖 체크 (true = Player가 보지 않는 방향에서만 순간이동)")]
+        [SerializeField] private bool checkPlayerVisionForTeleport = true;
         [Tooltip("매복 위치 재설정 시 Z축 고정 여부 (true = X축만 접근)")]
         [SerializeField] private bool lockZAxis = true;
+        [Tooltip("매복 위치에서 대기 시간 (초)")]
+        [SerializeField] private float ambushDuration = 3f;
 
         [Header("매복 스프라이트")]
         [Tooltip("매복 상태일 때 표시할 스프라이트 (땅에 숨은 모습)")]
@@ -43,26 +45,31 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private float dashSpeed = 8f;
         [Tooltip("돌진 지속 시간 (초). 1회만 돌진 후 일반 추적으로 전환")]
         [SerializeField] private float dashDuration = 1.5f;
+        [Tooltip("Chase 진입 후 돌진 전 대기 시간 (초). 이동 정지 상태")]
+        [SerializeField] private float dashPreDelay = 0.3f;
 
         // 상태
         private Transform _bossTransform;
         private Transform _playerTransform;
-        private Vector3 _ambushPoint;
-        private bool _isAmbushPointSet; // _ambushPoint 유효성 플래그 (Vector3.zero 비교 대체)
+        private HideAndInk.Player.PlayerMovementAdapter _playerMovementAdapter; // Player 방향 (Sprite 기준)
         private bool _isAmbushing;
-        private float _ambushTimer;
         private bool _hasDashed; // 돌진 1회 체크
-        private bool _isDashing;
+        private bool _isDashing; // 돌진 중
+        private bool _isDashPreDelay; // 돌진 전 대기 중 (이동 정지)
         private float _dashTimer;
+        private float _preDelayTimer;
         private Vector3 _dashTarget;
         private SpriteRenderer _spriteRenderer;
         private Sprite _originalSprite;
         private GroundBounds _groundBounds; // Ground Bounds 캐싱
         private bool _hasGroundBounds; // GroundBounds 설정 여부 (struct이므로 null 체크 불가)
 
-        // PatrolUpdate 상태 플래그 (매 프레임 콜백 최적화)
+        // 매복 위치 이동 상태
+        private Vector3 _ambushPoint;
+        private bool _isAmbushPointSet;
         private bool _isMovingToAmbush;
         private bool _isStoppedAtAmbush;
+        private float _ambushTimer;
 
         // 외부 연동 콜백
         public System.Action<float> OnSpeedOverride;
@@ -74,6 +81,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public System.Action<Vector3> OnRelocateAmbush; // 새 매복 위치 요청
         public System.Action<bool> OnDashModeToggle; // 돌진 모드 ON/OFF
         public System.Action<bool> OnPatrolBehaviorOverride; // PatrolBehavior 이동 제어권 토글
+        public System.Action<Vector3> OnDashMoveTo; // 돌진 이동 요청 (목표 위치)
 
         public void OnActivate(Transform bossTransform)
         {
@@ -81,13 +89,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = false;
             _hasDashed = false;
             _isDashing = false;
-            _isAmbushPointSet = false;
-            _ambushTimer = ambushDuration;
-            _isMovingToAmbush = false;
-            _isStoppedAtAmbush = false;
 
             // Player Transform 캐싱
             CachePlayerTransform();
+
+            // Player Movement Adapter 캐싱 (Sprite 방향용)
+            CachePlayerMovementAdapter();
 
             // SpriteRenderer 캐싱
             CacheSpriteRenderer();
@@ -97,9 +104,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isAmbushing = false;
             _isDashing = false;
-            _isAmbushPointSet = false;
-            _isMovingToAmbush = false;
-            _isStoppedAtAmbush = false;
+            _isDashPreDelay = false;
 
             OnMovementResume?.Invoke();
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
@@ -116,8 +121,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = true;
             _hasDashed = false;
             _isDashing = false;
+            _isDashPreDelay = false;
             _isAmbushPointSet = false;
-            _ambushTimer = ambushDuration;
             _isMovingToAmbush = false;
             _isStoppedAtAmbush = false;
 
@@ -127,8 +132,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 매복 스프라이트로 변경
             ApplyAmbushSprite(true);
 
-            // Player 근처 랜덤 위치로 이동
-            RequestRelocateAmbush();
+            // 추적 속도 적용
+            OnSpeedOverride?.Invoke(patrolTrackSpeed);
         }
 
         public void OnPatrolUpdate(float deltaTime)
@@ -146,47 +151,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // Player 캐싱 재시도
             if (_playerTransform == null) CachePlayerTransform();
+            if (_playerTransform == null) return;
 
-            // 매복 위치가 설정되지 않았으면 대기
-            if (!_isAmbushPointSet) return;
+            // PlayerMovementAdapter 캐싱 재시도
+            if (_playerMovementAdapter == null) CachePlayerMovementAdapter();
 
-            // 매복 위치로 이동 중인지 체크 (도달 전까지 이동 계속)
-            float distanceToAmbush = Vector3.Distance(_bossTransform.position, _ambushPoint);
-
-            if (distanceToAmbush > 1f)
-            {
-                // 아직 매복 위치로 이동 중 (상태 변경 시에만 플래그 업데이트)
-                // 이동은 PatrolBehavior.GetPatrolTarget()에서 처리됨
-                if (!_isMovingToAmbush)
-                {
-                    _isMovingToAmbush = true;
-                    _isStoppedAtAmbush = false;
-                }
-                return;
-            }
-
-            // 매복 위치 도착 → 상태 변경 시에만 콜백 호출
-            if (!_isStoppedAtAmbush)
-            {
-                _isMovingToAmbush = false;
-                _isStoppedAtAmbush = true;
-                OnMovementStop?.Invoke();
-                OnVisibilityToggle?.Invoke(true); // 거리 전용 모드 ON
-            }
-
-            // 매복 대기 타이머
-            _ambushTimer -= deltaTime;
-
-            // Player가 있으면 의심도 체크 (의심도 계산은 BossSuspicionSystem/AmbushSuspicionModule에서 전담)
-            // UpdateSuspicion(deltaTime); // 중복 호출 방지: 모듈에서 통합 처리
-
-            // 대기시간 끝나면 새 위치로 재매복
-            if (_ambushTimer <= 0f)
-            {
-                RequestRelocateAmbush();
-                _ambushTimer = ambushDuration;
-                _isStoppedAtAmbush = false; // 새 위치로 이동하므로 상태 리셋
-            }
+            // 화면 밖 체크 및 순간이동
+            CheckAndTeleportIfOffScreen();
         }
 
         public void OnPatrolExit()
@@ -194,7 +165,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = false;
             _isMovingToAmbush = false;
             _isStoppedAtAmbush = false;
-            _ambushTimer = ambushDuration; // 타이머 초기화 (복귀 시 정상 동작 보장)
 
             OnMovementResume?.Invoke();
             OnPatrolBehaviorOverride?.Invoke(false); // PatrolBehavior 제어권 반환
@@ -217,7 +187,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 돌진 1회 체크
             if (!_hasDashed)
             {
-                StartDash();
+                StartDashPreDelay();
             }
             else
             {
@@ -228,6 +198,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnChaseUpdate(float deltaTime)
         {
+            // 돌진 전 대기 중
+            if (_isDashPreDelay)
+            {
+                _preDelayTimer -= deltaTime;
+                if (_preDelayTimer <= 0f)
+                {
+                    // 대기 종료 → 돌진 시작
+                    StartDash();
+                }
+                return;
+            }
+
+            // 돌진 중
             if (!_isDashing) return;
 
             _dashTimer -= deltaTime;
@@ -240,6 +223,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnChaseExit()
         {
             _isDashing = false;
+            _isDashPreDelay = false;
             _isAmbushing = false;
             _isMovingToAmbush = false;
             _isStoppedAtAmbush = false;
@@ -286,6 +270,45 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
+        /// PlayerMovementAdapter 캐싱 (Sprite 방향 확인용)
+        /// </summary>
+        private void CachePlayerMovementAdapter()
+        {
+            if (_playerTransform != null)
+            {
+                _playerMovementAdapter = _playerTransform.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
+            }
+
+            if (_playerMovementAdapter == null)
+            {
+                _playerMovementAdapter = FindObjectOfType<HideAndInk.Player.PlayerMovementAdapter>();
+            }
+        }
+
+        /// <summary>
+        /// MoveDirection을 Vector3로 변환 (Sprite가 바라보는 방향 - 좌우만)
+        /// </summary>
+        private Vector3 GetPlayerViewDirection()
+        {
+            if (_playerMovementAdapter == null)
+            {
+                // fallback: Player Transform forward 사용
+                return _playerTransform != null ? _playerTransform.forward : Vector3.forward;
+            }
+
+            switch (_playerMovementAdapter.Direction)
+            {
+                case HideAndInk.Core.Interfaces.MoveDirection.Right:
+                    return Vector3.right;
+                case HideAndInk.Core.Interfaces.MoveDirection.Left:
+                    return Vector3.left;
+                default:
+                    // Up/Down은 마지막 방향 유지 (변경 없음)
+                    return Vector3.right; // 기본값: 오른쪽
+            }
+        }
+
+        /// <summary>
         /// SpriteRenderer 캐싱
         /// </summary>
         private void CacheSpriteRenderer()
@@ -323,52 +346,93 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 매복 위치 재설정 요청 (Player 방향으로 천천히 접근)
+        /// 화면 밖 체크 및 순간이동
+        /// Player가 Ambush를 보지 않으면 Player 카메라 뒤쪽으로 순간이동
         /// </summary>
-        private void RequestRelocateAmbush()
+        private void CheckAndTeleportIfOffScreen()
         {
             if (_playerTransform == null) return;
             if (_bossTransform == null) return;
 
-            Vector3 playerPos = _playerTransform.position;
-            Vector3 bossPos = _bossTransform.position;
+            // Player 카메라 가져오기
+            Camera playerCamera = Camera.main;
+            if (playerCamera == null) return;
 
-            // Player 방향 벡터 계산
-            Vector3 toPlayer = (playerPos - bossPos).normalized;
+            // Boss가 Player 카메라 시야 내에 있는지 체크
+            Vector3 screenPos = playerCamera.WorldToViewportPoint(_bossTransform.position);
+            bool isInScreen = screenPos.z > 0 && screenPos.x >= 0 && screenPos.x <= 1 && screenPos.y >= 0 && screenPos.y <= 1;
 
-            // 접근 거리 (ambushMoveRadiusMin ~ Max)
-            float approachDistance = Random.Range(ambushMoveRadiusMin, ambushMoveRadiusMax);
-
-            Vector3 newAmbushPoint;
-            if (lockZAxis)
+            // Player가 보고 있지 않으면 순간이동
+            if (!isInScreen)
             {
-                // X축만 접근 (Z축 고정)
-                float xDir = Mathf.Sign(toPlayer.x); // Player 방향 X 부호
-                newAmbushPoint = new Vector3(
-                    bossPos.x + xDir * approachDistance,
-                    bossPos.y,
-                    bossPos.z
-                );
+                // Player 시야각 체크 (선택적) - Sprite 좌우 방향 기준
+                if (checkPlayerVisionForTeleport)
+                {
+                    Vector3 playerViewDir = GetPlayerViewDirection();
+                    Vector3 toBoss = (_bossTransform.position - _playerTransform.position).normalized;
+                    float dot = Vector3.Dot(playerViewDir, toBoss);
+                    // Player가 보고 있는 방향(좌우)이면 순간이동 안 함
+                    if (dot > 0.5f) return; // 약 60도 이내
+                }
+
+                // Player 카메라 뒤쪽으로 순간이동 위치 계산
+                Vector3 teleportPos = CalculateTeleportPosition(playerCamera);
+                if (teleportPos != Vector3.zero)
+                {
+                    _bossTransform.position = teleportPos;
+#if UNITY_EDITOR
+                    Debug.Log($"[AmbushGimmick] 순간이동: Player 시야 밖 → {teleportPos}");
+#endif
+                }
             }
-            else
-            {
-                // X-Z 평면으로 Player 방향 접근
-                newAmbushPoint = new Vector3(
-                    bossPos.x + toPlayer.x * approachDistance,
-                    bossPos.y,
-                    bossPos.z + toPlayer.z * approachDistance
-                );
-            }
+        }
+
+        /// <summary>
+        /// 순간이동 위치 계산 (Player Sprite가 바라보는 방향 기준 X축 앞쪽)
+        /// </summary>
+        private Vector3 CalculateTeleportPosition(Camera playerCamera)
+        {
+            // Player Sprite가 바라보는 방향 (좌우만)
+            Vector3 playerViewDir = GetPlayerViewDirection();
+
+            // Player 위치에서 Sprite가 바라보는 방향 앞쪽으로 순간이동 (X축만)
+            float teleportX = _playerTransform.position.x + playerViewDir.x * teleportBehindDistance;
+
+            // X-Z 평면으로 보정 (Y축은 현재 높이 유지, Z축은 Player 위치 유지)
+            Vector3 teleportPos = new Vector3(
+                teleportX,
+                _bossTransform.position.y,
+                _playerTransform.position.z
+            );
 
             // Ground Bounds 내에서 위치 보정
             if (_hasGroundBounds && (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ))
             {
-                newAmbushPoint = _groundBounds.ClampXZ(newAmbushPoint);
+                teleportPos = _groundBounds.ClampXZ(teleportPos);
             }
 
-            OnRelocateAmbush?.Invoke(newAmbushPoint);
-            _ambushPoint = newAmbushPoint;
-            _isAmbushPointSet = true;
+            return teleportPos;
+        }
+
+        /// <summary>
+        /// 돌진 전 대기 시작 (ChaseBehavior 일시정지 + 이동 정지)
+        /// </summary>
+        private void StartDashPreDelay()
+        {
+            _hasDashed = true;
+            _isDashPreDelay = true;
+            _isDashing = false;
+            _preDelayTimer = dashPreDelay;
+
+            // ChaseBehavior 일시정지 (이동 제어 중단)
+            OnDashModeToggle?.Invoke(true);
+
+            // 이동 정지
+            OnMovementStop?.Invoke();
+
+#if UNITY_EDITOR
+            Debug.Log($"[AmbushGimmick] 돌진 전 대기 시작 ({dashPreDelay:F1}초)");
+#endif
         }
 
         /// <summary>
@@ -376,7 +440,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         private void StartDash()
         {
-            _hasDashed = true;
+            _isDashPreDelay = false;
             _isDashing = true;
             _dashTimer = dashDuration;
 
@@ -394,12 +458,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 #endif
             }
 
-            OnDashModeToggle?.Invoke(true);
+            // 돌진 이동 요청 (ChaseBehavior 이동 중단 후 직접 제어)
+            OnDashMoveTo?.Invoke(_dashTarget);
             OnSpeedOverride?.Invoke(dashSpeed);
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
 
 #if UNITY_EDITOR
-            Debug.Log("[AmbushGimmick] 기습 돌진 시작!");
+            Debug.Log($"[AmbushGimmick] 기습 돌진 시작! 목표: {_dashTarget}");
 #endif
         }
 
@@ -409,8 +474,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private void EndDash()
         {
             _isDashing = false;
-            OnDashModeToggle?.Invoke(false);
+            OnDashModeToggle?.Invoke(false); // ChaseBehavior 이동 재개
             OnDashCompleted?.Invoke(_dashTarget);
+            OnMovementResume?.Invoke(); // chaseSpeed로 속도 복원
 
 #if UNITY_EDITOR
             Debug.Log("[AmbushGimmick] 기습 돌진 종료 → 일반 추격 전환");
@@ -431,6 +497,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnRelocateAmbush = null;
             OnDashModeToggle = null;
             OnPatrolBehaviorOverride = null;
+            OnDashMoveTo = null;
         }
 
         #endregion
@@ -466,33 +533,34 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public bool HasMovementOverride => true;
 
         /// <summary>
-        /// Patrol 상태 이동 목표: 매복 위치 (_ambushPoint) 반환
+        /// Patrol 상태 이동 목표: Player 위치 지속 추적
         /// Z축은 lockZAxis 설정에 따라 고정 또는 미세 이동
         /// </summary>
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
-            // 매복 위치가 설정되어 있으면 그곳으로 이동
-            if (_isAmbushPointSet)
+            if (_playerTransform == null) return currentPos;
+
+            Vector3 playerPos = _playerTransform.position;
+            Vector3 target;
+
+            if (lockZAxis)
             {
-                Vector3 target = _ambushPoint;
-
-                // Ground 범위 내로 제한
-                if (_hasGroundBounds && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
-                {
-                    target = bounds.ClampXZ(target);
-                }
-
-                // Z축 고정 (lockZAxis = true면 현재 Z 유지)
-                if (lockZAxis)
-                {
-                    target.z = currentPos.z;
-                }
-
-                return target;
+                // X축만 Player 방향으로 이동 (Z축 고정)
+                target = new Vector3(playerPos.x, currentPos.y, currentPos.z);
+            }
+            else
+            {
+                // X-Z 평면으로 Player 방향 추적
+                target = new Vector3(playerPos.x, currentPos.y, playerPos.z);
             }
 
-            // 매복 위치 없으면 현재 위치 유지
-            return currentPos;
+            // Ground 범위 내로 제한
+            if (_hasGroundBounds && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
         }
 
         /// <summary>

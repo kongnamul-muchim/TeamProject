@@ -195,11 +195,27 @@ namespace HideAndInk.Core.Enemy.Boss
         private void ConnectAmbushCallbacks(AmbushGimmick ambush)
         {
             // 속도 제어
-            ambush.OnSpeedOverride = (speed) => _movement.Speed = speed;
+            ambush.OnSpeedOverride = (speed) =>
+            {
+                _movement.Speed = speed;
+                // EnemyMovement의 _maxSpeed도 함께 조정 (돌진 속도 제한 해제)
+                if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
+                {
+                    em.SetMaxSpeed(speed);
+                }
+            };
 
             // 이동 멈춤/재개
             ambush.OnMovementStop = () => _movement.Stop();
-            ambush.OnMovementResume = () => _movement.Speed = patrolSpeed;
+            ambush.OnMovementResume = () =>
+            {
+                _movement.Speed = chaseSpeed;
+                // EnemyMovement의 _maxSpeed도 Chase 속도로 복원
+                if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
+                {
+                    em.SetMaxSpeed(chaseSpeed);
+                }
+            };
 
             // 시야 모드 전환 (거리 전용 모드 ↔ 일반 시야)
             ambush.OnVisibilityToggle = (ambushMode) =>
@@ -229,11 +245,13 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
 
-            // 돌진 모드 토글 (돌진 중에는 ChaseBehavior 우회)
+            // 돌진 모드 토글 (돌진 중에는 ChaseBehavior 이동 제어 중단)
             ambush.OnDashModeToggle = (isDashing) =>
             {
-                // 돌진 중에는 ChaseBehavior의 예측 이동 대신 직선 돌진
-                // ChaseBehavior가 MoveTo를 호출하지만, 속도가 dashSpeed로 오버라이드됨
+                if (_chaseBehavior != null)
+                {
+                    _chaseBehavior.SetPaused(isDashing);
+                }
             };
 
             // 돌진 완료 → 일반 ChaseBehavior로 복귀
@@ -241,6 +259,12 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 // 돌진 완료 후 ChaseBehavior가 계속 Player 추적
                 // 상태 전환 불필요 (이미 Chase 상태)
+            };
+
+            // 돌진 이동 요청 (ChaseBehavior 이동 중단 후 직접 제어)
+            ambush.OnDashMoveTo = (target) =>
+            {
+                _movement.MoveTo(target);
             };
         }
 
@@ -449,24 +473,24 @@ namespace HideAndInk.Core.Enemy.Boss
             var currentState = _stateMachine.CurrentState;
             bool isAmbush = _activeGimmick is AmbushGimmick;
 
-            // VisionConeFloor: Chase일 때만 ON
-            bool showVisionCone = (currentState == EnemyAIState.Chase);
-            if (visionConeRenderer != null && visionConeRenderer.enabled != showVisionCone)
+            // VisionConeFloor: ChaseOnly 모드일 때 SetChasing으로 제어
+            if (visionConeRenderer != null)
             {
-                visionConeRenderer.enabled = showVisionCone;
-#if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] VisionCone: {(showVisionCone ? "ON" : "OFF")} (State={currentState})");
-#endif
+                bool isChasing = (currentState == EnemyAIState.Chase);
+                visionConeRenderer.SetChasing(isChasing);
             }
 
-            // SuspicionRadiusFloor: Ambush Patrol일 때만 ON
-            bool showSuspicionFloor = (isAmbush && currentState == EnemyAIState.Patrol);
+            // SuspicionRadiusFloor: Ambush일 때 Hidden, 일반 보스는 ChaseOnly
             if (suspicionSystem != null)
             {
-                suspicionSystem.SetFloorVisibility(showSuspicionFloor);
-#if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] SuspicionFloor: {(showSuspicionFloor ? "ON" : "OFF")} (State={currentState})");
-#endif
+                if (isAmbush)
+                {
+                    suspicionSystem.SetFloorVisibilityMode(HideAndInk.Core.Perception.SuspicionFloorVisibilityMode.Hidden);
+                }
+                else
+                {
+                    suspicionSystem.SetFloorVisibilityMode(HideAndInk.Core.Perception.SuspicionFloorVisibilityMode.ChaseOnly);
+                }
             }
         }
 

@@ -6,6 +6,16 @@ using HideAndInk.Core.Enemy.Boss.Gimmicks;
 namespace HideAndInk.Core.Perception
 {
     /// <summary>
+    /// 의심도 범위 바닥 가시성 모드
+    /// </summary>
+    public enum SuspicionFloorVisibilityMode
+    {
+        AlwaysOn,   // 항상 표시 (일반 보스용)
+        ChaseOnly,  // Chase일 때만 표시
+        Hidden      // 아예 표시 안 함 (Ambush 매복용)
+    }
+
+    /// <summary>
     /// 보스 전용 독립 의심도 시스템
     /// - 시야 기반 의심도 + 근접 기반 의심도 듀얼 채널
     /// - 의태 상태 연동 (감속/정지)
@@ -38,10 +48,10 @@ namespace HideAndInk.Core.Perception
         [Header("인게임 의심 범위 시각화")]
         [Tooltip("의심 범위 바닥 표시 활성화 여부")]
         [SerializeField] private bool showSuspicionRadiusInGame = true;
-        [Tooltip("바닥 표시 색상 (위험도 기반)")]
-        [SerializeField] private Color dangerColor = new Color(1f, 0f, 0f, 0.5f);
-        [Tooltip("바닥 표시 색상 (주의 기반)")]
-        [SerializeField] private Color cautionColor = new Color(1f, 0.5f, 0f, 0.3f);
+        [Tooltip("바닥 가시성 모드 (AlwaysOn/ChaseOnly/Hidden)")]
+        [SerializeField] private SuspicionFloorVisibilityMode floorVisibilityMode = SuspicionFloorVisibilityMode.AlwaysOn;
+        [Tooltip("의심 범위 바닥 표시 색상")]
+        [SerializeField] private Color suspicionFloorColor = new Color(1f, 0f, 0f, 0.5f);
         [Tooltip("바닥 메쉬 세그먼트 수 (높을수록 부드러움)")]
         [SerializeField, Range(16, 64)] private int floorSegmentCount = 32;
         [Tooltip("바닥과의 Z-fighting 방지 오프셋")]
@@ -68,6 +78,8 @@ namespace HideAndInk.Core.Perception
         private Material _floorMaterial;
         private bool _isFloorInitialized = false;
         private bool _needsMeshRebuild = true; // 메쉬 재생성 플래그
+        private SuspicionFloorVisibilityMode _floorVisibilityMode = SuspicionFloorVisibilityMode.AlwaysOn;
+        private bool _isFloorVisible = true;
 
         // 의심도 모듈 (기믹별 계산 로직)
         private ISuspicionModule _suspicionModule;
@@ -87,13 +99,36 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의심 범위 바닥 가시성 설정
+        /// 의심 범위 바닥 가시성 모드 설정
+        /// </summary>
+        public void SetFloorVisibilityMode(SuspicionFloorVisibilityMode mode)
+        {
+            _floorVisibilityMode = mode;
+            UpdateFloorVisibility();
+        }
+
+        /// <summary>
+        /// 의심 범위 바닥 가시성 설정 (레거시 호환용)
         /// </summary>
         public void SetFloorVisibility(bool visible)
         {
-            if (_floorRenderObject != null)
+            _floorVisibilityMode = visible ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.Hidden;
+            UpdateFloorVisibility();
+        }
+
+        /// <summary>
+        /// 현재 가시성 모드에 따라 바닥 표시/숨김 처리
+        /// </summary>
+        private void UpdateFloorVisibility()
+        {
+            bool shouldBeVisible = _floorVisibilityMode != SuspicionFloorVisibilityMode.Hidden;
+            if (_isFloorVisible != shouldBeVisible)
             {
-                _floorRenderObject.SetActive(visible);
+                _isFloorVisible = shouldBeVisible;
+                if (_floorRenderObject != null)
+                {
+                    _floorRenderObject.SetActive(shouldBeVisible);
+                }
             }
         }
 
@@ -300,6 +335,16 @@ namespace HideAndInk.Core.Perception
         {
             if (!showSuspicionRadiusInGame) return;
 
+            // 가시성 모드 체크 (Hidden이면 렌더링 안 함)
+            if (floorVisibilityMode == SuspicionFloorVisibilityMode.Hidden)
+            {
+                if (_isFloorInitialized && _floorRenderObject != null && _floorRenderObject.activeSelf)
+                {
+                    _floorRenderObject.SetActive(false);
+                }
+                return;
+            }
+
             // 초기화
             if (!_isFloorInitialized)
             {
@@ -314,11 +359,21 @@ namespace HideAndInk.Core.Perception
             // 자식 객체 위치 업데이트
             _floorRenderObject.transform.position = new Vector3(transform.position.x, floorY, transform.position.z);
 
-            // 의심도 레벨에 따른 색상 선택
-            Color targetColor = _currentLevel >= SuspicionLevel.Danger ? dangerColor : cautionColor;
-            if (_floorMaterial != null)
+            // 정점 색상을 직접 업데이트 (Vertex Color 셰이더가 재질 색상 무시하므로)
+            if (_floorMesh != null)
             {
-                _floorMaterial.color = targetColor;
+                Color[] colors = _floorMesh.colors;
+                if (colors != null && colors.Length > 0)
+                {
+                    // 중심점: 진하게
+                    colors[0] = new Color(suspicionFloorColor.r, suspicionFloorColor.g, suspicionFloorColor.b, 0.8f);
+                    // 가장자리: 연하게
+                    for (int i = 1; i < colors.Length; i++)
+                    {
+                        colors[i] = new Color(suspicionFloorColor.r, suspicionFloorColor.g, suspicionFloorColor.b, 0.4f);
+                    }
+                    _floorMesh.colors = colors;
+                }
             }
 
             // 메쉬 재생성 (반경 변경 시 또는 초기화 후 첫 프레임)
@@ -358,7 +413,7 @@ namespace HideAndInk.Core.Perception
             if (shader != null)
             {
                 _floorMaterial = new Material(shader);
-                _floorMaterial.color = cautionColor;
+                _floorMaterial.color = suspicionFloorColor;
                 _floorMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
                 _floorMeshRenderer.material = _floorMaterial;
                 _floorMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -368,6 +423,12 @@ namespace HideAndInk.Core.Perception
 
             // 초기 메쉬 생성
             BuildFloorMesh();
+
+            // 초기 가시성 적용
+            if (floorVisibilityMode == SuspicionFloorVisibilityMode.Hidden)
+            {
+                _floorRenderObject.SetActive(false);
+            }
 
             _isFloorInitialized = true;
         }
@@ -390,7 +451,7 @@ namespace HideAndInk.Core.Perception
 
             // 중심점
             vertices[0] = Vector3.zero;
-            colors[0] = new Color(1f, 0f, 0f, 0.8f);
+            colors[0] = Color.white; // 재질 색상(dangerColor/cautionColor)이 그대로 적용됨
 
             // 타원형 가장자리 점 생성
             float angleStep = 360f / segments;
@@ -402,9 +463,9 @@ namespace HideAndInk.Core.Perception
                 float z = Mathf.Sin(angle) * rz;
                 vertices[i + 1] = new Vector3(x, 0f, z);
 
-                // 가장자리: 반투명
+                // 가장자리: 재질 색상 적용을 위해 흰색 + alpha만 설정
                 float edgeAlpha = 0.4f;
-                colors[i + 1] = new Color(1f, 0f, 0f, edgeAlpha);
+                colors[i + 1] = new Color(1f, 1f, 1f, edgeAlpha);
 
                 // 삼각형 인덱스
                 triangles[i * 3] = 0;

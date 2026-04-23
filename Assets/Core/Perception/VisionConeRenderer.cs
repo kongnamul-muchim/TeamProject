@@ -4,6 +4,16 @@ using HideAndInk.Core.Perception;
 namespace HideAndInk.Core.Perception
 {
     /// <summary>
+    /// 시야각 렌더러 가시성 모드
+    /// </summary>
+    public enum VisionConeVisibilityMode
+    {
+        AlwaysOn,   // 항상 표시 (일반 몬스터용 - 플레이어 주의/회피용)
+        ChaseOnly,  // Chase 상태일 때만 표시 (보스용 - 추적 중 알림)
+        Hidden      // 아예 표시 안 함 (디버그/특수 상황)
+    }
+
+    /// <summary>
     /// 적의 시야가 바닥에 닿는 영역을 붉은 타원으로 표시
     /// 자식 객체를 바닥 높이에 배치, XZ 평면에서 부채꼴 계산
     /// </summary>
@@ -13,6 +23,10 @@ namespace HideAndInk.Core.Perception
         [Header("시야 센서 참조")]
         [Tooltip("시야 데이터를 가져올 ConeVisionSensor 컴포넌트")]
         [SerializeField] private ConeVisionSensor visionSensor;
+
+        [Header("가시성 모드")]
+        [Tooltip("AlwaysOn: 항상 표시 / ChaseOnly: Chase일 때만 / Hidden: 표시 안 함")]
+        [SerializeField] private VisionConeVisibilityMode visibilityMode = VisionConeVisibilityMode.AlwaysOn;
 
         [Header("색상 설정")]
         [Tooltip("시야 영역의 색상 (RGB=색상, A=기본 투명도)")]
@@ -40,6 +54,31 @@ namespace HideAndInk.Core.Perception
         private bool _isInitialized = false;
         private int _frameCount = 0;
         private const int LOG_INTERVAL = 120;
+
+        // ChaseOnly 모드용 상태
+        private bool _isChasing = false;
+
+        /// <summary>
+        /// Chase 상태 설정 (ChaseOnly 모드일 때 사용)
+        /// </summary>
+        public void SetChasing(bool isChasing)
+        {
+            if (_isChasing != isChasing)
+            {
+                _isChasing = isChasing;
+                UpdateVisibility();
+            }
+        }
+
+        /// <summary>
+        /// 현재 가시성 모드 반환
+        /// </summary>
+        public VisionConeVisibilityMode VisibilityMode => visibilityMode;
+
+        /// <summary>
+        /// 현재 렌더링 활성화 상태
+        /// </summary>
+        public bool IsRenderingActive { get; private set; }
 
         private void Awake()
         {
@@ -90,8 +129,12 @@ namespace HideAndInk.Core.Perception
 
             _isInitialized = true;
 
+            // 초기 가시성 설정
+            IsRenderingActive = ShouldRender();
+            SetMeshVisible(IsRenderingActive);
+
             if (debugLogging)
-                Debug.Log($"[VisionConeRenderer] Initialized: shader={shader?.name}", this);
+                Debug.Log($"[VisionConeRenderer] Initialized: mode={visibilityMode}, visible={IsRenderingActive}", this);
         }
 
         private void Update()
@@ -104,9 +147,69 @@ namespace HideAndInk.Core.Perception
                 if (!_isInitialized) return;
             }
 
+            // 가시성 모드에 따른 렌더링 제어
+            if (!ShouldRender())
+            {
+                if (IsRenderingActive)
+                {
+                    SetMeshVisible(false);
+                    IsRenderingActive = false;
+                }
+                return;
+            }
+
             if (_cachedSensor == null || _coneMesh == null) return;
 
+            if (!IsRenderingActive)
+            {
+                SetMeshVisible(true);
+                IsRenderingActive = true;
+            }
+
             BuildFloorMesh();
+        }
+
+        /// <summary>
+        /// 현재 모드에서 렌더링해야 하는지 확인
+        /// </summary>
+        private bool ShouldRender()
+        {
+            switch (visibilityMode)
+            {
+                case VisionConeVisibilityMode.AlwaysOn:
+                    return true;
+                case VisionConeVisibilityMode.ChaseOnly:
+                    return _isChasing;
+                case VisionConeVisibilityMode.Hidden:
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// 메쉬 가시성 토글 (렌더러 비활성화 + 자식 오브젝트 비활성화)
+        /// </summary>
+        private void SetMeshVisible(bool visible)
+        {
+            if (_meshRenderer != null)
+                _meshRenderer.enabled = visible;
+            if (_renderObject != null)
+                _renderObject.SetActive(visible);
+        }
+
+        /// <summary>
+        /// 초기화 시 가시성 상태 설정
+        /// </summary>
+        private void UpdateVisibility()
+        {
+            if (!_isInitialized) return;
+
+            bool shouldRender = ShouldRender();
+            if (shouldRender != IsRenderingActive)
+            {
+                SetMeshVisible(shouldRender);
+                IsRenderingActive = shouldRender;
+            }
         }
 
         /// <summary>
