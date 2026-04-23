@@ -258,7 +258,7 @@ namespace HideAndInk.Core.Enemy.Elite
             Vector2 randomDirection = Random.insideUnitCircle.normalized;
             Vector3 currentPos = transform.position;
             Vector3 target = new Vector3(
-                currentPos.x + randomDirection.x * moveSpeed,
+                currentPos.x + randomDirection.x * moveDistance,
                 currentPos.y,
                 currentPos.z + randomDirection.y * moveDistance);
 
