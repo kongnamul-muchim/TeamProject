@@ -97,18 +97,23 @@ namespace HideAndInk.ParallaxSystem
             Vector3 currentPos = targetCamera.transform.position;
             Vector3 delta = (currentPos - _previousCameraPosition) * globalSpeedMultiplier;
 
-            if (delta.sqrMagnitude < 0.0001f) return;
+            // CameraAnchored 모드에서는 매 프레임 위치 갱신이 필요하므로
+            // delta가 0이어도 레이어 업데이트를 수행한다.
+            // 이벤트는 의미 있는 이동이 있을 때만 발행한다.
+            bool hasMovement = delta.sqrMagnitude >= 0.0001f;
 
-            _previousCameraPosition = currentPos;
+            if (hasMovement)
+                _previousCameraPosition = currentPos;
 
-            // 모든 레이어에 동일한 delta 전달
+            // 모든 레이어에 카메라 위치 전달 (매 프레임)
             for (int i = 0; i < layers.Count; i++)
             {
                 if (layers[i] != null)
                     layers[i].ApplyOffset(delta);
             }
 
-            OnCameraMoved?.Invoke(delta);
+            if (hasMovement)
+                OnCameraMoved?.Invoke(delta);
         }
 
         // ── 공개 메서드 ──
