@@ -166,11 +166,11 @@ namespace HideAndInk.ParallaxSystem
                     break;
 
                 case AutoDiscoveryMode.Scene:
-                    FindObjectsOfType<ParallaxLayer>().ForEach(l =>
+                    foreach (var layer in FindObjectsOfType<ParallaxLayer>())
                     {
-                        if (!layers.Contains(l))
-                            layers.Add(l);
-                    });
+                        if (!layers.Contains(layer))
+                            layers.Add(layer);
+                    }
                     break;
 
                 case AutoDiscoveryMode.None:
