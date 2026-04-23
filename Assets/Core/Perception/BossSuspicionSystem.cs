@@ -67,6 +67,7 @@ namespace HideAndInk.Core.Perception
         private Mesh _floorMesh;
         private Material _floorMaterial;
         private bool _isFloorInitialized = false;
+        private bool _needsMeshRebuild = true; // 메쉬 재생성 플래그
 
         // 의심도 모듈 (기믹별 계산 로직)
         private ISuspicionModule _suspicionModule;
@@ -82,6 +83,7 @@ namespace HideAndInk.Core.Perception
         public void SetSuspicionRadius(Vector2 radius)
         {
             _suspicionRadius = radius;
+            _needsMeshRebuild = true; // 반경 변경 시 메쉬 재생성
         }
 
         /// <summary>
@@ -308,10 +310,11 @@ namespace HideAndInk.Core.Perception
                 _floorMaterial.color = targetColor;
             }
 
-            // 메쉬 업데이트 (반경이 변경되었을 때만)
-            if (_floorMesh != null)
+            // 메쉬 재생성 (반경 변경 시 또는 초기화 후 첫 프레임)
+            if (_needsMeshRebuild && _floorMesh != null)
             {
                 BuildFloorMesh();
+                _needsMeshRebuild = false;
             }
         }
 
@@ -335,8 +338,12 @@ namespace HideAndInk.Core.Perception
             _floorMesh.name = "SuspicionRadiusFloorMesh";
             _floorMeshFilter.sharedMesh = _floorMesh;
 
-            // 머티리얼 생성
-            Shader shader = Shader.Find("Unlit/Transparent") ?? Shader.Find("Sprites/Default");
+            // URP 호환 셰이더 사용 (VisionConeRenderer와 동일)
+            Shader shader = Shader.Find("Custom/VertexColorUnlitTransparent");
+            if (shader == null) shader = Shader.Find("Unlit/Transparent");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+
             if (shader != null)
             {
                 _floorMaterial = new Material(shader);
@@ -348,6 +355,9 @@ namespace HideAndInk.Core.Perception
                 _floorMeshRenderer.sortingOrder = -10;
             }
 
+            // 초기 메쉬 생성
+            BuildFloorMesh();
+
             _isFloorInitialized = true;
         }
 
@@ -356,7 +366,11 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void BuildFloorMesh()
         {
-            if (_floorMesh == null || _suspicionRadius.x <= 0 || _suspicionRadius.y <= 0) return;
+            if (_floorMesh == null) return;
+
+            // 반경이 0이면 기본값 사용 (초기화 순서 문제 방지)
+            float rx = Mathf.Max(_suspicionRadius.x, 0.1f);
+            float rz = Mathf.Max(_suspicionRadius.y, 0.1f);
 
             int segments = floorSegmentCount;
             Vector3[] vertices = new Vector3[segments + 1];
@@ -368,8 +382,6 @@ namespace HideAndInk.Core.Perception
             colors[0] = new Color(1f, 0f, 0f, 0.8f);
 
             // 타원형 가장자리 점 생성
-            float rx = _suspicionRadius.x;
-            float rz = _suspicionRadius.y;
             float angleStep = 360f / segments;
 
             for (int i = 0; i < segments; i++)
