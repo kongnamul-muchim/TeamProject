@@ -19,11 +19,11 @@ MonoBehaviour:
   ambushDuration: 3
   ambushSprite: {fileID: -1333484347, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
   targetSpriteRenderer: {fileID: 0}
-  suspicionRadius: {x: 10, y: 10}
+  suspicionRadius: {x: 3, y: 2}
   suspicionRate: 50
   suspicionCurveExponent: 1.5
   suspicionDropThreshold: 30
   dashSpeed: 30
-  dashDuration: 1.5
+  dashDuration: 2
   dashPreDelay: 0.3
   dashCooldown: 1
