@@ -4,7 +4,7 @@ using HideAndInk.Core.Interfaces;
 /// <summary>
 /// [위협 처리] 위협 신호를 받으면 치치 상태와 두두 잉크 상태를 함께 바꾼다.
 /// - SetThreat(true): 충전 중단 + 치치 대피 + autoResetDelay 초 후 자동 해제
-/// - VisionBasedSuspicionManager 가 Alert 상태일 때 호출됨
+/// - EnemyPerception 이 Alert 상태일 때 호출됨
 /// </summary>
 public class ChichiThreatHandler : MonoBehaviour, IThreatHandler
 {

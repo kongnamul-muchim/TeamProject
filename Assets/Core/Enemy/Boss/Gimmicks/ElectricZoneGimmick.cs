@@ -129,6 +129,65 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnPlayerTrapped?.Invoke(playerPosition);
             Debug.Log("[ElectricZoneGimmick] Player 감전! 3초간 행동 불가", this);
         }
+
+        #region Movement Override (IEnemyGimmick 확장)
+
+        /// <summary>
+        /// ElectricZoneGimmick은 이동 제어권을 가짐 (X-Z 순찰 + 구역 설치 위치 이동)
+        /// </summary>
+        public bool HasMovementOverride => true;
+
+        /// <summary>
+        /// Patrol 상태 이동 목표: X-Z 평면 순찰 (Z ±1m 제한)
+        /// </summary>
+        public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
+        {
+            // 현재 위치 기준 X-Z 랜덤 이동 (Z ±1m 제한)
+            float xDistance = Random.Range(5f, 12f);
+            float xDir = Random.value > 0.5f ? 1f : -1f;
+            float zOffset = Random.Range(-1f, 1f); // Z ±1m 제한
+
+            Vector3 target = new Vector3(
+                currentPos.x + xDir * xDistance,
+                currentPos.y,
+                currentPos.z + zOffset
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
+        }
+
+        /// <summary>
+        /// Search 상태 이동 목표: 마지막 Player 위치 주변 수색 (Z ±1m 제한)
+        /// </summary>
+        public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
+        {
+            float searchRadius = 3f;
+            float angle = Random.Range(0f, 360f);
+            float distance = Random.Range(1f, searchRadius);
+            float zOffset = Mathf.Clamp(Mathf.Sin(angle * Mathf.Deg2Rad) * distance, -1f, 1f);
+
+            Vector3 target = new Vector3(
+                lastKnownPos.x + Mathf.Cos(angle * Mathf.Deg2Rad) * distance,
+                currentPos.y,
+                currentPos.z + zOffset
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
+        }
+
+        #endregion
     }
 
     /// <summary>

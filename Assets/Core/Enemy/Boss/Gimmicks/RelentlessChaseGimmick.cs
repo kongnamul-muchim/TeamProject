@@ -120,5 +120,86 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public bool IsInFocusedPatrol => _isInFocusedPatrol;
         public bool HasCamouflageTarget => _hasCamouflageTarget;
         public void SetOriginalSpeed(float speed) => _originalSpeed = speed;
+
+        #region Movement Override (IEnemyGimmick 확장)
+
+        /// <summary>
+        /// RelentlessChaseGimmick은 집중 순찰 시 이동 제어권을 가짐
+        /// </summary>
+        public bool HasMovementOverride => true;
+
+        /// <summary>
+        /// Patrol 상태 이동 목표: 집중 순찰 영역 내 X-Z 랜덤 이동 (Z ±2m 제한)
+        /// </summary>
+        public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
+        {
+            if (_hasCamouflageTarget && _isInFocusedPatrol)
+            {
+                // 의태 위치 중심 집중 순찰
+                float radius = patrolAreaRadius;
+                Vector2 randomOffset = Random.insideUnitCircle * radius;
+
+                Vector3 target = new Vector3(
+                    _lastCamouflagePosition.x + randomOffset.x,
+                    currentPos.y,
+                    _lastCamouflagePosition.z + Mathf.Clamp(randomOffset.y, -2f, 2f) // Z ±2m 제한
+                );
+
+                // Ground 범위 내로 제한
+                if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+                {
+                    target = bounds.ClampXZ(target);
+                }
+
+                return target;
+            }
+            else
+            {
+                // 일반 순찰: 현재 위치 기준 X-Z 랜덤 이동 (Z ±2m 제한)
+                float radius = 10f;
+                Vector2 randomOffset = Random.insideUnitCircle * radius;
+
+                Vector3 target = new Vector3(
+                    currentPos.x + randomOffset.x,
+                    currentPos.y,
+                    currentPos.z + Mathf.Clamp(randomOffset.y, -2f, 2f) // Z ±2m 제한
+                );
+
+                // Ground 범위 내로 제한
+                if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+                {
+                    target = bounds.ClampXZ(target);
+                }
+
+                return target;
+            }
+        }
+
+        /// <summary>
+        /// Search 상태 이동 목표: 의태 위치 중심 수색 (Z ±2m 제한)
+        /// </summary>
+        public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
+        {
+            Vector3 searchCenter = _hasCamouflageTarget ? _lastCamouflagePosition : lastKnownPos;
+            float radius = patrolAreaRadius * searchRadiusMultiplier;
+
+            Vector2 randomOffset = Random.insideUnitCircle * radius;
+
+            Vector3 target = new Vector3(
+                searchCenter.x + randomOffset.x,
+                currentPos.y,
+                searchCenter.z + Mathf.Clamp(randomOffset.y, -2f, 2f) // Z ±2m 제한
+            );
+
+            // Ground 범위 내로 제한
+            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
+            {
+                target = bounds.ClampXZ(target);
+            }
+
+            return target;
+        }
+
+        #endregion
     }
 }

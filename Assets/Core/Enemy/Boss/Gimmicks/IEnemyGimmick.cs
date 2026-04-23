@@ -1,4 +1,5 @@
 using UnityEngine;
+using HideAndInk.Core.Enemy.Interfaces;
 
 namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 {
@@ -79,5 +80,27 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// Search 상태 종료 시 호출
         /// </summary>
         void OnSearchExit();
+
+        /// <summary>
+        /// 이동 제어권 여부 (true = 기믹이 이동 목표 계산, false = Behavior가 기본 순찰)
+        /// </summary>
+        bool HasMovementOverride { get; }
+
+        /// <summary>
+        /// Patrol 상태 이동 목표 계산 (Z축 제한 적용)
+        /// </summary>
+        /// <param name="currentPos">보스 현재 위치</param>
+        /// <param name="bounds">Ground 경계</param>
+        /// <returns>목표 위치 (null = Behavior 기본 로직 사용)</returns>
+        Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds);
+
+        /// <summary>
+        /// Search 상태 이동 목표 계산 (Z축 제한 적용)
+        /// </summary>
+        /// <param name="currentPos">보스 현재 위치</param>
+        /// <param name="lastKnownPos">Player 마지막 발견 위치</param>
+        /// <param name="bounds">Ground 경계</param>
+        /// <returns>목표 위치 (null = Behavior 기본 로직 사용)</returns>
+        Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds);
     }
 }

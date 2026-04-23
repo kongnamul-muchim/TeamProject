@@ -1,13 +1,18 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Utilities;
 
 namespace HideAndInk.Core.Perception
 {
     /// <summary>
-    /// 의심도 시스템 구현체 (MonoBehaviour)
+    /// 전역 의심도 관리 시스템
+    /// - Player 의심도 계산/관리
+    /// - 적 간 경보 상태 공유
+    /// - UI/게임 상태 연동 이벤트 제공
     /// </summary>
-    public sealed class SuspicionMeter : MonoBehaviour, ISuspicionMeter
+    public sealed class SuspicionManager : Singleton<SuspicionManager>
     {
         [Header("임계값 설정")]
         [SerializeField] private float cautionThreshold = 30f;
@@ -27,103 +32,88 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float detectionGracePeriod = 0.5f;
 
         [Header("발각 후 추적 복귀 설정")]
-        [SerializeField] private float detectedStateDuration = 2f;  // 발각 후 추적 상태 유지 시간
-        [SerializeField] private float minSuspicionAfterDetected = 0.3f;  // 발각 후 최소 의심도 (30%)
+        [SerializeField] private float detectedStateDuration = 2f;
+        [SerializeField] private float minSuspicionAfterDetected = 0.3f;
 
-        // 현재 의심도 값
+        [Header("경보 공유 설정")]
+        [SerializeField] private float alertBroadcastRadius = 10f;
+        [SerializeField] private float sharedSuspicionAmount = 0.3f;
+        [SerializeField] private float sharedSuspicionCooldown = 2f;
+
+        // 의심도 상태
         private float _currentValue;
-
-        // 상태
+        private SuspicionLevel _currentLevel;
         private bool _isCamouflaging;
         private bool _isPerfectCamouflage;
-        private SuspicionLevel _currentLevel;
-
-        // 근접 감지 중 자연 하락 방지
         private float _lastDetectionTime;
+        private float _lastDetectedTime;
+        private bool _wasDetected;
 
-        // 발각 후 추적 복귀 시스템
-        private float _lastDetectedTime;  // 마지막 발각 시점
-        private bool _wasDetected;  // 이전 프레임에서 발각 상태였는지
+        // 경보 공유
+        private List<EnemyPerception> _registeredEnemies = new();
+        private Dictionary<GameObject, float> _lastBroadcastTime = new();
 
         // 이벤트
         public event Action<SuspicionLevel> OnLevelChanged;
         public event Action OnDetected;
         public event Action OnClear;
+        public event Action<float> OnSuspicionValueChanged;
+        public event Action<EnemyPerception, Vector3, float> OnAlertBroadcast;
 
-        /// <summary>
-        /// 현재 의심도 값 (0~100)
-        /// </summary>
+        // 프로퍼티
         public float CurrentValue => Mathf.Clamp(_currentValue, 0f, 100f);
-
-        /// <summary>
-        /// 현재 의심도 레벨
-        /// </summary>
         public SuspicionLevel CurrentLevel => _currentLevel;
-
-        /// <summary>
-        /// 의태 중 여부
-        /// </summary>
         public bool IsCamouflaging => _isCamouflaging;
-
-        /// <summary>
-        /// 완벽 의태 여부
-        /// </summary>
         public bool IsPerfectCamouflage => _isPerfectCamouflage;
+        public bool IsInDetectedCooldown => _wasDetected && (Time.time - _lastDetectedTime < detectedStateDuration);
+        public float AlertBroadcastRadius => alertBroadcastRadius;
+        public float SharedSuspicionAmount => sharedSuspicionAmount;
 
-        private void Awake()
+        protected override void Awake()
         {
-            _currentValue = 0f;
-            _isCamouflaging = false;
-            _isPerfectCamouflage = false;
-            _currentLevel = SuspicionLevel.Safe;
-            _lastDetectionTime = 0f;
-            _lastDetectedTime = 0f;
-            _wasDetected = false;
+            base.Awake();
+            ResetSuspicion();
         }
 
         private void Update()
         {
-            // 쿨다운 감소
+            // Grace period 감소
             _lastDetectionTime -= Time.deltaTime;
 
-            // 발각 후 추적 복귀 시간 체크
+            // 발각 후 추적 복귀 체크
             bool isInDetectedCooldown = _wasDetected && (Time.time - _lastDetectedTime < detectedStateDuration);
 
-            // 발각 상태에서 벗어났을 때 (추적 복귀 시작)
+            // 발각 상태에서 벗어남
             if (_wasDetected && _currentValue < detectedThreshold)
             {
                 _wasDetected = false;
             }
 
-            // 발각 복귀 중이면 하락 제한 (minSuspicionAfterDetected 이상 유지)
+            // 의심도 하락 처리
             if (isInDetectedCooldown && _currentValue > minSuspicionAfterDetected)
             {
                 ReduceSuspicion(1f, Time.deltaTime);
-                // minSuspicionAfterDetected 이하로 떨어지지 않도록
                 _currentValue = Mathf.Max(_currentValue, minSuspicionAfterDetected);
             }
-            // 일반 하락
             else if (_lastDetectionTime <= 0f && _currentValue > 0f)
             {
                 ReduceSuspicion(1f, Time.deltaTime);
             }
+
+            OnSuspicionValueChanged?.Invoke(CurrentValue);
         }
 
+        #region 의심도 관리
+
         /// <summary>
-        /// 감지 시 호출 (상승) - 근접 감지에서도 호출됨
+        /// 감지 보고 받음 (EnemyPerception에서 호출)
         /// </summary>
-        /// <param name="detectionIntensity">감지 강도 (0~1, 클수록 빠르게 상승)</param>
-        public void OnDetectedTarget(float detectionIntensity = 1f)
+        public void ReportDetection(float detectionIntensity = 1f)
         {
-            _lastDetectionTime = detectionGracePeriod;  // Grace period 갱신
+            _lastDetectionTime = detectionGracePeriod;
             AddSuspicion(detectionIntensity, Time.deltaTime);
         }
 
-        /// <summary>
-        /// 의심도 상승
-        /// </summary>
-        /// <param name="amount">상승량 (초당)</param>
-        /// <param name="deltaTime">경과 시간 (프레임 독립적 계산)</param>
         public void AddSuspicion(float amount, float deltaTime)
         {
             _currentValue += amount * increaseSpeed * deltaTime;
@@ -133,22 +123,15 @@ namespace HideAndInk.Core.Perception
             CheckDetected();
         }
 
-        /// <summary>
-        /// 의심도 하락
-        /// </summary>
-        /// <param name="amount">하락량 (초당)</param>
-        /// <param name="deltaTime">경과 시간 (프레임 독립적 계산)</param>
         public void ReduceSuspicion(float amount, float deltaTime)
         {
             float decreaseAmount = amount * decreaseSpeed * deltaTime;
 
-            // 의태 중이면 추가 하락 적용
             if (_isCamouflaging)
             {
                 decreaseAmount *= (1f + camouflageReduceMultiplier);
             }
 
-            // 완벽 의태면 추가 하락
             if (_isPerfectCamouflage)
             {
                 decreaseAmount += perfectCamouflageReducePerSec * deltaTime;
@@ -161,63 +144,43 @@ namespace HideAndInk.Core.Perception
             CheckClear();
         }
 
-        /// <summary>
-        /// 의심도 리셋
-        /// </summary>
-        public void Reset()
+        public void ResetSuspicion()
         {
             float previousValue = _currentValue;
             _currentValue = 0f;
             _currentLevel = SuspicionLevel.Safe;
+            _wasDetected = false;
+            _lastDetectedTime = 0f;
 
-            if (previousValue > 0f && OnClear != null)
+            if (previousValue > 0f)
             {
-                OnClear.Invoke();
+                OnClear?.Invoke();
             }
         }
 
-        /// <summary>
-        /// 의심도 설정
-        /// </summary>
         public void SetSuspicion(float value)
         {
             _currentValue = Mathf.Clamp(value, 0f, 100f);
-
             CheckLevelChange();
             CheckDetected();
             CheckClear();
         }
 
-        /// <summary>
-        /// 상승 속도 설정
-        /// </summary>
-        public void SetIncreaseSpeed(float speed)
-        {
-            increaseSpeed = Mathf.Max(0f, speed);
-        }
+        public void SetIncreaseSpeed(float speed) => increaseSpeed = Mathf.Max(0f, speed);
+        public void SetDecreaseSpeed(float speed) => decreaseSpeed = Mathf.Max(0f, speed);
 
-        /// <summary>
-        /// 하락 속도 설정
-        /// </summary>
-        public void SetDecreaseSpeed(float speed)
-        {
-            decreaseSpeed = Mathf.Max(0f, speed);
-        }
-
-        /// <summary>
-        /// 의태 상태 설정
-        /// </summary>
-        /// <param name="isCamouflaging">의태 중 여부</param>
-        /// <param name="isPerfect">완벽 의태 여부</param>
         public void SetCamouflageState(bool isCamouflaging, bool isPerfect = false)
         {
             _isCamouflaging = isCamouflaging;
             _isPerfectCamouflage = isPerfect;
         }
 
-        /// <summary>
-        /// 레벨 계산
-        /// </summary>
+        public void ResetDetectedCooldown()
+        {
+            _wasDetected = false;
+            _lastDetectedTime = 0f;
+        }
+
         private SuspicionLevel CalculateLevel(float value)
         {
             if (value >= detectedThreshold) return SuspicionLevel.Detected;
@@ -227,9 +190,6 @@ namespace HideAndInk.Core.Perception
             return SuspicionLevel.Safe;
         }
 
-        /// <summary>
-        /// 레벨 변경 확인
-        /// </summary>
         private void CheckLevelChange()
         {
             SuspicionLevel newLevel = CalculateLevel(_currentValue);
@@ -240,26 +200,16 @@ namespace HideAndInk.Core.Perception
             }
         }
 
-        /// <summary>
-        /// 100% 도달 확인
-        /// </summary>
         private void CheckDetected()
         {
-            if (_currentValue >= detectedThreshold)
+            if (_currentValue >= detectedThreshold && !_wasDetected)
             {
-                // 발각 상태로 진입
-                if (!_wasDetected)
-                {
-                    _wasDetected = true;
-                    _lastDetectedTime = Time.time;
-                }
+                _wasDetected = true;
+                _lastDetectedTime = Time.time;
                 OnDetected?.Invoke();
             }
         }
 
-        /// <summary>
-        /// 0% 복귀 확인
-        /// </summary>
         private void CheckClear()
         {
             if (_currentValue <= 0f)
@@ -268,23 +218,59 @@ namespace HideAndInk.Core.Perception
             }
         }
 
-        /// <summary>
-        /// 발각 후 추적 복귀 중인지 여부
-        /// </summary>
-        public bool IsInDetectedCooldown => _wasDetected && (Time.time - _lastDetectedTime < detectedStateDuration);
+        #endregion
+
+        #region 경보 공유
 
         /// <summary>
-        /// 발각 후 추적 복귀 남은 시간
+        /// EnemyPerception 등록
         /// </summary>
-        public float DetectedCooldownRemaining => _wasDetected ? Mathf.Max(0f, detectedStateDuration - (Time.time - _lastDetectedTime)) : 0f;
-
-        /// <summary>
-        /// 발각 후 추적 복귀 강제 종료 (예: 플레이어 잡혔을 때)
-        /// </summary>
-        public void ResetDetectedCooldown()
+        public void RegisterEnemy(EnemyPerception enemy)
         {
-            _wasDetected = false;
-            _lastDetectedTime = 0f;
+            if (!_registeredEnemies.Contains(enemy))
+            {
+                _registeredEnemies.Add(enemy);
+            }
         }
+
+        /// <summary>
+        /// EnemyPerception 등록 해제
+        /// </summary>
+        public void UnregisterEnemy(EnemyPerception enemy)
+        {
+            _registeredEnemies.Remove(enemy);
+        }
+
+        /// <summary>
+        /// 경보 브로드캐스트 (발각 시 다른 적들에게 공유)
+        /// </summary>
+        public void BroadcastAlert(EnemyPerception sourceEnemy, Vector3 alertPosition, float alertIntensity)
+        {
+            if (sourceEnemy == null) return;
+
+            float currentTime = Time.time;
+            if (_lastBroadcastTime.TryGetValue(sourceEnemy.gameObject, out float lastTime))
+            {
+                if (currentTime - lastTime < sharedSuspicionCooldown) return;
+            }
+            _lastBroadcastTime[sourceEnemy.gameObject] = currentTime;
+
+            foreach (var enemy in _registeredEnemies)
+            {
+                if (enemy == null || enemy == sourceEnemy) continue;
+
+                float distance = Vector3.Distance(enemy.transform.position, sourceEnemy.transform.position);
+                if (distance <= alertBroadcastRadius)
+                {
+                    float distanceFactor = 1f - (distance / alertBroadcastRadius);
+                    float sharedIntensity = sharedSuspicionAmount * distanceFactor * alertIntensity;
+                    enemy.ReceiveSharedAlert(alertPosition, sharedIntensity);
+                }
+            }
+
+            OnAlertBroadcast?.Invoke(sourceEnemy, alertPosition, alertIntensity);
+        }
+
+        #endregion
     }
 }

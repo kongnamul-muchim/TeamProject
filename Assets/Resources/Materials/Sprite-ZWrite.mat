@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Sprite-ZWrite
-  m_Shader: {fileID: 4800000, guid: 8dabbb7e1442e0d41a130e812febd858, type: 3}
+  m_Shader: {fileID: 4800000, guid: d217604e56fb99942997f3d7bcb6c349, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []

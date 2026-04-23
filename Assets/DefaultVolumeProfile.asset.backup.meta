@@ -1,5 +1,10 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Resources/CamouflageColors.meta
+guid: 5128fb7cd775dce4eb19cfd512baccb4
+folderAsset: yes
+========
 guid: 8a65df7c500d8e945b48f1d1770adffb
+>>>>>>>> origin/develop:Assets/DefaultVolumeProfile.asset.backup.meta
 DefaultImporter:
   externalObjects: {}
   userData: 

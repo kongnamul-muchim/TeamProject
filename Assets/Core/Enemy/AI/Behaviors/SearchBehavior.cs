@@ -1,5 +1,6 @@
 using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
+using HideAndInk.Core.Enemy.Boss.Gimmicks;
 
 namespace HideAndInk.Core.Enemy.AI.Behaviors
 {
@@ -8,11 +9,13 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
     /// 마지막 Player 위치 기반으로 주변을 계속 수색 (멈추지 않음)
     /// X축만 이동 (Z축 고정), Ground 범위 내 탐색
     /// Ground 경계를 벗어나지 않도록 목표 제한
+    /// 보스 기믹이 이동 제어권을 가질 수 있음
     /// </summary>
     public sealed class SearchBehavior : IEnemyAIState
     {
         private readonly IEnemy _enemy;
         private readonly IEnemyMovement _movement;
+        private readonly IEnemyGimmick _gimmick;
 
         // 탐색 설정
         private readonly float _searchDuration;     // 탐색 최대 지속 시간
@@ -40,12 +43,14 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         public SearchBehavior(
             IEnemy enemy,
             IEnemyMovement movement,
+            IEnemyGimmick gimmick = null,
             float searchDuration = 5f,
             float searchDistance = 3f,
             float directionChangeCooldown = 1f)
         {
             _enemy = enemy;
             _movement = movement;
+            _gimmick = gimmick;
             _searchDuration = searchDuration;
             _searchDistance = searchDistance;
             _directionTimer = directionChangeCooldown;
@@ -86,6 +91,17 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             if (_searchTimer <= 0f)
             {
                 return; // 상태 머신에서 Patrol로 전환 처리
+            }
+
+            // 기믹이 이동 제어를 원하면 기믹의 목표 사용
+            if (_gimmick != null && _gimmick.HasMovementOverride)
+            {
+                Vector3? gimmickTarget = _gimmick.GetSearchTarget(_enemy.Position, _lastKnownPosition, _hasGroundBounds ? _groundBounds : default);
+                if (gimmickTarget.HasValue)
+                {
+                    _movement.MoveTo(gimmickTarget.Value);
+                }
+                return;
             }
 
             // 현재 위치 (X축만, Z축 고정)
