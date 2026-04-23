@@ -59,7 +59,8 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의심도 계산 및 상승 (AmbushGimmick.UpdateSuspicion 로직 추출)
+        /// 의심도 계산 및 상승 (타원형 거리 기반)
+        /// (x/rx)² + (z/rz)² <= 1 공식으로 타원형 영역 판정
         /// </summary>
         private void CalculateAndRaiseSuspicion(float deltaTime, Vector3 bossPos, Vector3 playerPos)
         {
@@ -69,34 +70,30 @@ namespace HideAndInk.Core.Perception
 
             // 0 나누기 방어
             float nearX = Mathf.Max(_nearSuspicionRadius.x, Mathf.Epsilon);
-            float farX = Mathf.Max(_farSuspicionRadius.x, Mathf.Epsilon);
-
-            // 의심도 계산은 항상 X/Z 축 거리를 모두 고려 (lockZAxis는 이동 전용)
-            float checkZ = absZ;
-            float farZ = Mathf.Max(_farSuspicionRadius.y, Mathf.Epsilon);
             float nearZ = Mathf.Max(_nearSuspicionRadius.y, Mathf.Epsilon);
+            float farX = Mathf.Max(_farSuspicionRadius.x, Mathf.Epsilon);
+            float farZ = Mathf.Max(_farSuspicionRadius.y, Mathf.Epsilon);
 
-            // 근접 범위 체크 (직사각형)
-            bool inNearZone = absX <= nearX && checkZ <= nearZ;
-            // 원거리 범위 체크 (직사각형)
-            bool inFarZone = absX <= farX && checkZ <= farZ;
+            // 타원형 정규화 거리 계산: sqrt((x/rx)² + (z/rz)²)
+            float nearNormalizedDist = Mathf.Sqrt(Mathf.Pow(absX / nearX, 2) + Mathf.Pow(absZ / nearZ, 2));
+            float farNormalizedDist = Mathf.Sqrt(Mathf.Pow(absX / farX, 2) + Mathf.Pow(absZ / farZ, 2));
+
+            // 영역 판정 (정규화 거리 <= 1.0 이면 영역 내)
+            bool inNearZone = nearNormalizedDist <= 1.0f;
+            bool inFarZone = farNormalizedDist <= 1.0f;
 
             if (inNearZone)
             {
-                // 거리 가중치: 중심 1.0 → 가장자리 0.3
-                float xFactor = 1f - (absX / nearX);
-                float zFactor = 1f - (checkZ / nearZ);
-                float distanceFactor = Mathf.Min(xFactor, zFactor);
+                // 거리 가중치: 중심(1.0) → 가장자리(0.3)
+                float distanceFactor = 1f - nearNormalizedDist;
                 float weightedRate = _nearSuspicionRate * Mathf.Lerp(0.3f, 1f, distanceFactor);
 
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);
             }
             else if (inFarZone)
             {
-                // 거리 가중치: 중심 1.0 → 가장자리 0.2
-                float xFactor = 1f - (absX / farX);
-                float zFactor = 1f - (checkZ / farZ);
-                float distanceFactor = Mathf.Min(xFactor, zFactor);
+                // 거리 가중치: 중심(1.0) → 가장자리(0.2)
+                float distanceFactor = 1f - farNormalizedDist;
                 float weightedRate = _farSuspicionRate * Mathf.Lerp(0.2f, 1f, distanceFactor);
 
                 OnSuspicionIncrease?.Invoke(weightedRate, deltaTime);

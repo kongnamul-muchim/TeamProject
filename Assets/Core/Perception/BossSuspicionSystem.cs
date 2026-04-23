@@ -258,13 +258,12 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의심도 상승 범위 Gizmos 표시
-        /// - 네모박스 (사각형 영역): 주황색 와이어프레임 (Far Radius 기준)
-        /// - 바닥 원형: 붉은색 디스크 (Near Radius 기준, 위험 지역)
+        /// 의심도 상승 범위 Gizmos 표시 (타원형)
+        /// - 외부 타원 (Far Radius): 주황색 와이어프레임
+        /// - 내부 타원 (Near Radius): 붉은색 와이어프레임
         /// </summary>
         private void OnDrawGizmosSelected()
         {
-            // linkedGimmick이 할당되어 있으면 SO의 현재 값을 직접 사용 (에디터 실시간 반영)
             Vector2 farRadius = _farSuspicionRadius;
             Vector2 nearRadius = _nearSuspicionRadius;
 
@@ -276,16 +275,19 @@ namespace HideAndInk.Core.Perception
             }
 #endif
 
-            // 직사각형 영역 (Far Radius) - 주황색 와이어프레임
+            // 외부 타원 (Far Radius) - 주황색
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
-            Gizmos.DrawWireCube(transform.position, new Vector3(farRadius.x * 2f, 0.05f, farRadius.y * 2f));
+            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(farRadius.x, 0.05f, farRadius.y));
+            Gizmos.DrawWireSphere(Vector3.zero, 1f);
 
-            // 직사각형 영역 (Near Radius) - 붉은색 와이어프레임
+            // 내부 타원 (Near Radius) - 붉은색
             Gizmos.color = new Color(1f, 0f, 0f, 0.4f);
-            Gizmos.DrawWireCube(transform.position, new Vector3(nearRadius.x * 2f, 0.05f, nearRadius.y * 2f));
+            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(nearRadius.x, 0.05f, nearRadius.y));
+            Gizmos.DrawWireSphere(Vector3.zero, 1f);
 
             // 중심점 표시
             Gizmos.color = Color.red;
+            Gizmos.matrix = Matrix4x4.identity;
             Gizmos.DrawSphere(transform.position, 0.15f);
         }
     }
