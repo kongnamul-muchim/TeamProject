@@ -25,8 +25,8 @@ namespace HideAndInk.Core.Perception
         public AmbushSuspicionModule(AmbushGimmick gimmick)
         {
             _gimmick = gimmick;
-            _suspicionRadius = gimmick.FarSuspicionRadius; // 단일 반경으로 사용
-            _suspicionRate = gimmick.FarSuspicionRate;
+            _suspicionRadius = gimmick.SuspicionRadius;
+            _suspicionRate = gimmick.SuspicionRate;
             _curveExponent = gimmick.SuspicionCurveExponent;
         }
 
