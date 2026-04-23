@@ -75,10 +75,22 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
         {
             // Player가 감지 반경 내에 있을 때 호출됨
             // 돌진 가능 상태면 돌진 시작
+            // 쿨타임 중이나 PostChargePatrol 중에는 무시
             if (_currentState == State.Idle && distance <= GetDetectionRadius())
             {
                 StartChargeDelay();
             }
+        }
+
+        /// <summary>
+        /// 돌진 직전 최종 거리 체크 (쿨타임 중 Player가 범위 벗어났는지 확인)
+        /// </summary>
+        private bool IsPlayerStillInRange()
+        {
+            if (_playerTransform == null) return false;
+            
+            float distance = Vector3.Distance(transform.position, _playerTransform.position);
+            return distance <= GetDetectionRadius();
         }
 
         public void OnUpdate(float deltaTime)
@@ -171,6 +183,16 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
         private void StartCharge()
         {
             if (_playerTransform == null) return;
+
+            // 돌진 직전 최종 거리 체크 (쿨타임 중 Player가 범위 벗어났으면 취소)
+            if (!IsPlayerStillInRange())
+            {
+#if UNITY_EDITOR
+                Debug.Log("[SwordfishBehavior] 돌진 취소: Player가 범위 벗어남");
+#endif
+                _currentState = State.Idle;
+                return;
+            }
 
             _currentState = State.Charging;
             _stateTimer = chargeDuration;

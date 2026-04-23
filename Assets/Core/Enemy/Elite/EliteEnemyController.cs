@@ -58,6 +58,9 @@ namespace HideAndInk.Core.Enemy.Elite
         private Mesh _detectionRangeMesh;
         private bool _isMeshInitialized;
 
+        // Player 의태 상태 캐싱
+        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+
         protected override void InitializeMovement()
         {
             _movement = new EnemyMovement(
@@ -80,6 +83,9 @@ namespace HideAndInk.Core.Enemy.Elite
             {
                 eliteSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
             }
+
+            // CamouflageAdapter 캐싱
+            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
             
 #if UNITY_EDITOR
             Debug.Log($"[EliteEnemyController] Start: showDetectionRangeInGame={showDetectionRangeInScene}");
@@ -152,10 +158,14 @@ namespace HideAndInk.Core.Enemy.Elite
         /// <summary>
         /// Player 감지 체크 (직사각형 영역 기반)
         /// 현재 스프라이트가 바라보는 방향으로만 감지
+        /// 의태 중이면 감지되지 않음
         /// </summary>
         private void CheckPlayerDetection()
         {
             if (_playerTransform == null) return;
+
+            // Player가 의태 중이면 감지 안 됨
+            if (IsPlayerCamouflaging()) return;
 
             // 현재 바라보는 방향 계산
             bool isFacingLeft = IsCurrentlyFacingLeft();
@@ -185,6 +195,14 @@ namespace HideAndInk.Core.Enemy.Elite
             {
                 _behavior?.OnPlayerApproached(distanceX, _playerTransform.position);
             }
+        }
+
+        /// <summary>
+        /// Player가 의태 중인지 확인
+        /// </summary>
+        private bool IsPlayerCamouflaging()
+        {
+            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
         }
 
         /// <summary>

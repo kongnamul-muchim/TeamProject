@@ -54,6 +54,7 @@ namespace HideAndInk.Core.Enemy.Normal
 
         // 컴포넌트
         private Rigidbody _rigidbody;
+        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
         protected override void InitializeMovement()
         {
@@ -93,6 +94,9 @@ namespace HideAndInk.Core.Enemy.Normal
             {
                 enemyAnimator = GetComponent<Animator>();
             }
+
+            // CamouflageAdapter 캐싱
+            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
 
             _pushTimer = 0f;
         }
@@ -142,13 +146,25 @@ namespace HideAndInk.Core.Enemy.Normal
 
         /// <summary>
         /// Player 감지 체크 (거리 기반)
+        /// 의태 중이면 감지되지 않음
         /// </summary>
         private bool CheckPlayerDetection()
         {
             if (_playerTransform == null) return false;
 
+            // Player가 의태 중이면 감지 안 됨
+            if (IsPlayerCamouflaging()) return false;
+
             float distance = Vector3.Distance(transform.position, _playerTransform.position);
             return distance <= detectionRadius;
+        }
+
+        /// <summary>
+        /// Player가 의태 중인지 확인
+        /// </summary>
+        private bool IsPlayerCamouflaging()
+        {
+            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
         }
 
         /// <summary>
