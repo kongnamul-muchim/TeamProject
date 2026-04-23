@@ -11,6 +11,11 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
     {
         public string BehaviorName => "Swordfish Charge";
 
+        /// <summary>
+        /// 이동 제어권 보유 여부 (돌진 중 + 돌진 후 기억된 위치 이동 중)
+        /// </summary>
+        public bool IsControllingMovement => _currentState == State.Charging || _currentState == State.PostChargePatrol;
+
         [Header("청새치 설정")]
         [Tooltip("돌진 속도")]
         [SerializeField] private float chargeSpeed = 10f;
@@ -46,11 +51,6 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
         /// 현재 돌진 중인지 여부 (컨트롤러에서 확인용)
         /// </summary>
         public bool IsCharging => _currentState == State.Charging;
-
-        /// <summary>
-        /// 이동 제어권 보유 여부 (돌진 중 + 돌진 후 기억된 위치 이동 중)
-        /// </summary>
-        public bool IsControllingMovement => _currentState == State.Charging || _currentState == State.PostChargePatrol;
 
         // 외부 참조
         private EliteEnemyController _controller;

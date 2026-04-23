@@ -14,6 +14,11 @@ namespace HideAndInk.Core.Enemy.Elite
         string BehaviorName { get; }
 
         /// <summary>
+        /// 이동 제어권 보유 여부 (true = 행동 패턴이 이동 제어, false = 컨트롤러 기본 순찰)
+        /// </summary>
+        bool IsControllingMovement { get; }
+
+        /// <summary>
         /// Player 접근 시 호출 (매 프레임)
         /// </summary>
         /// <param name="distance">Player까지의 거리</param>

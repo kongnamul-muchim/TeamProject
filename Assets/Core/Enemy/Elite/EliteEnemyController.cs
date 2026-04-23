@@ -198,12 +198,7 @@ namespace HideAndInk.Core.Enemy.Elite
         /// </summary>
         private bool IsBehaviorControllingMovement()
         {
-            // SwordfishBehavior가 Idle이 아니면 (돌진 지연/돌진/쿨타임 중) 이동 제어권 넘김
-            if (_behavior is SwordfishBehavior swordfish)
-            {
-                return swordfish.IsControllingMovement;
-            }
-            return false;
+            return _behavior != null && _behavior.IsControllingMovement;
         }
 
         /// <summary>
