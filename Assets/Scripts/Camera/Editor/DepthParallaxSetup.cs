@@ -203,8 +203,8 @@ namespace HideAndInk.Editor
                 // DepthParallaxLayer 부착
                 var depthLayer = Undo.AddComponent<DepthParallaxLayer>(go);
 
-                // 기존 ParallaxLayer의 rate를 기반으로 depthRatio 추정
-                var preset = EstimatePreset(go.name, parallaxLayer.rate);
+                // 기존 ParallaxLayer의 SpeedRatio를 기반으로 depthRatio 추정
+                var preset = EstimatePreset(go.name, parallaxLayer.SpeedRatio);
                 ApplyPresetToLayer(depthLayer, preset);
 
                 Debug.Log($"[DepthParallax] {go.name}: depthRatio={preset.depthRatio:F2}, " +
