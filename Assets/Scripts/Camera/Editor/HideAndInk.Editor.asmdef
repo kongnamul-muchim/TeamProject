@@ -1,0 +1,19 @@
+{
+    "name": "HideAndInk.Editor",
+    "rootNamespace": "HideAndInk.Editor",
+    "references": [
+        "HideAndInk",
+        "UnityEditor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
