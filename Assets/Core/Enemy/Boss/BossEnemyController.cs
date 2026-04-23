@@ -437,22 +437,21 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// 시야각 가시성 업데이트 (의심도 레벨 기반)
-        /// Danger/Detected: 시야각 표시 (Player가 위험 인지)
-        /// Safe/Caution: 시야각 숨김
+        /// 시야각 가시성 업데이트 (상태 기반)
+        /// Chase: 시야각 ON (Player 추적 중)
+        /// Patrol/Search: 시야각 OFF (매복 중에는 숨김)
         /// </summary>
         private void UpdateVisionConeVisibility()
         {
-            if (visionConeRenderer == null || suspicionSystem == null) return;
+            if (visionConeRenderer == null || _stateMachine == null) return;
 
-            SuspicionLevel level = suspicionSystem.CurrentLevel;
-            bool shouldBeVisible = (level == SuspicionLevel.Danger || level == SuspicionLevel.Detected);
+            bool shouldBeVisible = _stateMachine.CurrentState == EnemyAIState.Chase;
 
             if (visionConeRenderer.enabled != shouldBeVisible)
             {
                 visionConeRenderer.enabled = shouldBeVisible;
 #if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] VisionCone: {(shouldBeVisible ? "ON" : "OFF")} (Level={level})");
+                Debug.Log($"[BossEnemyController] VisionCone: {(shouldBeVisible ? "ON" : "OFF")} (State={_stateMachine.CurrentState})");
 #endif
             }
         }

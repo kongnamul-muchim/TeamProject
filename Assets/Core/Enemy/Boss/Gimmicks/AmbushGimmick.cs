@@ -13,13 +13,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public GimmickType Type => GimmickType.Ambush;
 
         [Header("매복 설정")]
-        [Tooltip("매복 대기 시간 (초). 이 시간 동안 매복 유지 후 새 위치로 이동")]
+        [Tooltip("매복 대기 시간 (초). 이 시간 동안 매복 유지 후 Player 방향으로 이동")]
         [SerializeField] private float ambushDuration = 3f;
-        [Tooltip("매복 중 Player 기준 최소 이동 거리 (m)")]
-        [SerializeField] private float ambushMoveRadiusMin = 5f;
-        [Tooltip("매복 중 Player 기준 최대 이동 거리 (m)")]
-        [SerializeField] private float ambushMoveRadiusMax = 12f;
-        [Tooltip("매복 위치 재설정 시 Z축 고정 여부 (true = X축만 이동)")]
+        [Tooltip("매복 중 Player 방향 접근 최소 거리 (m)")]
+        [SerializeField] private float ambushMoveRadiusMin = 2f;
+        [Tooltip("매복 중 Player 방향 접근 최대 거리 (m)")]
+        [SerializeField] private float ambushMoveRadiusMax = 5f;
+        [Tooltip("매복 위치 재설정 시 Z축 고정 여부 (true = X축만 접근)")]
         [SerializeField] private bool lockZAxis = true;
 
         [Header("매복 스프라이트")]
@@ -323,7 +323,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 매복 위치 재설정 요청 (Player 근처 랜덤 위치)
+        /// 매복 위치 재설정 요청 (Player 방향으로 천천히 접근)
         /// </summary>
         private void RequestRelocateAmbush()
         {
@@ -331,31 +331,32 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_bossTransform == null) return;
 
             Vector3 playerPos = _playerTransform.position;
+            Vector3 bossPos = _bossTransform.position;
 
-            // Player 기준 랜덤 방향 + 랜덤 거리
-            float angle = Random.Range(0f, 360f);
-            float distance = Random.Range(ambushMoveRadiusMin, ambushMoveRadiusMax);
+            // Player 방향 벡터 계산
+            Vector3 toPlayer = (playerPos - bossPos).normalized;
+
+            // 접근 거리 (ambushMoveRadiusMin ~ Max)
+            float approachDistance = Random.Range(ambushMoveRadiusMin, ambushMoveRadiusMax);
 
             Vector3 newAmbushPoint;
             if (lockZAxis)
             {
-                // X축만 이동 (Z축 고정)
-                float xDir = Mathf.Cos(angle * Mathf.Deg2Rad);
+                // X축만 접근 (Z축 고정)
+                float xDir = Mathf.Sign(toPlayer.x); // Player 방향 X 부호
                 newAmbushPoint = new Vector3(
-                    playerPos.x + xDir * distance,
-                    _bossTransform.position.y,
-                    _bossTransform.position.z
+                    bossPos.x + xDir * approachDistance,
+                    bossPos.y,
+                    bossPos.z
                 );
             }
             else
             {
-                // X-Z 평면 이동
-                float xDir = Mathf.Cos(angle * Mathf.Deg2Rad);
-                float zDir = Mathf.Sin(angle * Mathf.Deg2Rad);
+                // X-Z 평면으로 Player 방향 접근
                 newAmbushPoint = new Vector3(
-                    playerPos.x + xDir * distance,
-                    _bossTransform.position.y,
-                    playerPos.z + zDir * distance
+                    bossPos.x + toPlayer.x * approachDistance,
+                    bossPos.y,
+                    bossPos.z + toPlayer.z * approachDistance
                 );
             }
 
