@@ -8,33 +8,23 @@ namespace HideAndInk.ParallaxSystem
     /// 캐릭터가 위아래로 이동할 때, 각 레이어의 깊이 비율(depthRatio)에 따라
     /// 위치와 스케일을 조절하여 2D 게임에서 입체감을 표현한다.
     /// 
-    /// ┌─────────────────────────────────────────────────────────┐
-    /// │  Orthographic 모드 (직교 카메라)                          │
-    /// │                                                         │
-    /// │  원리: Y축 이동을 "가상의 Z축"으로 치환                    │
-    /// │                                                         │
-    /// │  캐릭터가 위로 올라가면:                                   │
-    /// │    전경(depthRatio=1) → Y를 더 많이 올림 (가까이 보임)     │
-    /// │    원경(depthRatio=0) → Y를 적게 올림  (멀리 보임)        │
-    /// │                                                         │
-    /// │  공식:                                                   │
-    /// │    layerY = originY + (charY - originY) × depthRatio    │
-    │    layerScale = originScale × (1 + depthRatio × scaleBoost│
-    /// │                                                         │
-    /// │  ┌─────────────────────────────────────────────────────┐ │
-    /// │  │  Perspective 모드 (원근 카메라)                      │ │
-    /// │  │                                                     │ │
-    /// │  │  원리: 실제 Z축 값을 이동하여 카메라 투영이 자동 처리    │ │
-    /// │  │                                                     │ │
-    /// │  │  캐릭터가 위로 올라가면:                               │ │
-    /// │  │    전경 → Z를 앞으로 당김 (더 크게 보임)               │ │
-    /// │  │    원경 → Z를 뒤로 밂   (더 작게 보임)               │ │
-    /// │  │                                                     │ │
-    /// │  │  공식:                                               │ │
-    /// │  │    layerZ = originZ + (charY - originY) × depthRatio │ │
-    /// │  │    × zDepthFactor                                   │ │
-    /// │  └─────────────────────────────────────────────────────┘ │
-    /// └─────────────────────────────────────────────────────────┘
+    /// [Orthographic 모드 - 직교 카메라]
+    /// 원리: Y축 이동을 "가상의 Z축"으로 치환
+    /// 캐릭터가 위로 올라가면:
+    ///   전경(depthRatio=1) → Y를 더 많이 올림 (가까이 보임)
+    ///   원경(depthRatio=0) → Y를 적게 올림  (멀리 보임)
+    /// 공식:
+    ///   layerY = originY + (charY - originY) * depthRatio * yDepthFactor
+    ///   layerScale = originScale * (1 + depthRatio * scaleBoost * delta * 0.1)
+    /// 
+    /// [Perspective 모드 - 원근 카메라]
+    /// 원리: 실제 Z축 값을 이동하여 카메라 투영이 자동 처리
+    /// 캐릭터가 위로 올라가면:
+    ///   전경 → Z를 앞으로 당김 (더 크게 보임)
+    ///   원경 → Z를 뒤로 밈   (더 작게 보임)
+    /// 공식:
+    ///   layerZ = originZ + (charY - originY) * depthRatio * zDepthFactor
+    ///   (스케일은 카메라가 자동 처리)
     /// 
     /// SRP: 깊이에 따른 위치/스케일 계산만 담당
     /// DI: [SerializeField]로 설정 참조
