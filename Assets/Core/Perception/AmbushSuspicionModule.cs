@@ -29,9 +29,9 @@ namespace HideAndInk.Core.Perception
             _gimmick = gimmick;
             _farSuspicionRadius = gimmick.FarSuspicionRadius;
             _nearSuspicionRadius = gimmick.NearSuspicionRadius;
-            _farSuspicionRate = 5f; // 기본값 (필요하면 기믹에서 가져오도록 확장 가능)
-            _nearSuspicionRate = 15f;
-            _lockZAxis = true; // 기본값 (필요하면 기믹에서 가져오도록 확장 가능)
+            _farSuspicionRate = gimmick.FarSuspicionRate;
+            _nearSuspicionRate = gimmick.NearSuspicionRate;
+            _lockZAxis = gimmick.LockZAxis;
         }
 
         public void OnActivate()

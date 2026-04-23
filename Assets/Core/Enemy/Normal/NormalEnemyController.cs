@@ -70,7 +70,7 @@ namespace HideAndInk.Core.Enemy.Normal
         protected override void UpdateAI(float deltaTime)
         {
             // 시야 기반 Player 감지
-            CheckVision();
+            CheckVision(deltaTime);
 
             // 이동 상태 머신
             _stateTimer -= deltaTime;
@@ -102,12 +102,12 @@ namespace HideAndInk.Core.Enemy.Normal
         /// <summary>
         /// 시야 기반 Player 감지 (부채꼴 센서)
         /// </summary>
-        private void CheckVision()
+        private void CheckVision(float deltaTime)
         {
             if (visionSensor == null || _playerTransform == null) return;
             if (_alertTimer > 0f)
             {
-                _alertTimer -= Time.deltaTime;
+                _alertTimer -= deltaTime;
                 return;
             }
 

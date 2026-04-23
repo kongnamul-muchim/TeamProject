@@ -50,6 +50,11 @@ namespace HideAndInk.Core.Perception
         // 의심도 모듈 (기믹별 계산 로직)
         private ISuspicionModule _suspicionModule;
 
+        // Player Transform 캐싱 (매 프레임 FindWithTag 방지)
+        private Transform _playerTransform;
+        private float _playerCacheTimer;
+        private const float PLAYER_CACHE_INTERVAL = 1f; // 1초마다 갱신
+
         /// <summary>
         /// 의심도 범위 설정 (AmbushGimmick에서 호출)
         /// </summary>
@@ -143,14 +148,29 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// Player 위치 탐색 (Tag 기반)
+        /// Player 위치 탐색 (캐싱 기반, 주기적 갱신)
         /// </summary>
         private Vector3? FindPlayerPosition()
         {
-            GameObject playerObj = GameObject.FindWithTag("Player");
-            if (playerObj != null)
+            _playerCacheTimer -= Time.deltaTime;
+
+            if (_playerCacheTimer <= 0f || _playerTransform == null)
             {
-                return playerObj.transform.position;
+                _playerCacheTimer = PLAYER_CACHE_INTERVAL;
+                GameObject playerObj = GameObject.FindWithTag("Player");
+                if (playerObj != null)
+                {
+                    _playerTransform = playerObj.transform;
+                }
+                else
+                {
+                    _playerTransform = null;
+                }
+            }
+
+            if (_playerTransform != null)
+            {
+                return _playerTransform.position;
             }
             return null;
         }

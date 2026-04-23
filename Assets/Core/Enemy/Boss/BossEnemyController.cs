@@ -417,6 +417,7 @@ namespace HideAndInk.Core.Enemy.Boss
 
         /// <summary>
         /// 의심도 업데이트 (시야/근접 기반)
+        /// AmbushGimmick일 경우 의심도 계산은 AmbushSuspicionModule에서 전담 (이중 상승 방지)
         /// </summary>
         private void UpdateSuspicion(bool canSeePlayer)
         {
@@ -425,22 +426,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // 가자미 기믹이 활성화되어 있으면
             if (_activeGimmick is AmbushGimmick)
             {
-                // Patrol: 기믹이 거리 기반 의심도 관리 (컨트롤러는 관여 안 함)
-                if (_stateMachine.IsPatrol) return;
-
-                // Search: Player 시야 발견 시에만 의심도 상승
-                if (_stateMachine.IsSearch && canSeePlayer)
-                {
-                    suspicionSystem.ReportVisionDetection(1f);
-                    return;
-                }
-
-                // Chase: Player 시야 발견 시에만 의심도 상승
-                if (_stateMachine.IsChase && canSeePlayer)
-                {
-                    suspicionSystem.ReportVisionDetection(1f);
-                    return;
-                }
+                // 의심도 계산은 AmbushSuspicionModule에서 전담 (거리 기반, 모든 상태 커버)
+                // 컨트롤러에서는 의태 상태만 전달
+                return;
             }
             else
             {

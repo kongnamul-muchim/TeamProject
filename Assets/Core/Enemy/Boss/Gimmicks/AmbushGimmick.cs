@@ -499,6 +499,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public float SuspicionDropThreshold => suspicionDropThreshold;
         public Vector2 FarSuspicionRadius => farSuspicionRadius;
         public Vector2 NearSuspicionRadius => nearSuspicionRadius;
+        public float FarSuspicionRate => farSuspicionRate;
+        public float NearSuspicionRate => nearSuspicionRate;
+        public bool LockZAxis => lockZAxis;
 
         /// <summary>
         /// Ground Bounds 설정 (BossEnemyController에서 호출)
