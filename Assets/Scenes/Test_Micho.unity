@@ -1124,7 +1124,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b4a25f7475659f4b859bd3863afb2e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.SuspicionMeterUI
-  suspicionMeter: {fileID: 0}
+  bossSuspicionSystem: {fileID: 0}
   suspicionFillImage: {fileID: 0}
   suspicionText: {fileID: 1968272509}
   suspicionLevelText: {fileID: 402308813}
