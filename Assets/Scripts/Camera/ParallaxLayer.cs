@@ -39,8 +39,7 @@ namespace HideAndInk.ParallaxSystem
         /// <summary>초기 위치와 카메라 위치를 기록한다.</summary>
         public void Initialize()
         {
-            if (targetCamera == null)
-                targetCamera = UnityEngine.Camera.main;
+            ResolveCamera();
 
             if (targetCamera != null)
             {
@@ -48,6 +47,17 @@ namespace HideAndInk.ParallaxSystem
                 _originCameraPos = targetCamera.transform.position;
                 _isInitialized = true;
             }
+        }
+
+        /// <summary>참조 카메라가 비활성이면 Camera.main으로 대체한다.</summary>
+        private void ResolveCamera()
+        {
+            if (targetCamera != null && targetCamera.isActiveAndEnabled)
+                return;
+
+            var mainCam = UnityEngine.Camera.main;
+            if (mainCam != null)
+                targetCamera = mainCam;
         }
 
         /// <summary>Controller로부터 delta를 받아 위치를 갱신한다.</summary>
@@ -82,7 +92,19 @@ namespace HideAndInk.ParallaxSystem
         {
             // Controller 구독 모드면 자체 이동 로직 스킵
             if (_isControllerDriven) return;
-            if (!_isInitialized || targetCamera == null) return;
+
+            // 참조 카메라가 비활성이면 활성 카메라로 전환
+            if (targetCamera == null || !targetCamera.isActiveAndEnabled)
+            {
+                ResolveCamera();
+                if (targetCamera == null) return;
+
+                // 카메라가 전환되었으므로 원점 재설정
+                _originLayerPos = transform.position;
+                _originCameraPos = targetCamera.transform.position;
+            }
+
+            if (!_isInitialized) return;
 
             Vector3 cameraPos = targetCamera.transform.position;
             float newX = _originLayerPos.x + (cameraPos.x - _originCameraPos.x) * rate;

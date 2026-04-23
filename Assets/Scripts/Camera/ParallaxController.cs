@@ -57,14 +57,14 @@ namespace HideAndInk.ParallaxSystem
 
         private void Awake()
         {
-            if (targetCamera == null)
-                targetCamera = Camera.main;
-
+            ResolveCamera();
             AutoDiscoverLayers();
         }
 
         private void Start()
         {
+            ResolveCamera();
+
             if (targetCamera != null)
             {
                 _previousCameraPosition = targetCamera.transform.position;
@@ -82,7 +82,17 @@ namespace HideAndInk.ParallaxSystem
 
         private void LateUpdate()
         {
-            if (!_isInitialized || targetCamera == null) return;
+            // 참조 카메라가 비활성이면 활성 카메라로 전환
+            if (targetCamera == null || !targetCamera.isActiveAndEnabled)
+            {
+                ResolveCamera();
+                if (targetCamera == null) return;
+
+                _previousCameraPosition = targetCamera.transform.position;
+                _isInitialized = true;
+            }
+
+            if (!_isInitialized) return;
 
             Vector3 currentPos = targetCamera.transform.position;
             Vector3 delta = (currentPos - _previousCameraPosition) * globalSpeedMultiplier;
@@ -147,6 +157,17 @@ namespace HideAndInk.ParallaxSystem
         }
 
         // ── 내부 메서드 ──
+
+        /// <summary>참조 카메라가 비활성이면 Camera.main으로 대체한다.</summary>
+        private void ResolveCamera()
+        {
+            if (targetCamera != null && targetCamera.isActiveAndEnabled)
+                return;
+
+            var mainCam = Camera.main;
+            if (mainCam != null)
+                targetCamera = mainCam;
+        }
 
         /// <summary>설정에 따라 레이어를 자동 탐색한다.</summary>
         private void AutoDiscoverLayers()
