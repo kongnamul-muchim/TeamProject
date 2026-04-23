@@ -86,22 +86,10 @@ namespace HideAndInk.Core.Enemy.Elite
 
             // CamouflageAdapter 캐싱
             _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
-            
-#if UNITY_EDITOR
-            Debug.Log($"[EliteEnemyController] Start: showDetectionRangeInGame={showDetectionRangeInScene}");
-#endif
-            
+
             // 감지 범위 시각화 초기화
             InitializeDetectionRangeVisualizer();
-            
-#if UNITY_EDITOR
-            Debug.Log($"[EliteEnemyController] Start: isMeshInitialized={_isMeshInitialized}, visualizerObj={(_visualizerObj != null ? "OK" : "NULL")}");
-            if (_detectionRangeMeshRenderer != null)
-            {
-                Debug.Log($"[EliteEnemyController] Start: MeshRenderer.enabled={_detectionRangeMeshRenderer.enabled}, material={(_detectionRangeMeshRenderer.material != null ? "OK" : "NULL")}");
-            }
-#endif
-            
+
             InitializeBehavior();
         }
 
@@ -380,15 +368,8 @@ namespace HideAndInk.Core.Enemy.Elite
         {
             if (!showDetectionRangeInGame)
             {
-#if UNITY_EDITOR
-                Debug.Log("[EliteEnemyController] 시각화 비활성화됨 (showDetectionRangeInGame = false)");
-#endif
                 return;
             }
-
-#if UNITY_EDITOR
-            Debug.Log("[EliteEnemyController] 시각화 초기화 시작...");
-#endif
 
             // 시각화용 자식 오브젝트 생성
             _visualizerObj = new GameObject("DetectionRangeVisualizer");
@@ -419,19 +400,11 @@ namespace HideAndInk.Core.Enemy.Elite
             
             _detectionRangeMeshFilter.mesh = _detectionRangeMesh;
 
-#if UNITY_EDITOR
-            Debug.Log($"[EliteEnemyController] Mesh 생성 완료: 정점={_detectionRangeMesh.vertexCount}, 삼각형={_detectionRangeMesh.triangles.Length}");
-#endif
-
             // 머티리얼 설정 (URP 호환 Shader 우선 사용)
             Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null) shader = Shader.Find("Unlit/Color");
             if (shader == null) shader = Shader.Find("Sprites/Default");
-            
-#if UNITY_EDITOR
-            Debug.Log($"[EliteEnemyController] 사용된 Shader: {(shader != null ? shader.name : "NULL")}");
-#endif
-            
+
             if (shader != null)
             {
                 Material mat = new Material(shader);
@@ -452,10 +425,6 @@ namespace HideAndInk.Core.Enemy.Elite
                 _detectionRangeMeshRenderer.material = mat;
                 _detectionRangeMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 _detectionRangeMeshRenderer.receiveShadows = false;
-                
-#if UNITY_EDITOR
-                Debug.Log($"[EliteEnemyController] Material 생성 완료: Color={mat.color}, RenderQueue={mat.renderQueue}");
-#endif
             }
             else
             {
@@ -463,10 +432,6 @@ namespace HideAndInk.Core.Enemy.Elite
             }
             
             _isMeshInitialized = true;
-            
-#if UNITY_EDITOR
-            Debug.Log($"[EliteEnemyController] 시각화 초기화 완료: isMeshInitialized={_isMeshInitialized}");
-#endif
         }
 
         /// <summary>
@@ -476,12 +441,6 @@ namespace HideAndInk.Core.Enemy.Elite
         {
             if (!showDetectionRangeInGame || !_isMeshInitialized || _visualizerObj == null)
             {
-#if UNITY_EDITOR
-                if (Time.frameCount % 60 == 0) // 1초에 한 번만 로그
-                {
-                    Debug.Log($"[EliteEnemyController] 시각화 업데이트 스: showDetectionRangeInGame={showDetectionRangeInGame}, isMeshInitialized={_isMeshInitialized}, visualizerObj={(_visualizerObj != null ? "OK" : "NULL")}");
-                }
-#endif
                 return;
             }
 
@@ -509,13 +468,6 @@ namespace HideAndInk.Core.Enemy.Elite
                 0f
             );
             _visualizerObj.transform.localPosition = offset;
-            
-#if UNITY_EDITOR
-            if (Time.frameCount % 60 == 0) // 1초에 한 번만 로그
-            {
-                Debug.Log($"[EliteEnemyController] 시각화 업데이트: facingLeft={isFacingLeft}, width={width}, height={height}, lossyScale={lossyScale}, localScale={_visualizerObj.transform.localScale}, localPos={_visualizerObj.transform.localPosition}");
-            }
-#endif
         }
 
         #endregion
