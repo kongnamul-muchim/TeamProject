@@ -66,6 +66,8 @@ namespace HideAndInk.Core.Perception
         private bool _isPerfectCamouflage;
         private bool _wasDetected;
         private float _lastDetectedTime;
+        private float _suspicionDecayMultiplier = 1f; // 의심도 하락 배율 (RelentlessChase용)
+        private bool _isIncreaseBlocked = false; // 의심도 상승 차단 플래그 (Ambush Chase용)
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
         private Vector2 _suspicionRadius = new Vector2(10f, 10f);
@@ -158,6 +160,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void OnModuleSuspicionIncrease(float rate, float deltaTime)
         {
+            if (_isIncreaseBlocked) return; // 차단 중이면 상승 무시
             AddSuspicion(rate, deltaTime);
         }
 
@@ -203,6 +206,8 @@ namespace HideAndInk.Core.Perception
             {
                 // 의태 중이면 빠른 하락
                 float decreaseSpeed = _isCamouflaging ? camouflageDecreaseSpeed : normalDecreaseSpeed;
+                // RelentlessChase 배율 적용
+                decreaseSpeed *= _suspicionDecayMultiplier;
                 _currentValue -= decreaseSpeed * Time.deltaTime;
                 _currentValue = Mathf.Max(_currentValue, 0f);
             }
@@ -307,6 +312,32 @@ namespace HideAndInk.Core.Perception
         {
             _currentValue = Mathf.Clamp(value, 0f, 100f);
             CheckLevelChange();
+        }
+
+        /// <summary>
+        /// 의심도 하락 배율 설정 (RelentlessChaseGimmick에서 호출)
+        /// 1보다 작으면 느리게 하락, 1이면 기본값
+        /// </summary>
+        public void SetSuspicionDecayMultiplier(float multiplier)
+        {
+            _suspicionDecayMultiplier = Mathf.Max(0.1f, multiplier);
+        }
+
+        /// <summary>
+        /// 의심도 상승 차단 (Ambush Chase 중 호출)
+        /// Chase 중에는 의심도 하락만 허용
+        /// </summary>
+        public void BlockSuspicionIncrease()
+        {
+            _isIncreaseBlocked = true;
+        }
+
+        /// <summary>
+        /// 의심도 상승 허용 (Patrol/Search 상태로 복귀 시 호출)
+        /// </summary>
+        public void AllowSuspicionIncrease()
+        {
+            _isIncreaseBlocked = false;
         }
 
         private void CheckLevelChange()

@@ -48,6 +48,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [Tooltip("Chase 진입 후 돌진 전 대기 시간 (초). 이동 정지 상태")]
         [SerializeField] private float dashPreDelay = 0.3f;
 
+        [Header("돌진 쿨타임")]
+        [Tooltip("돌진 후 다음 돌진까지 대기 시간 (초)")]
+        [SerializeField] private float dashCooldown = 2f;
+
         // 상태
         private Transform _bossTransform;
         private Transform _playerTransform;
@@ -56,8 +60,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _hasDashed; // 돌진 1회 체크
         private bool _isDashing; // 돌진 중
         private bool _isDashPreDelay; // 돌진 전 대기 중 (이동 정지)
+        private bool _isDashCooldown; // 돌진 후 쿨타임 중
         private float _dashTimer;
         private float _preDelayTimer;
+        private float _cooldownTimer; // 쿨타임 타이머
         private Vector3 _dashTarget;
         private SpriteRenderer _spriteRenderer;
         private Sprite _originalSprite;
@@ -105,10 +111,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isAmbushing = false;
             _isDashing = false;
             _isDashPreDelay = false;
+            _isDashCooldown = false;
 
             OnMovementResume?.Invoke();
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
             OnPatrolBehaviorOverride?.Invoke(false);
+            OnDashModeToggle?.Invoke(false);
 
             // 이벤트 콜백 구독 해제 (메모리 누수 방지)
             ClearCallbacks();
@@ -122,6 +130,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _hasDashed = false;
             _isDashing = false;
             _isDashPreDelay = false;
+            _isDashCooldown = false;
             _isAmbushPointSet = false;
             _isMovingToAmbush = false;
             _isStoppedAtAmbush = false;
@@ -184,16 +193,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 원래 스프라이트로 복원
             ApplyAmbushSprite(false);
 
-            // 돌진 1회 체크
-            if (!_hasDashed)
-            {
-                StartDashPreDelay();
-            }
-            else
-            {
-                // 이미 돌진했으면 일반 추격 (속도 오버라이드 해제)
-                OnMovementResume?.Invoke();
-            }
+            // ChaseBehavior 이동 제어 중단 (돌진만 이동)
+            OnDashModeToggle?.Invoke(true);
+
+            // 돌진 시작
+            StartDashPreDelay();
         }
 
         public void OnChaseUpdate(float deltaTime)
@@ -211,12 +215,27 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // 돌진 중
-            if (!_isDashing) return;
-
-            _dashTimer -= deltaTime;
-            if (_dashTimer <= 0f)
+            if (_isDashing)
             {
-                EndDash();
+                _dashTimer -= deltaTime;
+                if (_dashTimer <= 0f)
+                {
+                    EndDash();
+                }
+                return;
+            }
+
+            // 쿨타임 중 (매복 애니메이션 대기)
+            if (_isDashCooldown)
+            {
+                _cooldownTimer -= deltaTime;
+                if (_cooldownTimer <= 0f)
+                {
+                    // 쿨타임 종료 → 다시 돌진 시작
+                    _isDashCooldown = false;
+                    StartDashPreDelay();
+                }
+                return;
             }
         }
 
@@ -224,10 +243,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isDashing = false;
             _isDashPreDelay = false;
+            _isDashCooldown = false;
             _isAmbushing = false;
             _isMovingToAmbush = false;
             _isStoppedAtAmbush = false;
             OnMovementResume?.Invoke();
+            OnDashModeToggle?.Invoke(false); // ChaseBehavior 이동 제어권 반환
         }
 
         #endregion
@@ -469,17 +490,20 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 돌진 종료 → 일반 추격으로 전환
+        /// 돌진 종료 → 정지 → 매복 대기 → 쿨타임 후 재돌진
         /// </summary>
         private void EndDash()
         {
             _isDashing = false;
-            OnDashModeToggle?.Invoke(false); // ChaseBehavior 이동 재개
-            OnDashCompleted?.Invoke(_dashTarget);
-            OnMovementResume?.Invoke(); // chaseSpeed로 속도 복원
+            OnMovementStop?.Invoke(); // 정지
+            ApplyAmbushSprite(true); // 매복 스프라이트로 변경
+
+            // 쿨타임 시작
+            _isDashCooldown = true;
+            _cooldownTimer = dashCooldown;
 
 #if UNITY_EDITOR
-            Debug.Log("[AmbushGimmick] 기습 돌진 종료 → 일반 추격 전환");
+            Debug.Log($"[AmbushGimmick] 돌진 종료 → 매복 대기 → 쿨타임 ({dashCooldown:F1}초)");
 #endif
         }
 
@@ -507,6 +531,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public bool IsDashing => _isDashing;
         public bool IsAmbushing => _isAmbushing;
         public bool HasDashed => _hasDashed;
+        public bool IsDashCooldown => _isDashCooldown;
         public Vector3 AmbushPoint => _ambushPoint;
         public float SuspicionDropThreshold => suspicionDropThreshold;
         public Vector2 SuspicionRadius => suspicionRadius;

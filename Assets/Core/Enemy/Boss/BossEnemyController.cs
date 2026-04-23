@@ -47,6 +47,9 @@ namespace HideAndInk.Core.Enemy.Boss
         // 기믹 시스템
         private IEnemyGimmick _activeGimmick;
 
+        [Header("애니메이션")]
+        [SerializeField] private Animator bossAnimator;
+
         // Player 의태 상태 캐싱 (매 프레임 FindObjectOfType 방지)
         private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
@@ -274,6 +277,30 @@ namespace HideAndInk.Core.Enemy.Boss
         private void ConnectRelentlessChaseCallbacks(RelentlessChaseGimmick relentless)
         {
             relentless.SetOriginalSpeed(patrolSpeed);
+
+            // Chase 시 의심도 하락률 감소
+            relentless.OnSuspicionDecayRateOverride = (multiplier) =>
+            {
+                if (suspicionSystem != null)
+                {
+                    suspicionSystem.SetSuspicionDecayMultiplier(multiplier);
+                }
+            };
+
+            // Search 수색 반경 확대 (SearchBehavior에 전달)
+            relentless.OnSearchRadiusOverride = (multiplier) =>
+            {
+                // SearchBehavior는 현재 고정 _searchDistance를 사용하므로
+                // RelentlessChaseGimmick.GetSearchTarget()에서 이미 searchRadiusMultiplier를 적용하므로
+                // 여기서는 별도 처리 불필요 (기믹이 직접 계산)
+            };
+
+            // 집중 순찰 영역 설정 (PatrolBehavior에 전달)
+            relentless.OnPatrolAreaOverride = (center, radius) =>
+            {
+                // PatrolBehavior는 현재 기믹의 GetPatrolTarget()을 사용하므로
+                // 여기서는 별도 처리 불필요 (기믹이 직접 계산)
+            };
         }
 
         /// <summary>
@@ -446,6 +473,15 @@ namespace HideAndInk.Core.Enemy.Boss
             // 가자미 기믹이 활성화되어 있으면
             if (_activeGimmick is AmbushGimmick)
             {
+                // Chase 중에는 의심도 상승 차단 (하락만 허용)
+                if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
+                {
+                    suspicionSystem.BlockSuspicionIncrease();
+                }
+                else
+                {
+                    suspicionSystem.AllowSuspicionIncrease();
+                }
                 // 의심도 계산은 AmbushSuspicionModule에서 전담 (거리 기반, 모든 상태 커버)
                 // 컨트롤러에서는 의태 상태만 전달
                 return;
@@ -521,19 +557,15 @@ namespace HideAndInk.Core.Enemy.Boss
 
                 case EnemyAIState.Chase:
                     // Chase → Search: Player 놓침 + 의심도 하락
-                    // Ambush 기믹: 의심도가 임계값 이하로 떨어져야 Search로 전환
+                    // Ambush 기믹: 의심도가 임계값 이하로 떨어지면 바로 Patrol 복귀 (Search 건너뜀)
                     if (isAmbushGimmick)
                     {
                         if (suspicionValue < ambushDropThreshold)
                         {
 #if UNITY_EDITOR
-                            Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Search");
+                            Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Patrol (Re-ambush)");
 #endif
-                            if (_playerTransform != null)
-                            {
-                                _searchBehavior.SetLastKnownPosition(_playerTransform.position);
-                            }
-                            _stateMachine.TryTransitionTo(EnemyAIState.Search);
+                            _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
                         }
                     }
                     else
@@ -583,6 +615,7 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 case EnemyAIState.Patrol:
                     _movement.Speed = patrolSpeed;
+                    if (bossAnimator != null) bossAnimator.SetBool("IsChase", false);
                     // Patrol: 매복 모드 (거리 전용 360도)
                     if (_activeGimmick is AmbushGimmick && visionSensor != null)
                     {
@@ -594,6 +627,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
+                    if (bossAnimator != null) bossAnimator.SetBool("IsChase", true);
                     // Chase: 360도 감지 (매복 보스는 Player 위치 이미 파악)
                     if (_activeGimmick is AmbushGimmick && visionSensor != null)
                     {
