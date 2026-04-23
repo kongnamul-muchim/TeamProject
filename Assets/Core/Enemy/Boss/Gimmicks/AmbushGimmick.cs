@@ -88,6 +88,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public System.Action<bool> OnDashModeToggle; // 돌진 모드 ON/OFF
         public System.Action<bool> OnPatrolBehaviorOverride; // PatrolBehavior 이동 제어권 토글
         public System.Action<Vector3> OnDashMoveTo; // 돌진 이동 요청 (목표 위치)
+        public System.Action<float> OnDashAnimationTrigger; // 돌진 애니메이션 재생 요청 (지속시간 전달)
+        public System.Action OnDashAnimationEnd; // 돌진 애니메이션 종료 요청
 
         public void OnActivate(Transform bossTransform)
         {
@@ -484,6 +486,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnSpeedOverride?.Invoke(dashSpeed);
             OnVisibilityToggle?.Invoke(false); // 일반 시야 모드 복귀
 
+            // 애니메이션 트리거 (지속시간 전달)
+            OnDashAnimationTrigger?.Invoke(dashDuration);
+
 #if UNITY_EDITOR
             Debug.Log($"[AmbushGimmick] 기습 돌진 시작! 목표: {_dashTarget}");
 #endif
@@ -501,6 +506,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 쿨타임 시작
             _isDashCooldown = true;
             _cooldownTimer = dashCooldown;
+
+            // 애니메이션 종료 알림
+            OnDashAnimationEnd?.Invoke();
 
 #if UNITY_EDITOR
             Debug.Log($"[AmbushGimmick] 돌진 종료 → 매복 대기 → 쿨타임 ({dashCooldown:F1}초)");

@@ -55,6 +55,8 @@ namespace HideAndInk.Core.Enemy.Boss
 
         [Header("애니메이션")]
         [SerializeField] private Animator bossAnimator;
+        [Tooltip("Chase 애니메이션 길이 (초). 속도 계산에 사용됨")]
+        [SerializeField] private float chaseAnimationLength = 0.5f;
 
         // Player 의태 상태 캐싱 (매 프레임 FindObjectOfType 방지)
         private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
@@ -274,6 +276,27 @@ namespace HideAndInk.Core.Enemy.Boss
             ambush.OnDashMoveTo = (target) =>
             {
                 _movement.MoveTo(target);
+            };
+
+            // 돌진 애니메이션 제어 (속도 조절 + Trigger)
+            ambush.OnDashAnimationTrigger = (duration) =>
+            {
+                if (bossAnimator != null)
+                {
+                    // 애니메이션 속도를 돌진 시간에 맞춰 조절
+                    // Speed = AnimationLength / Duration
+                    bossAnimator.speed = chaseAnimationLength / duration;
+                    bossAnimator.SetTrigger("OnDash");
+                }
+            };
+
+            // 돌진 애니메이션 종료 시 속도 복원
+            ambush.OnDashAnimationEnd = () =>
+            {
+                if (bossAnimator != null)
+                {
+                    bossAnimator.speed = 1f;
+                }
             };
         }
 
