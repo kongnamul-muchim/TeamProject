@@ -84,8 +84,8 @@ namespace HideAndInk.Core.Enemy.Elite
                 eliteSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
             }
 
-            // CamouflageAdapter 캐싱
-            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+            // CamouflageAdapter 캐싱 (부모에서 제공)
+            CacheCamouflageAdapter();
 
             // 감지 범위 시각화 초기화
             InitializeDetectionRangeVisualizer();
@@ -183,14 +183,6 @@ namespace HideAndInk.Core.Enemy.Elite
             {
                 _behavior?.OnPlayerApproached(distanceX, _playerTransform.position);
             }
-        }
-
-        /// <summary>
-        /// Player가 의태 중인지 확인
-        /// </summary>
-        private bool IsPlayerCamouflaging()
-        {
-            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
         }
 
         /// <summary>

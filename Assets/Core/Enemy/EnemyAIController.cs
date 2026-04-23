@@ -38,6 +38,7 @@ namespace HideAndInk.Core.Enemy
         // 컴포넌트 참조
         protected IEnemyMovement _movement;
         protected Transform _playerTransform;
+        protected HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
         // Ground 경계 정보
         protected GroundBounds _groundBounds;
@@ -277,6 +278,22 @@ namespace HideAndInk.Core.Enemy
             {
                 sr.flipX = !movingRight;
             }
+        }
+
+        /// <summary>
+        /// CamouflageAdapter 캐싱 (Start에서 한 번만 호출)
+        /// </summary>
+        protected virtual void CacheCamouflageAdapter()
+        {
+            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+        }
+
+        /// <summary>
+        /// Player가 의태 중인지 확인
+        /// </summary>
+        protected bool IsPlayerCamouflaging()
+        {
+            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
         }
 
         /// <summary>

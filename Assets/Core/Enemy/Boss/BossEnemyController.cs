@@ -488,15 +488,7 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// CamouflageAdapter 캐싱 (Start에서 한 번만 호출)
-        /// </summary>
-        private void CacheCamouflageAdapter()
-        {
-            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
-        }
-
-        /// <summary>
-        /// Player가 의태 중인지 확인
+        /// 의태 상태 업데이트
         /// </summary>
         private bool IsPlayerCamouflaging()
         {

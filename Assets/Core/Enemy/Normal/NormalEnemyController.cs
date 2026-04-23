@@ -95,8 +95,8 @@ namespace HideAndInk.Core.Enemy.Normal
                 enemyAnimator = GetComponent<Animator>();
             }
 
-            // CamouflageAdapter 캐싱
-            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+            // CamouflageAdapter 캐싱 (부모에서 제공)
+            CacheCamouflageAdapter();
 
             _pushTimer = 0f;
         }
@@ -157,14 +157,6 @@ namespace HideAndInk.Core.Enemy.Normal
 
             float distance = Vector3.Distance(transform.position, _playerTransform.position);
             return distance <= detectionRadius;
-        }
-
-        /// <summary>
-        /// Player가 의태 중인지 확인
-        /// </summary>
-        private bool IsPlayerCamouflaging()
-        {
-            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
         }
 
         /// <summary>
