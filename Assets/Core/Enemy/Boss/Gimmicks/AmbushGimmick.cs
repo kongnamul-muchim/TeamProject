@@ -459,7 +459,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 기습 돌진 시작 (1회)
+        /// 기습 돌진 시작 (1회) - 플레이어 이동 예측 적용
         /// </summary>
         private void StartDash()
         {
@@ -467,10 +467,37 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isDashing = true;
             _dashTimer = dashDuration;
 
-            // 돌진 방향: 매복 위치 → Player
+            // 돌진 방향: 매복 위치 → Player 예측 위치
             if (_playerTransform != null)
             {
-                _dashTarget = _playerTransform.position;
+                // 플레이어 현재 위치
+                Vector3 playerPos = _playerTransform.position;
+                
+                // 플레이어 이동 속도 (X-Z 평면)
+                Vector3 playerVelocity = Vector3.zero;
+                if (_playerMovementAdapter != null)
+                {
+                    Vector2 vel2D = _playerMovementAdapter.CurrentVelocity;
+                    playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
+                }
+
+                // 보스가 플레이어当前位置에 도달하는 데 걸리는 시간 예측
+                float distanceToPlayer = Vector3.Distance(_bossTransform.position, playerPos);
+                float timeToReach = distanceToPlayer / dashSpeed;
+                
+                // 예측 시간 제한 (너무 먼 거리면 dashDuration으로 제한)
+                timeToReach = Mathf.Min(timeToReach, dashDuration);
+
+                // 예측 위치 계산: 현재 위치 + (속도 * 예측 시간)
+                Vector3 predictedPos = playerPos + (playerVelocity * timeToReach);
+                
+                // Ground Bounds 보정 (필요시)
+                if (_hasGroundBounds && (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ))
+                {
+                    predictedPos = _groundBounds.ClampXZ(predictedPos);
+                }
+
+                _dashTarget = predictedPos;
             }
             else if (_bossTransform != null)
             {
@@ -490,7 +517,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnDashAnimationTrigger?.Invoke(dashDuration);
 
 #if UNITY_EDITOR
-            Debug.Log($"[AmbushGimmick] 기습 돌진 시작! 목표: {_dashTarget}");
+            Debug.Log($"[AmbushGimmick] 기습 돌진 시작! 목표: {_dashTarget} (예측 기반)");
 #endif
         }
 

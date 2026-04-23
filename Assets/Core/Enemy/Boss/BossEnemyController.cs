@@ -58,6 +58,11 @@ namespace HideAndInk.Core.Enemy.Boss
         [Tooltip("Chase 애니메이션 길이 (초). 속도 계산에 사용됨")]
         [SerializeField] private float chaseAnimationLength = 0.5f;
 
+        [Header("스프라이트 방향")]
+        [Tooltip("기본 에셋이 왼쪽을 보고 있는지 여부 (true: 왼쪽 기본, false: 오른쪽 기본)")]
+        [SerializeField] private bool isDefaultFacingLeft = true;
+        [SerializeField] private SpriteRenderer bossSpriteRenderer;
+
         // Player 의태 상태 캐싱 (매 프레임 FindObjectOfType 방지)
         private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
@@ -69,6 +74,13 @@ namespace HideAndInk.Core.Enemy.Boss
         protected override void Start()
         {
             base.Start();
+            
+            // 스프라이트 렌더러 자동 할당 (없을 경우)
+            if (bossSpriteRenderer == null)
+            {
+                bossSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            }
+
             CacheCamouflageAdapter();
             InitializeGimmick();      // 기믹 먼저 초기화
             InitializeBehaviors();    // Behavior 생성 시 기믹 사용
@@ -788,6 +800,41 @@ namespace HideAndInk.Core.Enemy.Boss
             newPosition.z += _movement.Velocity.z * deltaTime;
             // Y축은 고정
             transform.position = newPosition;
+
+            // 스프라이트 방향 업데이트
+            UpdateSpriteDirection();
+        }
+
+        /// <summary>
+        /// 이동 방향에 따라 스프라이트 좌우 반전
+        /// </summary>
+        private void UpdateSpriteDirection()
+        {
+            if (bossSpriteRenderer == null) return;
+
+            // 이동 중일 때만 방향 전환 (정지 시 현재 방향 유지)
+            if (_movement.Velocity.sqrMagnitude > 0.01f)
+            {
+                // X축 이동 방향 확인
+                bool movingRight = _movement.Velocity.x > 0;
+                bool movingLeft = _movement.Velocity.x < 0;
+
+                // 기본이 왼쪽 Facing일 때:
+                // - 왼쪽 이동: flipX = false (원래대로)
+                // - 오른쪽 이동: flipX = true (반전)
+                // 기본이 오른쪽 Facing일 때:
+                // - 왼쪽 이동: flipX = true (반전)
+                // - 오른쪽 이동: flipX = false (원래대로)
+                
+                if (isDefaultFacingLeft)
+                {
+                    bossSpriteRenderer.flipX = movingRight;
+                }
+                else
+                {
+                    bossSpriteRenderer.flipX = movingLeft;
+                }
+            }
         }
 
         protected virtual void OnDestroy()

@@ -25,3 +25,5 @@ MonoBehaviour:
   suspicionDropThreshold: 30
   dashSpeed: 30
   dashDuration: 1.5
+  dashPreDelay: 0.3
+  dashCooldown: 1
