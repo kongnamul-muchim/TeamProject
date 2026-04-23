@@ -60,6 +60,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private SpriteRenderer _spriteRenderer;
         private Sprite _originalSprite;
         private GroundBounds _groundBounds; // Ground Bounds 캐싱
+        private bool _hasGroundBounds; // GroundBounds 설정 여부 (struct이므로 null 체크 불가)
 
         // PatrolUpdate 상태 플래그 (매 프레임 콜백 최적화)
         private bool _isMovingToAmbush;
@@ -415,7 +416,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // Ground Bounds 내에서 위치 보정
-            if (_groundBounds != null && (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ))
+            if (_hasGroundBounds && (_groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ))
             {
                 newAmbushPoint = _groundBounds.ClampXZ(newAmbushPoint);
             }
@@ -505,6 +506,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void SetGroundBounds(GroundBounds bounds)
         {
             _groundBounds = bounds;
+            _hasGroundBounds = true;
         }
 
         #endregion
@@ -528,7 +530,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 Vector3 target = _ambushPoint;
 
                 // Ground 범위 내로 제한
-                if (bounds != null && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
+                if (_hasGroundBounds && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
                 {
                     target = bounds.ClampXZ(target);
                 }
@@ -582,7 +584,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // Ground 범위 내로 제한
-            if (bounds != null && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
+            if (_hasGroundBounds && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
             {
                 target = bounds.ClampXZ(target);
             }
