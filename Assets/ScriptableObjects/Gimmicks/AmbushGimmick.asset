@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cafbed86010b5984e8e6fea8dce6d2af, type: 3}
+  m_Name: AmbushGimmick
+  m_EditorClassIdentifier: HideAndInk.GamePlayEmbedded::HideAndInk.Core.Enemy.Boss.Gimmicks.AmbushGimmick
+  ambushDuration: 3
+  ambushMoveRadiusMin: 5
+  ambushMoveRadiusMax: 12
+  lockZAxis: 1
+  ambushSprite: {fileID: -1333484347, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
+  targetSpriteRenderer: {fileID: 0}
+  farSuspicionRadius: {x: 2, y: 1}
+  nearSuspicionRadius: {x: 1, y: 0.5}
+  farSuspicionRate: 10
+  nearSuspicionRate: 40
+  suspicionDropThreshold: 20
+  dashSpeed: 8
+  dashDuration: 1.5

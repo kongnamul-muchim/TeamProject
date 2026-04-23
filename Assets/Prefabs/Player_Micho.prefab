@@ -150,14 +150,12 @@ GameObject:
   - component: {fileID: 1773651626226977474}
   - component: {fileID: 6183797669293676706}
   - component: {fileID: 7168234213576925758}
-  - component: {fileID: 3297640407222950382}
-  - component: {fileID: 5468357319464283952}
   - component: {fileID: 6553424077790585379}
   - component: {fileID: 3356346080948635764}
   - component: {fileID: 2622753924600596128}
   m_Layer: 6
   m_Name: Player_Micho
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -170,15 +168,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5903600637855583843}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: -0.41, y: 0.5, z: -2.16}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4987047004403506284}
   - {fileID: 8721996896268219663}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &7065858629677508360
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -272,42 +270,6 @@ MonoBehaviour:
   spriteDirector: {fileID: 0}
   camouflageCooldownTime: 1
   attachMoveSpeed: 0.3
---- !u!114 &3297640407222950382
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5903600637855583843}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f0d6894c1067b24dafe318076728be8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.SuspicionMeter
-  cautionThreshold: 30
-  dangerThreshold: 60
-  criticalThreshold: 80
-  detectedThreshold: 100
-  increaseSpeed: 40
-  decreaseSpeed: 10
-  camouflageReduceMultiplier: 0.5
-  perfectCamouflageReducePerSec: 6
-  detectionGracePeriod: 0.5
-  detectedStateDuration: 2
-  minSuspicionAfterDetected: 0.3
---- !u!114 &5468357319464283952
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5903600637855583843}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 17365a6daab704b46bf8e56ee4e4dc8c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageToSuspicionLink
-  suspicionMeter: {fileID: 3297640407222950382}
 --- !u!114 &6553424077790585379
 MonoBehaviour:
   m_ObjectHideFlags: 0

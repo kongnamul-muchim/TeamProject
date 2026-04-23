@@ -14,14 +14,8 @@ namespace HideAndInk.Core.Logging
     {
         private string _logFolder;
         private Dictionary<string, StreamWriter> _writers = new Dictionary<string, StreamWriter>();
-        private Dictionary<string, List<string>> _pendingLogs = new Dictionary<string, List<string>>();
 
         private string[] _logTypeTags = { "INFO", "WARN", "ERROR", "FATAL", "DEBUG" };
-
-        protected override void Awake()
-        {
-            base.Awake();
-        }
 
         private void Start()
         {
@@ -31,7 +25,7 @@ namespace HideAndInk.Core.Logging
         private void InitializeLogFolder()
         {
             string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-            string projectPath = Application.dataPath.Replace("/Assets", "");
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
             _logFolder = Path.Combine(projectPath, "Logs", dateString);
 
             // 같은 날 재실행 시 기존 로그 초기화
@@ -49,7 +43,6 @@ namespace HideAndInk.Core.Logging
             {
                 string filePath = Path.Combine(_logFolder, $"{tag}.md");
                 _writers[tag] = new StreamWriter(filePath, false);
-                _pendingLogs[tag] = new List<string>();
                 
                 // 마크다운 헤더 작성
                 _writers[tag].WriteLine($"# {tag} Log\n");
@@ -111,21 +104,17 @@ namespace HideAndInk.Core.Logging
         // Unity 로그 외에도 직접 로그를 남기고 싶을 때 사용
         public void Log(string message, string tag = "INFO")
         {
-            if (!_pendingLogs.ContainsKey(tag))
-            {
-                _pendingLogs[tag] = new List<string>();
-            }
-
             string timeString = DateTime.Now.ToString("HH:mm:ss");
             string logEntry = $"## {timeString}\n[{tag}] {message}";
 
             WriteLog(tag, logEntry);
         }
 
-        private void OnDestroy()
+        /// <summary>
+        /// StreamWriter 정리 (중복 코드 통합)
+        /// </summary>
+        private void DisposeWriters()
         {
-            Application.logMessageReceived -= OnLogReceived;
-
             foreach (var writer in _writers.Values)
             {
                 if (writer != null)
@@ -136,16 +125,15 @@ namespace HideAndInk.Core.Logging
             }
         }
 
+        private void OnDestroy()
+        {
+            Application.logMessageReceived -= OnLogReceived;
+            DisposeWriters();
+        }
+
         private void OnApplicationQuit()
         {
-            foreach (var writer in _writers.Values)
-            {
-                if (writer != null)
-                {
-                    writer.Close();
-                    writer.Dispose();
-                }
-            }
+            DisposeWriters();
         }
     }
 }

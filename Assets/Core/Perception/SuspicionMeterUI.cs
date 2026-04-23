@@ -6,55 +6,52 @@ namespace HideAndInk.Core.Perception
 {
     /// <summary>
     /// 의심도 게이지 UI 표시
+    /// BossSuspicionSystem의 이벤트를 구독하여 UI 업데이트
     /// </summary>
     public class SuspicionMeterUI : MonoBehaviour
     {
-        [Header("연동할 의심도 계량기")]
-        [SerializeField] private SuspicionMeter suspicionMeter;
+        [Header("의심도 시스템 참조")]
+        [Tooltip("보스의 BossSuspicionSystem 컴포넌트")]
+        [SerializeField] private BossSuspicionSystem bossSuspicionSystem;
 
         [Header("UI 참조")]
         [SerializeField] private Image suspicionFillImage;  // 의심도 게이지 바
         [SerializeField] private UnityEngine.UI.Text suspicionText;        // 텍스트 (0% ~ 100%)
-        [SerializeField] private UnityEngine.UI.Text suspicionLevelText;   // 레벨 텍스트 (Safe, Caution, Danger, Critical, Detected)
+        [SerializeField] private UnityEngine.UI.Text suspicionLevelText;   // 레벨 텍스트
 
         [Header("색상 설정")]
         [SerializeField] private Color safeColor = Color.green;
         [SerializeField] private Color cautionColor = Color.yellow;
-        [SerializeField] private Color dangerColor = new Color(1f, 0.5f, 0f); // Orange
+        [SerializeField] private Color dangerColor = new Color(1f, 0.5f, 0f);
         [SerializeField] private Color criticalColor = Color.red;
         [SerializeField] private Color detectedColor = Color.magenta;
 
-        private void Start()
+        private void OnEnable()
         {
-            if (suspicionMeter != null)
+            if (bossSuspicionSystem != null)
             {
-                suspicionMeter.OnLevelChanged += OnLevelChanged;
-                suspicionMeter.OnDetected += OnDetected;
-                suspicionMeter.OnClear += OnClear;
+                bossSuspicionSystem.OnLevelChanged += OnLevelChanged;
+                bossSuspicionSystem.OnDetected += OnDetected;
+                bossSuspicionSystem.OnValueChanged += OnValueChanged;
             }
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
-            if (suspicionMeter != null)
+            if (bossSuspicionSystem != null)
             {
-                suspicionMeter.OnLevelChanged -= OnLevelChanged;
-                suspicionMeter.OnDetected -= OnDetected;
-                suspicionMeter.OnClear -= OnClear;
+                bossSuspicionSystem.OnLevelChanged -= OnLevelChanged;
+                bossSuspicionSystem.OnDetected -= OnDetected;
+                bossSuspicionSystem.OnValueChanged -= OnValueChanged;
             }
         }
 
-        private void Update()
+        private void OnValueChanged(float value)
         {
-            if (suspicionMeter == null) return;
-
-            float value = suspicionMeter.CurrentValue;
-
             // 게이지 바 업데이트
             if (suspicionFillImage != null)
             {
                 suspicionFillImage.fillAmount = value / 100f;
-                suspicionFillImage.color = GetColorForLevel(suspicionMeter.CurrentLevel);
             }
 
             // 텍스트 업데이트
@@ -72,22 +69,14 @@ namespace HideAndInk.Core.Perception
                 suspicionLevelText.color = GetColorForLevel(level);
             }
 
-            // 색상 변경
             if (suspicionFillImage != null)
             {
                 suspicionFillImage.color = GetColorForLevel(level);
             }
-
-#if UNITY_EDITOR
-            Debug.Log($"[SuspicionUI] Level changed: {level}");
-#endif
         }
 
         private void OnDetected()
         {
-#if UNITY_EDITOR
-            Debug.Log("[SuspicionUI] DETECTED!");
-#endif
             if (suspicionLevelText != null)
             {
                 suspicionLevelText.text = "DETECTED!";
@@ -97,9 +86,6 @@ namespace HideAndInk.Core.Perception
 
         private void OnClear()
         {
-#if UNITY_EDITOR
-            Debug.Log("[SuspicionUI] Suspicion cleared!");
-#endif
             if (suspicionLevelText != null)
             {
                 suspicionLevelText.text = "Safe";
@@ -118,28 +104,6 @@ namespace HideAndInk.Core.Perception
                 SuspicionLevel.Detected => detectedColor,
                 _ => Color.white
             };
-        }
-
-        /// <summary>
-        /// 의심도 계량기 설정
-        /// </summary>
-        public void SetSuspicionMeter(SuspicionMeter meter)
-        {
-            if (suspicionMeter != null)
-            {
-                suspicionMeter.OnLevelChanged -= OnLevelChanged;
-                suspicionMeter.OnDetected -= OnDetected;
-                suspicionMeter.OnClear -= OnClear;
-            }
-
-            suspicionMeter = meter;
-
-            if (suspicionMeter != null)
-            {
-                suspicionMeter.OnLevelChanged += OnLevelChanged;
-                suspicionMeter.OnDetected += OnDetected;
-                suspicionMeter.OnClear += OnClear;
-            }
         }
     }
 }

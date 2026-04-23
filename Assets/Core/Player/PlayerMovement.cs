@@ -75,7 +75,7 @@ namespace HideAndInk.Core.Player
         }
 
         /// <summary>
-        /// 방향 업데이트 (입력 기반으로)
+        /// 방향 업데이트 (0 0 0 기준 직관적 매핑)
         /// </summary>
         private void UpdateDirection(Vector2 direction)
         {

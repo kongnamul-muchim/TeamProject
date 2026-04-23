@@ -276,8 +276,8 @@ namespace HideAndInk.Player
         /// </summary>
         private void TryHandleKeyDown()
         {
-            // 쿨타임 중이면 무시
-            if (_camouflageCooldown > 0f)
+            // Perfect 상태에서는 쿨타임 무시 (즉시 해제 가능)
+            if (_stateMachine.CurrentState != CamouflageState.Perfect && _camouflageCooldown > 0f)
             {
                 return;
             }
@@ -319,6 +319,9 @@ namespace HideAndInk.Player
                 _isRestoringRate = false;
                 _rateRestoreProgress = 0f;
             }
+
+            // End 이벤트 플래그 리셋 (이전 사이클 잔여 방지)
+            _hasInvokedEndEvent = false;
 
             // 반경 내 가장 가까운 오브젝트 탐지
             GameObject nearest = _detector.FindNearestCandidate(transform.position);
@@ -515,11 +518,11 @@ namespace HideAndInk.Player
 
             Vector3 targetPos = _stateMachine.TargetObject.transform.position;
 
-            // 뒷면에서 접근: 오브젝트 뒤로 이동
-            // 앞면에서 접근: 오브젝트 앞으로 이동
+            // 뒷면에서 접근: 오브젝트 앞으로 이동
+            // 앞면에서 접근: 오브젝트 뒤로 이동
             Vector3 offset = _isAttachingFromBehind
-                ? -_stateMachine.TargetObject.transform.forward * BACK_OFFSET
-                : _stateMachine.TargetObject.transform.forward * BACK_OFFSET;
+                ? _stateMachine.TargetObject.transform.forward * BACK_OFFSET
+                : -_stateMachine.TargetObject.transform.forward * BACK_OFFSET;
 
             return targetPos + offset;
         }
@@ -549,7 +552,7 @@ namespace HideAndInk.Player
             Vector3 dirToPlayer = (transform.position - target.transform.position).normalized;
             Vector3 targetForward = target.transform.forward;
             float dot = Vector3.Dot(dirToPlayer, targetForward);
-            _isAttachingFromBehind = dot < 0f;
+            _isAttachingFromBehind = dot > 0f;
 
             // Outline 원래 색상 저장
             _originalOutlineColor = _targetOutline.OutlineColor;
