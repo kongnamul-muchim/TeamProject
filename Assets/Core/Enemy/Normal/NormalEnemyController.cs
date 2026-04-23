@@ -332,31 +332,7 @@ namespace HideAndInk.Core.Enemy.Normal
         /// </summary>
         private void UpdateSpriteDirection()
         {
-            if (enemySpriteRenderer == null) return;
-
-            // 이동 중일 때만 방향 전환 (정지 시 현재 방향 유지)
-            if (_movement != null && _movement.Velocity.sqrMagnitude > 0.01f)
-            {
-                // X축 이동 방향 확인
-                bool movingRight = _movement.Velocity.x > 0;
-                bool movingLeft = _movement.Velocity.x < 0;
-
-                // 기본이 왼쪽 Facing일 때:
-                // - 왼쪽 이동: flipX = false (원래대로)
-                // - 오른쪽 이동: flipX = true (반전)
-                // 기본이 오른쪽 Facing일 때:
-                // - 왼쪽 이동: flipX = true (반전)
-                // - 오른쪽 이동: flipX = false (원래대로)
-                
-                if (isDefaultFacingLeft)
-                {
-                    enemySpriteRenderer.flipX = movingRight;
-                }
-                else
-                {
-                    enemySpriteRenderer.flipX = movingLeft;
-                }
-            }
+            UpdateSpriteFlipX(enemySpriteRenderer, isDefaultFacingLeft, _movement?.Velocity.x ?? 0f);
         }
 
         private void OnDestroy()

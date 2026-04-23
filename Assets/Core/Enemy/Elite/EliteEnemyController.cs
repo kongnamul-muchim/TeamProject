@@ -272,40 +272,14 @@ namespace HideAndInk.Core.Enemy.Elite
         {
             if (eliteSpriteRenderer == null) return;
 
-            // 이동 중일 때만 방향 전환 (정지 시 현재 방향 유지)
-            // 돌진 중에는 _movement.Velocity가 0일 수 있으므로 현재 상태 확인
+            // 돌진 중이고 Velocity가 0이면 이전 방향 유지
             bool isCharging = _behavior is SwordfishBehavior sf && sf.IsCharging;
-            
-            if (_movement != null && (_movement.Velocity.sqrMagnitude > 0.01f || isCharging))
+            if (isCharging && _movement != null && _movement.Velocity.sqrMagnitude < 0.01f)
             {
-                // X축 이동 방향 확인
-                bool movingRight = _movement.Velocity.x > 0;
-                bool movingLeft = _movement.Velocity.x < 0;
-                
-                // 돌진 중이고 Velocity가 0이면 이전 방향 유지 (또는 돌진 방향 사용)
-                if (isCharging && _movement.Velocity.sqrMagnitude < 0.01f)
-                {
-                    // 돌진 방향은 SwordfishBehavior에서 관리하므로 여기서는 생략
-                    // 필요시 _behavior에서 방향 정보 받아올 수 있음
-                    return;
-                }
-
-                // 기본이 왼쪽 Facing일 때:
-                // - 왼쪽 이동: flipX = false (원래대로)
-                // - 오른쪽 이동: flipX = true (반전)
-                // 기본이 오른쪽 Facing일 때:
-                // - 왼쪽 이동: flipX = true (반전)
-                // - 오른쪽 이동: flipX = false (원래대로)
-                
-                if (isDefaultFacingLeft)
-                {
-                    eliteSpriteRenderer.flipX = movingRight;
-                }
-                else
-                {
-                    eliteSpriteRenderer.flipX = movingLeft;
-                }
+                return;
             }
+
+            UpdateSpriteFlipX(eliteSpriteRenderer, isDefaultFacingLeft, _movement?.Velocity.x ?? 0f);
         }
 
         /// <summary>

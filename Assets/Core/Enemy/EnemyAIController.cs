@@ -255,6 +255,31 @@ namespace HideAndInk.Core.Enemy
         }
 
         /// <summary>
+        /// 이동 방향에 따라 스프라이트 좌우 반전 (공통 메서드)
+        /// </summary>
+        /// <param name="sr">SpriteRenderer</param>
+        /// <param name="isDefaultFacingLeft">기본 에셋이 왼쪽을 보고 있는지 여부</param>
+        /// <param name="velocityX">X축 이동 속도</param>
+        protected void UpdateSpriteFlipX(SpriteRenderer sr, bool isDefaultFacingLeft, float velocityX)
+        {
+            if (sr == null) return;
+
+            // 이동 중일 때만 방향 전환 (정지 시 현재 방향 유지)
+            if (Mathf.Abs(velocityX) < 0.01f) return;
+
+            bool movingRight = velocityX > 0;
+
+            if (isDefaultFacingLeft)
+            {
+                sr.flipX = movingRight;
+            }
+            else
+            {
+                sr.flipX = !movingRight;
+            }
+        }
+
+        /// <summary>
         /// Player 찾기 (Tag "Player" 우선, 실패 시 레이어 기반 탐색)
         /// </summary>
         protected virtual void FindPlayer()
