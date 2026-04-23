@@ -359,12 +359,14 @@ namespace HideAndInk.Core.Enemy
 
         /// <summary>
         /// IEnemy.Update 구현
+        /// MonoBehaviour.Update와 동일한 동작 보장
         /// </summary>
         public void Update(float deltaTime)
         {
             if (!_isActive) return;
             UpdateAI(deltaTime);
             UpdateMovement(deltaTime);
+            UpdateViewDirection();
         }
     }
 }
