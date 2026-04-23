@@ -35,6 +35,20 @@ namespace HideAndInk.Core.Perception
         [Tooltip("시각화용 기믹 (에디터에서 Gizmos 업데이트용)")]
         [SerializeField] public AmbushGimmick linkedGimmick;
 
+        [Header("인게임 의심 범위 시각화")]
+        [Tooltip("의심 범위 바닥 표시 활성화 여부")]
+        [SerializeField] private bool showSuspicionRadiusInGame = true;
+        [Tooltip("바닥 표시 색상 (위험도 기반)")]
+        [SerializeField] private Color dangerColor = new Color(1f, 0f, 0f, 0.5f);
+        [Tooltip("바닥 표시 색상 (주의 기반)")]
+        [SerializeField] private Color cautionColor = new Color(1f, 0.5f, 0f, 0.3f);
+        [Tooltip("바닥 메쉬 세그먼트 수 (높을수록 부드러움)")]
+        [SerializeField, Range(16, 64)] private int floorSegmentCount = 32;
+        [Tooltip("바닥과의 Z-fighting 방지 오프셋")]
+        [SerializeField] private float floorYOffset = 0.05f;
+        [Tooltip("바닥으로 인식할 레이어")]
+        [SerializeField] private LayerMask groundLayer = -1;
+
         // 상태
         private float _currentValue;
         private SuspicionLevel _currentLevel;
@@ -45,6 +59,14 @@ namespace HideAndInk.Core.Perception
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
         private Vector2 _suspicionRadius = new Vector2(10f, 10f);
+
+        // 인게임 바닥 렌더링
+        private GameObject _floorRenderObject;
+        private MeshFilter _floorMeshFilter;
+        private MeshRenderer _floorMeshRenderer;
+        private Mesh _floorMesh;
+        private Material _floorMaterial;
+        private bool _isFloorInitialized = false;
 
         // 의심도 모듈 (기믹별 계산 로직)
         private ISuspicionModule _suspicionModule;
@@ -139,6 +161,9 @@ namespace HideAndInk.Core.Perception
 
             // 레벨 체크
             CheckLevelChange();
+
+            // 인게임 의심 범위 바닥 업데이트
+            UpdateSuspicionFloorVisual();
 
             // 이벤트 발생
             OnValueChanged?.Invoke(CurrentValue);
@@ -255,6 +280,123 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 인게임 의심 범위 바닥 시각화 업데이트
+        /// 의심도 레벨에 따라 색상 변경 (Danger=빨강, Caution=주황)
+        /// </summary>
+        private void UpdateSuspicionFloorVisual()
+        {
+            if (!showSuspicionRadiusInGame) return;
+
+            // 초기화
+            if (!_isFloorInitialized)
+            {
+                InitializeFloorRenderer();
+                if (!_isFloorInitialized) return;
+            }
+
+            // 바닥 높이 찾기 (Raycast)
+            if (!Physics.Raycast(transform.position, Vector3.down, out RaycastHit floorHit, 20f, groundLayer)) return;
+            float floorY = floorHit.point.y + floorYOffset;
+
+            // 자식 객체 위치 업데이트
+            _floorRenderObject.transform.position = new Vector3(transform.position.x, floorY, transform.position.z);
+
+            // 의심도 레벨에 따른 색상 선택
+            Color targetColor = _currentLevel >= SuspicionLevel.Danger ? dangerColor : cautionColor;
+            if (_floorMaterial != null)
+            {
+                _floorMaterial.color = targetColor;
+            }
+
+            // 메쉬 업데이트 (반경이 변경되었을 때만)
+            if (_floorMesh != null)
+            {
+                BuildFloorMesh();
+            }
+        }
+
+        /// <summary>
+        /// 바닥 렌더러 초기화
+        /// </summary>
+        private void InitializeFloorRenderer()
+        {
+            // 자식 GameObject 생성
+            _floorRenderObject = new GameObject("SuspicionRadiusFloor");
+            _floorRenderObject.transform.SetParent(transform);
+            _floorRenderObject.transform.localPosition = Vector3.zero;
+            _floorRenderObject.transform.localRotation = Quaternion.identity;
+
+            _floorMeshFilter = _floorRenderObject.AddComponent<MeshFilter>();
+            _floorMeshRenderer = _floorRenderObject.AddComponent<MeshRenderer>();
+
+            if (_floorMeshFilter == null || _floorMeshRenderer == null) return;
+
+            _floorMesh = new Mesh();
+            _floorMesh.name = "SuspicionRadiusFloorMesh";
+            _floorMeshFilter.sharedMesh = _floorMesh;
+
+            // 머티리얼 생성
+            Shader shader = Shader.Find("Unlit/Transparent") ?? Shader.Find("Sprites/Default");
+            if (shader != null)
+            {
+                _floorMaterial = new Material(shader);
+                _floorMaterial.color = cautionColor;
+                _floorMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                _floorMeshRenderer.material = _floorMaterial;
+                _floorMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _floorMeshRenderer.sortingLayerName = "Default";
+                _floorMeshRenderer.sortingOrder = -10;
+            }
+
+            _isFloorInitialized = true;
+        }
+
+        /// <summary>
+        /// 의심 범위 바닥 메쉬 생성 (타원형)
+        /// </summary>
+        private void BuildFloorMesh()
+        {
+            if (_floorMesh == null || _suspicionRadius.x <= 0 || _suspicionRadius.y <= 0) return;
+
+            int segments = floorSegmentCount;
+            Vector3[] vertices = new Vector3[segments + 1];
+            Color[] colors = new Color[segments + 1];
+            int[] triangles = new int[segments * 3];
+
+            // 중심점
+            vertices[0] = Vector3.zero;
+            colors[0] = new Color(1f, 0f, 0f, 0.8f);
+
+            // 타원형 가장자리 점 생성
+            float rx = _suspicionRadius.x;
+            float rz = _suspicionRadius.y;
+            float angleStep = 360f / segments;
+
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = angleStep * i * Mathf.Deg2Rad;
+                float x = Mathf.Cos(angle) * rx;
+                float z = Mathf.Sin(angle) * rz;
+                vertices[i + 1] = new Vector3(x, 0f, z);
+
+                // 가장자리: 반투명
+                float edgeAlpha = 0.4f;
+                colors[i + 1] = new Color(1f, 0f, 0f, edgeAlpha);
+
+                // 삼각형 인덱스
+                triangles[i * 3] = 0;
+                triangles[i * 3 + 1] = i + 1;
+                triangles[i * 3 + 2] = (i + 1) % segments + 1;
+            }
+
+            _floorMesh.Clear();
+            _floorMesh.vertices = vertices;
+            _floorMesh.colors = colors;
+            _floorMesh.triangles = triangles;
+            _floorMesh.RecalculateNormals();
+        }
+
+        /// <summary>
         /// 의심도 상승 범위 Gizmos 표시 (단일 타원형)
         /// - 타원형 영역: 주황색 와이어프레임 (SuspicionRadius 기준)
         /// </summary>
@@ -278,6 +420,13 @@ namespace HideAndInk.Core.Perception
             Gizmos.color = Color.red;
             Gizmos.matrix = Matrix4x4.identity;
             Gizmos.DrawSphere(transform.position, 0.15f);
+        }
+
+        private void OnDestroy()
+        {
+            if (_floorMaterial != null) DestroyImmediate(_floorMaterial);
+            if (_floorMesh != null) DestroyImmediate(_floorMesh);
+            if (_floorRenderObject != null) DestroyImmediate(_floorRenderObject);
         }
     }
 }

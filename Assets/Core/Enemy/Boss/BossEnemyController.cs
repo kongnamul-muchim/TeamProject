@@ -335,6 +335,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // 의심도 업데이트 (시야/근접 기반)
             UpdateSuspicion(canSeePlayer);
 
+            // 시야각 가시성 업데이트 (의심도 레벨 기반)
+            UpdateVisionConeVisibility();
+
             // 상태 전환 체크
             CheckStateTransitions(canSeePlayer);
 
@@ -430,6 +433,27 @@ namespace HideAndInk.Core.Enemy.Boss
                 {
                     suspicionSystem.ReportVisionDetection(1f);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 시야각 가시성 업데이트 (의심도 레벨 기반)
+        /// Danger/Detected: 시야각 표시 (Player가 위험 인지)
+        /// Safe/Caution: 시야각 숨김
+        /// </summary>
+        private void UpdateVisionConeVisibility()
+        {
+            if (visionConeRenderer == null || suspicionSystem == null) return;
+
+            SuspicionLevel level = suspicionSystem.CurrentLevel;
+            bool shouldBeVisible = (level == SuspicionLevel.Danger || level == SuspicionLevel.Detected);
+
+            if (visionConeRenderer.enabled != shouldBeVisible)
+            {
+                visionConeRenderer.enabled = shouldBeVisible;
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] VisionCone: {(shouldBeVisible ? "ON" : "OFF")} (Level={level})");
+#endif
             }
         }
 
@@ -530,11 +554,6 @@ namespace HideAndInk.Core.Enemy.Boss
                         Debug.Log($"[BossEnemyController] Patrol: 360도 거리 전용 모드 활성화");
 #endif
                     }
-                    // 매복 중에는 시야각 표시 비활성화
-                    if (_activeGimmick is AmbushGimmick && visionConeRenderer != null)
-                    {
-                        visionConeRenderer.enabled = false;
-                    }
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
@@ -546,11 +565,6 @@ namespace HideAndInk.Core.Enemy.Boss
                         Debug.Log($"[BossEnemyController] Chase: 360도 거리 전용 모드 활성화");
 #endif
                     }
-                    // Chase에서는 시야각 표시 복귀
-                    if (visionConeRenderer != null)
-                    {
-                        visionConeRenderer.enabled = true;
-                    }
                     break;
                 case EnemyAIState.Search:
                     _movement.Speed = searchSpeed;
@@ -561,11 +575,6 @@ namespace HideAndInk.Core.Enemy.Boss
 #if UNITY_EDITOR
                         Debug.Log($"[BossEnemyController] Search: 부채꼴 모드 복귀");
 #endif
-                    }
-                    // Search에서는 시야각 표시 복귀
-                    if (visionConeRenderer != null)
-                    {
-                        visionConeRenderer.enabled = true;
                     }
                     break;
             }
