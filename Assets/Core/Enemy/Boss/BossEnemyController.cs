@@ -474,15 +474,12 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// Player가 시야 내에 있는지 확인
-        /// 의태 중이면 감지되지 않음
+        /// Player가 시야 내에 있는지 확인 (순수 시야각 기반)
+        /// 상태 전환용: 의태 여부와 관계없이 시야각/거리/장애물만 체크
         /// </summary>
         private bool CanSeePlayer()
         {
             if (visionSensor == null || _playerTransform == null) return false;
-
-            // Player가 의태 중이면 감지 안 됨
-            if (IsPlayerCamouflaging()) return false;
 
             return visionSensor.CanSee(_playerTransform.gameObject);
         }
@@ -605,16 +602,16 @@ namespace HideAndInk.Core.Enemy.Boss
             switch (currentState)
             {
                 case EnemyAIState.Patrol:
-                    // Patrol → Chase: Player 발견 + 의심도 Danger 이상
-                    if (canSeePlayer && suspicionLevel >= SuspicionLevel.Danger)
+                    // Patrol → Chase: 시야각에 Player가 보이면 즉시 추적 (의태 무관)
+                    if (canSeePlayer)
                     {
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                     }
                     break;
 
                 case EnemyAIState.Chase:
-                    // Chase → Search: Player 놓침 + 의심도 하락
-                    // Ambush 기믹: 의심도가 임계값 이하로 떨어지면 바로 Patrol 복귀 (Search 건너뜀)
+                    // Chase → Search: Player가 추적 범위를 벗어나면 Search (의태 무시, 거리 기반)
+                    // Ambush 기믹: 의심도가 임계값 이하로 떨어지면 바로 Patrol 복귀 (Search 걸러뜀)
                     if (isAmbushGimmick)
                     {
                         if (suspicionValue < ambushDropThreshold)
@@ -627,8 +624,8 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     else
                     {
-                        // 일반 보스: Player 놓치면 바로 Search
-                        if (!canSeePlayer)
+                        // 일반 보스: ChaseBehavior의 거리 체크로 Player 놓침 판단 (의태 무시)
+                        if (_chaseBehavior != null && _chaseBehavior.IsPlayerOutOfRange())
                         {
                             if (_playerTransform != null)
                             {
