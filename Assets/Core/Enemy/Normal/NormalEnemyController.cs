@@ -216,6 +216,7 @@ namespace HideAndInk.Core.Enemy.Normal
 
         /// <summary>
         /// Chase 상태 업데이트 (Player 방향으로 이동 + 근접 공격)
+        /// 공격 후 쿨타임 동안은 정지하여 Player가 도망갈 시간을 확보
         /// </summary>
         private void UpdateChase(float deltaTime)
         {
@@ -224,6 +225,13 @@ namespace HideAndInk.Core.Enemy.Normal
             // Chase 속도로 변경
             _movement.Speed = chaseSpeed;
             _movement.SetMaxSpeed(chaseSpeed);
+
+            // 공격 쿨타임 중에는 이동 정지 (Player 넉백 후 도주 시간 확보)
+            if (_damageTimer > 0f)
+            {
+                _movement.Stop();
+                return;
+            }
 
             // Player 방향으로 이동
             _movement.MoveTo(_playerTransform.position);
