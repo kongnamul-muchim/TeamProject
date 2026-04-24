@@ -44,12 +44,15 @@ public class Underwater : ScriptableRendererFeature
         {
             if (settings.material == null) return;
 
+            // 콘솔창에서 이 로그가 뜨는지 확인해 주세요!
+            Debug.Log("Underwater Pass Executing...");
+
             CommandBuffer cmd = CommandBufferPool.Get("Underwater Effects");
             
             // 현재 카메라의 컬러 타겟 핸들 가져오기
             RTHandle source = renderingData.cameraData.renderer.cameraColorTargetHandle;
 
-            // 매테리얼 파라미터 실시간 업데이트
+            // 매테리얼 파라미터 업데이트
             settings.material.SetColor("_color", settings.color);
             settings.material.SetFloat("_dis", settings.distance);
             settings.material.SetFloat("_alpha", settings.alpha);
@@ -57,12 +60,10 @@ public class Underwater : ScriptableRendererFeature
             settings.material.SetTexture("_NormalMap", settings.normalmap);
             settings.material.SetVector("_normalUV", settings.UV);
 
-            // Blitter를 사용하여 화면 복사 및 효과 적용
-            // 1. source -> m_TempTexture (쉐이더 적용)
-            Blitter.BlitCameraTexture(cmd, source, m_TempTexture, settings.material, 0);
-            
-            // 2. m_TempTexture -> source (최종 화면에 덮어쓰기)
-            Blitter.BlitCameraTexture(cmd, m_TempTexture, source);
+            // [변경] 가장 보편적인 Blit 방식으로 교체
+            cmd.SetGlobalTexture("_MainTex", source);
+            cmd.Blit(source, m_TempTexture, settings.material);
+            cmd.Blit(m_TempTexture, source);
 
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

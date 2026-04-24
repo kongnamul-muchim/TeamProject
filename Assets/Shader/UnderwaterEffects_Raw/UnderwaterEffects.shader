@@ -24,8 +24,8 @@ Shader "Paro222/UnderwaterEffects"
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings { float2 uv : TEXCOORD0; float4 positionCS : SV_POSITION; };
 
-            // Blitter API 전용 텍스처 선언
-            TEXTURE2D(_BlitTexture); SAMPLER(sampler_BlitTexture);
+            // 기본 텍스처 선언 (_MainTex 사용)
+            TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
             TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
             TEXTURE2D(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
 
@@ -46,8 +46,8 @@ Shader "Paro222/UnderwaterEffects"
                 float3 normalSample = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, input.uv * _normalUV.xy + _normalUV.zw * _Time.y));
                 float2 offset = normalSample.xy * _refraction * 0.05;
 
-                // 굴절이 적용된 화면 컬러 샘플링
-                half4 col = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, input.uv + offset);
+                // 굴절이 적용된 화면 컬러 샘플링 (_MainTex 사용)
+                half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv + offset);
                 
                 // 깊이값 샘플링 및 거리 계산
                 float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv + offset).r;
