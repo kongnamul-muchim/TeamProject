@@ -58,6 +58,10 @@ namespace HideAndInk.Core.Enemy.Boss
         [Tooltip("Chase 애니메이션 길이 (초). 속도 계산에 사용됨")]
         [SerializeField] private float chaseAnimationLength = 0.5f;
 
+        [Header("공격/데미지")]
+        [Tooltip("보스 접촉 시 Player 넉백 힘")]
+        [SerializeField] private float bossKnockbackForce = 12f;
+
         [Header("스프라이트 방향")]
         [Tooltip("기본 에셋이 왼쪽을 보고 있는지 여부 (true: 왼쪽 기본, false: 오른쪽 기본)")]
         [SerializeField] private bool isDefaultFacingLeft = true;
@@ -65,6 +69,10 @@ namespace HideAndInk.Core.Enemy.Boss
 
         // Player 의태 상태 캐싱 (부모 클래스에서 제공)
         // private HideAndInk.Player.CamouflageAdapter _camouflageAdapter; // 부모에 이미 있음
+
+        // Player 목숨/데미지
+        private HideAndInk.Core.Player.PlayerLives _bossPlayerLives;
+        private Rigidbody _bossPlayerRigidbody;
 
         protected override void Awake()
         {
@@ -82,6 +90,7 @@ namespace HideAndInk.Core.Enemy.Boss
             }
 
             CacheCamouflageAdapter();
+            CacheBossPlayerComponents();
             InitializeGimmick();      // 기믹 먼저 초기화
             InitializeBehaviors();    // Behavior 생성 시 기믹 사용
             InitializeStateMachine();
@@ -804,6 +813,100 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             UpdateSpriteFlipX(bossSpriteRenderer, isDefaultFacingLeft, _movement?.Velocity.x ?? 0f);
         }
+
+        #region Player 데미지 처리
+
+        /// <summary>
+        /// PlayerLives + Rigidbody 캐싱
+        /// </summary>
+        private void CacheBossPlayerComponents()
+        {
+            if (_playerTransform != null)
+            {
+                _bossPlayerLives = _playerTransform.GetComponent<HideAndInk.Core.Player.PlayerLives>();
+                _bossPlayerRigidbody = _playerTransform.GetComponent<Rigidbody>();
+            }
+
+            if (_bossPlayerLives == null)
+            {
+                _bossPlayerLives = FindObjectOfType<HideAndInk.Core.Player.PlayerLives>();
+            }
+
+            if (_bossPlayerRigidbody == null && _playerTransform != null)
+            {
+                _bossPlayerRigidbody = _playerTransform.GetComponent<Rigidbody>();
+            }
+        }
+
+        /// <summary>
+        /// 물리 충돌 시 데미지 처리
+        /// Chase 중이거나 기믹 공격 중(돌진/대시)일 때만 데미지가 들어감
+        /// </summary>
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (!collision.gameObject.CompareTag("Player")) return;
+            if (_bossPlayerLives == null || _bossPlayerLives.IsInvincible) return;
+
+            // 데미지를 줄 수 있는 상태인지 확인
+            if (!CanBossDamagePlayer()) return;
+
+            // 데미지
+            _bossPlayerLives.TakeDamage();
+
+            // 넉백
+            ApplyBossKnockback();
+
+#if UNITY_EDITOR
+            Debug.Log($"[BossEnemy] Contact damage! Lives left: {_bossPlayerLives.CurrentLives}, State: {_stateMachine?.CurrentState}");
+#endif
+        }
+
+        /// <summary>
+        /// 현재 보스가 Player에게 데미지를 줄 수 있는 상태인지 확인
+        /// Chase 중이거나, 기믹이 돌진/대시 공격 중일 때 true
+        /// </summary>
+        private bool CanBossDamagePlayer()
+        {
+            // 1. Chase 상태면 항상 데미지 가능
+            if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
+            {
+                return true;
+            }
+
+            // 2. 기믹별 공격 상태 확인
+            if (_activeGimmick != null)
+            {
+                switch (_activeGimmick)
+                {
+                    case AmbushGimmick ambush:
+                        return ambush.IsDashing;
+                    case DashChargeGimmick dash:
+                        return dash.IsCharging;
+                    // 추후: SwordfishChargeGimmick — IsCharging 추가 예정
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Player 넉백 적용
+        /// </summary>
+        private void ApplyBossKnockback()
+        {
+            if (_playerTransform == null || _bossPlayerRigidbody == null) return;
+
+            Vector3 knockbackDir = (_playerTransform.position - transform.position).normalized;
+            knockbackDir.y = 0f;
+
+            _bossPlayerRigidbody.AddForce(knockbackDir * bossKnockbackForce, ForceMode.Impulse);
+
+#if UNITY_EDITOR
+            Debug.Log($"[BossEnemy] Knockback! Force: {bossKnockbackForce}, Direction: {knockbackDir}");
+#endif
+        }
+
+        #endregion
 
         protected virtual void OnDestroy()
         {
