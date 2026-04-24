@@ -12,11 +12,12 @@ Shader "Hidden/UnderwaterEffects_FullScreen"
         _NormalMap ("Normal Map", 2D) = "bump" {}
         _normalUV ("Normal UV", Vector) = (1, 1, 0.2, 0.1)
 
-        [Header(Light Rays)]
-        _RayColor ("Ray Color", Color) = (1, 1, 1, 0.2)
-        _RayIntensity ("Ray Intensity", Range(0, 1)) = 0.3
-        _RaySpeed ("Ray Speed", Float) = 0.1
-        _RayScale ("Ray Scale", Float) = 2.0
+        [Header(God Rays)]
+        _RayColor ("Ray Color", Color) = (1, 1, 1, 0.3)
+        _RayIntensity ("Ray Intensity", Range(0, 2)) = 0.5
+        _RaySpeed ("Ray Speed", Float) = 0.2
+        _RayScale ("Ray Scale", Float) = 5.0
+        _RayTilt ("Ray Tilt (Angle)", Range(-1, 1)) = 0.3
     }
     SubShader
     {
@@ -59,12 +60,8 @@ Shader "Hidden/UnderwaterEffects_FullScreen"
                 float _RayIntensity;
                 float _RaySpeed;
                 float _RayScale;
+                float _RayTilt;
             CBUFFER_END
-
-            // 가짜 노이즈 함수 (빛 줄기용)
-            float PseudoNoise(float2 uv) {
-                return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
-            }
 
             Varyings vert (Attributes input) {
                 Varyings output;
@@ -73,10 +70,15 @@ Shader "Hidden/UnderwaterEffects_FullScreen"
                 return output;
             }
 
+            // 고품질 줄기 생성을 위한 노이즈 함수
+            float GradientNoise(float x) {
+                return (sin(x) + sin(x * 2.3) + sin(x * 5.7) + sin(x * 11.3)) * 0.25;
+            }
+
             half4 frag (Varyings input) : SV_Target {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                // 1. 굴절 효과
+                // 1. 굴절
                 float2 normalUV = input.uv * _normalUV.xy + _normalUV.zw * _Time.y;
                 float3 normalSample = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, normalUV));
                 float2 offset = normalSample.xy * _refraction * 0.05;
@@ -85,41 +87,45 @@ Shader "Hidden/UnderwaterEffects_FullScreen"
                 float2 uv = input.uv + offset;
                 half4 col = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, uv);
 
-                // 3. 깊이 정보
+                // 3. 깊이
                 float rawDepth = SampleSceneDepth(uv);
                 float depth = Linear01Depth(rawDepth, _ZBufferParams);
 
-                // 4. 광원 레이 (Light Rays) 계산
-                // 수직으로 길게 늘어뜨린 노이즈를 좌우로 스크롤
-                float rayMask = 0;
-                float2 rayUV = input.uv;
-                rayUV.x *= _RayScale;
-                rayUV.y = 0.5; // 수직으로 고정하여 줄기 형태 만듦
+                // 4. 스크린샷 스타일 Godrays 계산
+                // UV를 각도(Tilt)에 따라 변형
+                float rayCoord = input.uv.x + (input.uv.y * _RayTilt);
+                rayCoord *= _RayScale;
+
+                float time = _Time.y * _RaySpeed;
                 
-                // 두 층의 노이즈를 섞어서 부드러운 움직임 생성
-                rayMask += PseudoNoise(float2(rayUV.x + _Time.y * _RaySpeed, 0.5));
-                rayMask += PseudoNoise(float2(rayUV.x - _Time.y * _RaySpeed * 0.7, 0.8));
-                rayMask *= 0.5;
+                // 여러 겹의 파동을 섞어 뚜렷한 줄기 형성
+                float rays = 0;
+                rays += GradientNoise(rayCoord + time);
+                rays += GradientNoise(rayCoord * 0.6 - time * 0.7) * 0.5;
                 
-                // 빛 줄기 선명도 조절 (pow)
-                rayMask = pow(rayMask, 4.0) * _RayIntensity;
+                // 줄기를 날카롭게 (Saturate & Power)
+                rays = saturate(rays);
+                rays = pow(rays, 3.0) * _RayIntensity;
+
+                // 미세한 깜빡임(Flicker) 추가
+                float flicker = 1.0 + 0.1 * sin(_Time.y * 2.0);
+                rays *= flicker;
+
+                // 아래로 갈수록 흐려짐 (스크린샷처럼 부드럽게)
+                float falloff = saturate(1.1 - input.uv.y);
+                rays *= pow(falloff, 1.5);
                 
-                // 아래쪽으로 갈수록 흐려지게 (그라데이션)
-                rayMask *= saturate(1.0 - input.uv.y);
-                
-                // 깊이에 따른 가림 처리 (가까운 물체 뒤에는 레이가 안 나타나게)
-                // 만약 아주 먼 배경(depth ~ 1)이면 레이가 잘 보이게 함
-                rayMask *= saturate(depth * 5.0);
+                // 깊이 가림
+                rays *= saturate(depth * 10.0);
 
                 // 5. 최종 합성
                 float fogFactor = saturate(depth / max(0.001, _dis * 0.1));
                 float finalFog = saturate(fogFactor * _alpha);
                 
-                // 안개 입히기
                 half4 finalCol = lerp(col, _color, finalFog);
                 
-                // 광원 레이 추가 (Additive 방식)
-                finalCol.rgb += _RayColor.rgb * rayMask * _RayColor.a;
+                // Additive 합성
+                finalCol.rgb += _RayColor.rgb * rays * _RayColor.a;
 
                 return finalCol;
             }
