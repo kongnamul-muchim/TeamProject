@@ -255,9 +255,9 @@ namespace HideAndInk.Core.Enemy.Elite
         {
             if (eliteSpriteRenderer == null) return;
 
-            // 돌진 중이고 Velocity가 0이면 이전 방향 유지
-            bool isCharging = _behavior is SwordfishBehavior sf && sf.IsCharging;
-            if (isCharging && _movement != null && _movement.Velocity.sqrMagnitude < 0.01f)
+            // 행동 패턴이 이동 제어 중이고 Velocity가 0이면 이전 방향 유지
+            bool isControllingMovement = _behavior != null && _behavior.IsControllingMovement;
+            if (isControllingMovement && _movement != null && _movement.Velocity.sqrMagnitude < 0.01f)
             {
                 return;
             }

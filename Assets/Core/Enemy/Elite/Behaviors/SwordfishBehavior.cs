@@ -4,11 +4,17 @@ using HideAndInk.Core.Enemy.Elite;
 namespace HideAndInk.Core.Enemy.Elite.Behaviors
 {
     /// <summary>
-    /// 청새치 정예몬스터 행동 패턴 (개선 버전)
+    /// 청새치 정예몬스터 행동 패턴 (개선 버전) — 레거시
+    /// 
+    /// ⚠️ 보스 전환 완료: 이 클래스는 더 이상 사용되지 않습니다.
+    /// SwordfishGimmick (ScriptableObject + IEnemyGimmick)으로 대체됨.
+    /// Assets/Core/Enemy/Boss/Gimmicks/SwordfishGimmick.cs 참조.
+    /// 
     /// - 2단계 돌진: 조준(Aim) → 돌진(Charge) — Player에게 회피 기회 제공
     /// - 스태미나 기반 3종 패턴: 기본 돌진 / 연속 돌진 / 광역 돌격
     /// - 시각적 피드백: 조준 경고선, 돌진 Trail, 충돌 이펙트
     /// </summary>
+    [System.Obsolete("SwordfishBehavior는 SwordfishGimmick(ScriptableObject)으로 대체됨. Assets/Core/Enemy/Boss/Gimmicks/SwordfishGimmick.cs 참조.")]
     public class SwordfishBehavior : MonoBehaviour, IEliteBehavior
     {
         public string BehaviorName => "Swordfish";

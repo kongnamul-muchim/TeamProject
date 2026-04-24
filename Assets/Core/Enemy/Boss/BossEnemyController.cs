@@ -215,6 +215,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 case DashChargeGimmick dash:
                     ConnectDashChargeCallbacks(dash);
                     break;
+                case SwordfishGimmick swordfish:
+                    ConnectSwordfishCallbacks(swordfish);
+                    break;
             }
         }
 
@@ -369,6 +372,68 @@ namespace HideAndInk.Core.Enemy.Boss
                 {
                     _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
                 }
+            };
+        }
+
+        /// <summary>
+        /// 청새치: 조준 → 예측 돌진 기믹 콜백
+        /// </summary>
+        private void ConnectSwordfishCallbacks(SwordfishGimmick swordfish)
+        {
+            // 돌진 속도 제어
+            swordfish.OnSpeedOverride = (speed) =>
+            {
+                _movement.Speed = speed;
+                if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
+                {
+                    em.SetMaxSpeed(Mathf.Max(speed, chaseSpeed));
+                }
+            };
+
+            // 돌진 방향으로 이동 시작
+            swordfish.OnDashStarted = (direction) =>
+            {
+                // 돌진 방향으로 계속 이동 (GetPatrolTarget에서 direction 유지)
+                Vector3 chargeTarget = transform.position + direction * 20f;
+                chargeTarget.y = transform.position.y;
+                _movement.MoveTo(chargeTarget);
+
+                if (bossAnimator != null)
+                {
+                    bossAnimator.SetTrigger("OnDash");
+                }
+            };
+
+            // 돌진 완료 → Patrol 복귀
+            swordfish.OnDashCompleted = () =>
+            {
+                if (_stateMachine != null)
+                {
+                    _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                }
+            };
+
+            // 스턴 처리
+            swordfish.OnStun = (duration) =>
+            {
+                _movement.Stop();
+
+                if (bossAnimator != null)
+                {
+                    bossAnimator.speed = 0f;
+                }
+            };
+
+            // 목표 위치로 이동
+            swordfish.OnMoveTo = (target) =>
+            {
+                _movement.MoveTo(target);
+            };
+
+            // 이동 정지
+            swordfish.OnMovementStop = () =>
+            {
+                _movement.Stop();
             };
         }
 
@@ -882,7 +947,8 @@ namespace HideAndInk.Core.Enemy.Boss
                         return ambush.IsDashing;
                     case DashChargeGimmick dash:
                         return dash.IsCharging;
-                    // 추후: SwordfishChargeGimmick — IsCharging 추가 예정
+                    case SwordfishGimmick swordfish:
+                        return swordfish.IsCharging;
                 }
             }
 
