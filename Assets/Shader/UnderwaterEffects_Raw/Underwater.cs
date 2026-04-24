@@ -11,9 +11,8 @@ public class Underwater : ScriptableRendererFeature
         public Material material;
         public RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         [Header("Fog Settings")]
-        public Color color = Color.red;
-        public float distance = 10f;
-        [Range(0, 1)] public float alpha = 1f;
+        public Color color = Color.cyan;
+        [Range(0, 1)] public float alpha = 0.5f;
         [Header("Refraction Settings")]
         public float refraction = 1f;
         public Texture normalmap;
@@ -25,21 +24,10 @@ public class Underwater : ScriptableRendererFeature
     class Pass : ScriptableRenderPass
     {
         public Settings settings;
-        private RTHandle m_TempTexture;
-
-        public Pass()
-        {
-            ConfigureInput(ScriptableRenderPassInput.Color | ScriptableRenderPassInput.Depth);
-        }
 
         private class PassData
         {
             public Material material;
-            public Color color;
-            public float alpha;
-            public float refraction;
-            public Texture normalmap;
-            public Vector4 UV;
             public TextureHandle source;
         }
 
@@ -57,14 +45,10 @@ public class Underwater : ScriptableRendererFeature
             desc.depthBufferBits = 0;
             TextureHandle temp = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_UnderwaterTemp", false);
 
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Effects", out var passData))
+            // 1. 첫 번째 패스: Source -> Temp (쉐이더 적용)
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Pass", out var passData))
             {
                 passData.material = settings.material;
-                passData.color = settings.color;
-                passData.alpha = settings.alpha;
-                passData.refraction = settings.refraction;
-                passData.normalmap = settings.normalmap;
-                passData.UV = settings.UV;
                 passData.source = source;
 
                 builder.UseTexture(source, AccessFlags.Read);
@@ -73,17 +57,19 @@ public class Underwater : ScriptableRendererFeature
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
-                    data.material.SetColor("_color", data.color);
-                    data.material.SetFloat("_alpha", data.alpha);
-                    data.material.SetFloat("_refraction", data.refraction);
-                    data.material.SetTexture("_NormalMap", data.normalmap);
-                    data.material.SetVector("_normalUV", data.UV);
+                    data.material.SetColor("_color", settings.color);
+                    data.material.SetFloat("_alpha", settings.alpha);
+                    data.material.SetFloat("_refraction", settings.refraction);
+                    data.material.SetTexture("_NormalMap", settings.normalmap);
+                    data.material.SetVector("_normalUV", settings.UV);
 
+                    // 가장 확실한 Blit 호출
                     Blitter.BlitTexture(context.cmd, data.source, new Vector4(1, 1, 0, 0), data.material, 0);
                 });
             }
 
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Copy Back", out var passData))
+            // 2. 두 번째 패스: Temp -> Source (다시 덮어쓰기)
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Final", out var passData))
             {
                 passData.source = temp;
                 builder.UseTexture(temp, AccessFlags.Read);
@@ -98,21 +84,9 @@ public class Underwater : ScriptableRendererFeature
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) { }
-
-        public void Cleanup() => m_TempTexture?.Release();
     }
 
     Pass m_Pass;
-
-    public override void Create()
-    {
-        m_Pass = new Pass { settings = settings, renderPassEvent = settings.renderPassEvent };
-    }
-
-    public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
-    {
-        renderer.EnqueuePass(m_Pass);
-    }
-
-    protected override void Dispose(bool disposing) => m_Pass?.Cleanup();
+    public override void Create() => m_Pass = new Pass { settings = settings, renderPassEvent = settings.renderPassEvent };
+    public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) => renderer.EnqueuePass(m_Pass);
 }
