@@ -69,12 +69,12 @@ Material:
     - _OriginalRate: 0
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _alpha: 0.5
-    - _dis: 10
-    - _refraction: 0.1
+    - _alpha: 0.2
+    - _dis: 1
+    - _refraction: 0.03
     m_Colors:
     - Color_551f3de45b3f45d188af0756b6c21b12: {r: 0.494117, g: 0.784313, b: 0.890196, a: 1}
-    - _color: {r: 0.3803922, g: 0.7843138, b: 0.8431373, a: 1}
+    - _color: {r: 0.1764706, g: 0.8980392, b: 0.78039217, a: 1}
     - _normalUV: {r: 1, g: 1, b: 0.2, a: 0.1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

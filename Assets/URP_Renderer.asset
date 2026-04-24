@@ -92,10 +92,9 @@ MonoBehaviour:
   m_Active: 1
   settings:
     material: {fileID: 2100000, guid: 945e4b272ebd7a943ac373f35d2a8ecc, type: 2}
-    renderPassEvent: 550
-    color: {r: 1, g: 0, b: 0, a: 1}
-    distance: 10
-    alpha: 1
-    refraction: 0.2
+    renderPassEvent: 500
+    color: {r: 0.1764706, g: 0.8980392, b: 0.78039217, a: 1}
+    alpha: 0.2
+    refraction: 0.03
     normalmap: {fileID: 2800000, guid: 23643b35e914187488b5d55e3e5ac939, type: 3}
     UV: {x: 1, y: 1, z: 0.2, w: 0.1}
