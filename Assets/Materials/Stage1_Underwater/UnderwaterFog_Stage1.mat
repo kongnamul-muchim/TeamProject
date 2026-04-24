@@ -70,7 +70,7 @@ Material:
     - _QueueControl: 0
     - _QueueOffset: 0
     - _alpha: 0.2
-    - _dis: 1
+    - _dis: 10
     - _refraction: 0.03
     m_Colors:
     - Color_551f3de45b3f45d188af0756b6c21b12: {r: 0.494117, g: 0.784313, b: 0.890196, a: 1}
