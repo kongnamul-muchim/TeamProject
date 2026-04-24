@@ -77,6 +77,11 @@ namespace HideAndInk.Core.Enemy.Interfaces
         float Speed { get; set; }
 
         /// <summary>
+        /// 최대 속도 설정 (돌진 등 임시 속도 증가용)
+        /// </summary>
+        void SetMaxSpeed(float maxSpeed);
+
+        /// <summary>
         /// 목표 위치로 이동 (X-Z 평면)
         /// </summary>
         /// <param name="targetPosition">목표 위치 (월드 좌표, X-Z 사용)</param>

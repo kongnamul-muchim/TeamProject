@@ -76,5 +76,20 @@ namespace HideAndInk.Core.Interfaces
         /// 대상까지의 시야가 가려졌는지 확인 (장애물 체크)
         /// </summary>
         bool IsBlockedByObstacle(Vector3 targetPosition);
+
+        /// <summary>
+        /// 거리 전용 모드 설정 (true: 각도/장애물 무시, 거리만 체크)
+        /// </summary>
+        void SetDistanceOnlyMode(bool enabled);
+
+        /// <summary>
+        /// 시야 반경 코드에서 변경
+        /// </summary>
+        void SetViewRadius(float radius);
+
+        /// <summary>
+        /// 시야 각도 코드에서 변경
+        /// </summary>
+        void SetViewAngle(float angle);
     }
 }
