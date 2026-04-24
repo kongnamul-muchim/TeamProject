@@ -29,6 +29,13 @@ namespace HideAndInk.Core.Enemy.Normal
         [Tooltip("Camera가 Player로부터 떨어진 Z 거리 (CameraFollow.offset.z의 절대값)")]
         [SerializeField] private float cameraZOffset = 10f;
 
+        [Header("지면 감지 설정")]
+        [Tooltip("지면 레이어 (Ground)")]
+        [SerializeField] private LayerMask groundLayer = 1 << 8;
+
+        [Tooltip("지면 탐색 최대 거리 (공중 소환 시 높이 고려)")]
+        [SerializeField] private float groundCheckDistance = 100f;
+
         [Header("비활성화 설정")]
         [Tooltip("카메라 밖에서 비활성화까지 지연 시간 (초)")]
         [SerializeField] private float deactivateDelay = 2.5f;
@@ -67,8 +74,10 @@ namespace HideAndInk.Core.Enemy.Normal
                 _rigidbody.useGravity = false;
                 _rigidbody.freezeRotation = false;
                 _rigidbody.constraints = RigidbodyConstraints.FreezePositionY;
-                _rigidbody.linearDamping = 2f;
             }
+
+            // Rigidbody가 이미 있든 새로 추가했든 항상 Damping 설정 (prefab 기본값 0 방지)
+            _rigidbody.linearDamping = 2f;
 
             // Collider가 없으면 SphereCollider 자동 추가 (Trigger)
             Collider existingCollider = GetComponent<Collider>();
@@ -132,11 +141,15 @@ namespace HideAndInk.Core.Enemy.Normal
 
             // 카메라 밖에서 소환
             Vector3 spawnPos = GetSpawnPositionOutsideCamera(direction);
+            spawnPos.y = 0f; // Y 초기화 후 AlignToGround에서 보정
             transform.position = spawnPos;
 
             // Rigidbody 초기화
             _rigidbody.linearVelocity = Vector3.zero;
             _rigidbody.angularVelocity = Vector3.zero;
+
+            // 지면에 맞춰 Y 위치 조정 (공중 생성 방지, Rigidbody freeze 전에 실행)
+            AlignToGround();
 
             // 조류 방향에 따라 힘 적용
             // Left: 오른쪽→왼쪽 흐름 (왼쪽 방향으로 힘)
@@ -144,10 +157,51 @@ namespace HideAndInk.Core.Enemy.Normal
             Vector3 forceDirection = direction == TideDirection.Right ? Vector3.right : Vector3.left;
             _rigidbody.AddForce(forceDirection * tideForce, ForceMode.Impulse);
 
-            // 애니메이션 재생 (구르기) - Animator가 있을 경우만
+            // 애니메이션 재생 (구르기) - Animator + 파라미터 존재 시만
             if (_animator != null)
             {
-                _animator.SetBool("IsRolling", true);
+                // Animator에 IsRolling 파라미터가 있을 때만 설정
+                foreach (AnimatorControllerParameter param in _animator.parameters)
+                {
+                    if (param.name == "IsRolling" && param.type == AnimatorControllerParameterType.Bool)
+                    {
+                        _animator.SetBool("IsRolling", true);
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Raycast로 지면을 감지하여 성게의 Y 위치를 지면에 맞춤
+        /// useGravity=false + FreezePositionY 상태에서도 지면에 붙어있도록 보장
+        /// </summary>
+        private void AlignToGround()
+        {
+            Collider col = GetComponent<Collider>();
+            if (col == null) return;
+
+            // 콜라이더 하단에서 지면까지의 오프셋 계산
+            float bottomOffset = transform.position.y - col.bounds.min.y;
+
+            // 성게 위에서 아래로 Raycast
+            Vector3 rayOrigin = transform.position + Vector3.up * (groundCheckDistance * 0.5f);
+
+            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, groundCheckDistance, groundLayer))
+            {
+                Vector3 pos = transform.position;
+                pos.y = hit.point.y + bottomOffset;
+                transform.position = pos;
+
+#if UNITY_EDITOR
+                Debug.Log($"[SeaUrchin] Aligned to ground: Y={pos.y:F2} (hit ground at Y={hit.point.y:F2})");
+#endif
+            }
+            else
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"[SeaUrchin] No ground found below spawn position! Y={transform.position.y:F2}");
+#endif
             }
         }
 
@@ -162,8 +216,8 @@ namespace HideAndInk.Core.Enemy.Normal
             {
                 // 카메라 없으면 기본 위치 (조류 반대쪽에서 스폰)
                 return direction == TideDirection.Left
-                    ? new Vector3(20f, transform.position.y, transform.position.z)
-                    : new Vector3(-20f, transform.position.y, transform.position.z);
+                    ? new Vector3(20f, 0f, 0f)
+                    : new Vector3(-20f, 0f, 0f);
             }
 
             // 조류 흐름 방향의 반대쪽 가장자리에서 생성
@@ -179,7 +233,7 @@ namespace HideAndInk.Core.Enemy.Normal
             // gamePlaneZ = cameraZ + cameraZOffset, 거리 = |cameraZ - gamePlaneZ| = cameraZOffset
             Vector3 viewportPos = new Vector3(viewportX, viewportY, cameraZOffset);
             Vector3 worldPos = mainCamera.ViewportToWorldPoint(viewportPos);
-            worldPos.y = transform.position.y; // Y값 유지 (성게 원래 높이)
+            worldPos.y = 0f; // Y는 AlignToGround에서 보정, 여기선 0으로 초기화
 
             return worldPos;
         }
@@ -284,7 +338,15 @@ namespace HideAndInk.Core.Enemy.Normal
 
             if (_animator != null)
             {
-                _animator.SetBool("IsRolling", false);
+                // Animator에 IsRolling 파라미터가 있을 때만 설정
+                foreach (AnimatorControllerParameter param in _animator.parameters)
+                {
+                    if (param.name == "IsRolling" && param.type == AnimatorControllerParameterType.Bool)
+                    {
+                        _animator.SetBool("IsRolling", false);
+                        break;
+                    }
+                }
             }
         }
     }

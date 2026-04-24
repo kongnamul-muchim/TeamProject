@@ -84,8 +84,8 @@ namespace HideAndInk.Core.Enemy.Elite.Behaviors
         [SerializeField] private Animator enemyAnimator;
         [Tooltip("돌진 애니메이션 트리거 이름")]
         [SerializeField] private string chargeTriggerName = "OnCharge";
-        [Tooltip("조준 애니메이션 트리거 이름")]
-        [SerializeField] private string aimTriggerName = "OnAim";
+        [Tooltip("조준 애니메이션 트리거 이름 (비우면 생략)")]
+        [SerializeField] private string aimTriggerName = "";
         [Tooltip("돌진 애니메이션 길이 (초). 속도 계산에 사용됨")]
         [SerializeField] private float chargeAnimationLength = 1f;
 
