@@ -62,8 +62,8 @@ namespace HideAndInk.Core.Enemy.Normal
                 }
 
                 urchin.transform.SetParent(null);
+                urchin.gameObject.SetActive(true); // 먼저 활성화 (AddForce가 작동하려면 필요)
                 urchin.SetupForTide(direction, tideForce);
-                urchin.gameObject.SetActive(true);
             }
 
 #if UNITY_EDITOR

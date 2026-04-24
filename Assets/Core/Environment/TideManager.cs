@@ -36,8 +36,12 @@ namespace HideAndInk.Core.Environment
         [Tooltip("성게 프리팹")]
         [SerializeField] private GameObject seaUrchinPrefab;
 
-        [Tooltip("풀 크기 (기본값)")]
-        [SerializeField] private int poolSize = 10;
+        [Tooltip("풀 크기")]
+        [SerializeField] private int poolSize = 20;
+
+        [Header("성게 연속 생성")]
+        [Tooltip("조류 1초당 생성할 성게 수 (0.2 = 0.2초마다 1마리 = 초당 5마리)")]
+        [SerializeField] private float spawnInterval = 0.2f;
 
         [Header("Player 참조")]
         [Tooltip("Player Rigidbody")]
@@ -51,6 +55,7 @@ namespace HideAndInk.Core.Environment
         private float _tideTimer;
         private bool _isTideActive;
         private float _tideActiveTimer;
+        private float _spawnTimer;
         private TideDirection _currentDirection;
 
         // Player 의태 상태 캐싱
@@ -110,6 +115,16 @@ namespace HideAndInk.Core.Environment
             else
             {
                 _tideActiveTimer += Time.deltaTime;
+
+                // 연속 생성: spawnInterval 간격으로 1마리씩
+                _spawnTimer += Time.deltaTime;
+                if (_spawnTimer >= spawnInterval)
+                {
+                    _spawnTimer = 0f;
+                    if (_urchinPool != null)
+                        _urchinPool.SpawnFromTide(_currentDirection, tideForce);
+                }
+
                 if (_tideActiveTimer >= tideDuration)
                 {
                     EndTide();
@@ -137,15 +152,11 @@ namespace HideAndInk.Core.Environment
                 ? (TideDirection)Random.Range(0, 2)
                 : TideDirection.Left;
 
-#if UNITY_EDITOR
-            Debug.Log($"[TideManager] Tide started: {_currentDirection} (Force: {tideForce})");
-#endif
+            _spawnTimer = 0f; // 생성 타이머 리셋
 
-            // 성게 풀에서 소환
-            if (_urchinPool != null)
-            {
-                _urchinPool.SpawnFromTide(_currentDirection, tideForce);
-            }
+#if UNITY_EDITOR
+            Debug.Log($"[TideManager] Tide started: {_currentDirection} (Force: {tideForce}, Interval: {spawnInterval}s)");
+#endif
 
             // 이벤트 발생
             TideEvents.InvokeTideStarted(_currentDirection, tideForce);
