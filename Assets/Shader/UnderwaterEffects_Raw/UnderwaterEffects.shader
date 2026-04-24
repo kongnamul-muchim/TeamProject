@@ -15,29 +15,45 @@ Shader "Hidden/UnderwaterEffects_FullScreen"
         Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
         Pass
         {
+            Name "UnderwaterFullScreenPass"
             ZTest Always ZWrite Off Cull Off
+            
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            // 유니티 표준 깊이 텍스처 라이브러리 포함
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
-            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
-            struct Varyings { float2 uv : TEXCOORD0; float4 positionCS : SV_POSITION; };
+            struct Attributes {
+                uint vertexID : SV_VertexID;
+            };
 
-            TEXTURE2D_X(_BlitTexture); SAMPLER(sampler_BlitTexture);
-            TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
+            struct Varyings {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+            };
+
+            // 공식 Full Screen Pass에서 사용하는 화면 텍스처
+            TEXTURE2D_X(_BlitTexture);
+            SAMPLER(sampler_BlitTexture);
+
+            TEXTURE2D(_NormalMap);
+            SAMPLER(sampler_NormalMap);
 
             CBUFFER_START(UnityPerMaterial)
-                float4 _color; float _dis; float _alpha; float _refraction; float4 _normalUV;
+                float4 _color;
+                float _dis;
+                float _alpha;
+                float _refraction;
+                float4 _normalUV;
             CBUFFER_END
 
             Varyings vert (Attributes input) {
                 Varyings output;
-                output.positionCS = float4(input.positionOS.xyz, 1.0);
-                output.uv = input.uv;
+                // 공식 규격: 인덱스 기반 풀스크린 삼각형 생성
+                output.positionCS = GetFullScreenTriangleVertexPosition(input.vertexID);
+                output.uv = GetFullScreenTriangleTexCoord(input.vertexID);
                 return output;
             }
 
@@ -45,19 +61,20 @@ Shader "Hidden/UnderwaterEffects_FullScreen"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 // 1. 노멀맵 기반 굴절
-                float3 normalSample = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, input.uv * _normalUV.xy + _normalUV.zw * _Time.y));
-                float2 offset = normalSample.xy * _refraction * 0.02;
+                float2 normalUV = input.uv * _normalUV.xy + _normalUV.zw * _Time.y;
+                float3 normalSample = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, normalUV));
+                float2 offset = normalSample.xy * _refraction * 0.05;
 
-                // 2. 화면 컬러 샘플링
+                // 2. 화면 샘플링 (굴절 적용)
                 float2 uv = input.uv + offset;
                 half4 col = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, uv);
-                
-                // 3. 유니티 표준 방식으로 깊이 값 샘플링
+
+                // 3. 수중 포그 (깊이 기반)
                 float rawDepth = SampleSceneDepth(uv);
                 float depth = Linear01Depth(rawDepth, _ZBufferParams);
                 
-                // 4. 안개 계산 (검은 화면 방지를 위해 saturate 및 max 처리)
-                float fogFactor = saturate(depth / max(0.01, _dis * 0.1));
+                // 안개 강도 계산
+                float fogFactor = saturate(depth / max(0.001, _dis * 0.1));
                 float finalFog = saturate(fogFactor * _alpha);
 
                 return lerp(col, _color, finalFog);
