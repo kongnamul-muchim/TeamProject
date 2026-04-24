@@ -35,7 +35,7 @@ Shader "Paro222/UnderwaterEffects"
 
             Varyings vert (Attributes input) {
                 Varyings output;
-                // Blitter API가 제공하는 풀스크린 삼각형 좌표를 그대로 사용
+                // Unity 6 Blitter용 표준 버텍스 쉐이더
                 output.positionCS = float4(input.positionOS.xyz, 1.0);
                 output.uv = input.uv;
                 return output;

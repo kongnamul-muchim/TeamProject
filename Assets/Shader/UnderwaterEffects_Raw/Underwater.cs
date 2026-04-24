@@ -55,14 +55,13 @@ public class Underwater : ScriptableRendererFeature
             TextureHandle source = resourceData.activeColorTexture;
             TextureHandle depth = resourceData.activeDepthTexture;
 
-            // 소스 텍스처가 유효하지 않으면 실행 안 함
             if (!source.IsValid()) return;
 
-            // 카메라 타겟과 동일한 설정으로 임시 텍스처 생성
             RenderTextureDescriptor desc = cameraData.cameraTargetDescriptor;
-            desc.depthBufferBits = 0; // 컬러만 담을 것이므로 0
+            desc.depthBufferBits = 0;
             TextureHandle temp = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_UnderwaterTemp", false);
 
+            // 단일 패스에서 모든 처리를 완료
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Effects", out var passData))
             {
                 passData.material = settings.material;
@@ -74,15 +73,12 @@ public class Underwater : ScriptableRendererFeature
                 passData.UV = settings.UV;
                 passData.source = source;
 
-                // 텍스처 사용권 획득
                 builder.UseTexture(source, AccessFlags.Read);
                 if (depth.IsValid()) builder.UseTexture(depth, AccessFlags.Read);
                 
-                // 출력 타겟을 임시 텍스처(temp)로 설정
                 builder.SetRenderAttachment(temp, 0, AccessFlags.Write);
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
-                    // 매테리얼 파라미터 실시간 동기화
                     data.material.SetColor("_color", data.color);
                     data.material.SetFloat("_dis", data.distance);
                     data.material.SetFloat("_alpha", data.alpha);
@@ -90,13 +86,22 @@ public class Underwater : ScriptableRendererFeature
                     data.material.SetTexture("_NormalMap", data.normalmap);
                     data.material.SetVector("_normalUV", data.UV);
 
-                    // 화면(source)에 쉐이더를 먹여서 temp에 그림
+                    // 1. source -> temp (효과 적용)
                     Blitter.BlitTexture(context.cmd, data.source, new Vector4(1, 1, 0, 0), data.material, 0);
                 });
             }
 
-            // [핵심] 효과가 적용된 temp 텍스처를 이후 단계의 활성 컬러 텍스처로 지정 (Chaining)
-            resourceData.activeColorTexture = temp;
+            // 결과를 다시 원래 화면으로 복사 (가장 확실한 방법)
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Final Blit", out var passData))
+            {
+                passData.source = temp;
+                builder.UseTexture(temp, AccessFlags.Read);
+                builder.SetRenderAttachment(source, 0, AccessFlags.Write);
+                builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
+                {
+                    Blitter.BlitTexture(context.cmd, data.source, new Vector4(1, 1, 0, 0), 0, false);
+                });
+            }
         }
 
         // --- Compatibility Mode (Older URP) ---
