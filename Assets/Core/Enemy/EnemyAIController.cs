@@ -35,10 +35,10 @@ namespace HideAndInk.Core.Enemy
         [SerializeField] protected float groundScanDistance = 50f; // Ground 경계 스캔 최대 거리
         [SerializeField] protected float groundScanStep = 1f; // Ground 경계 스캔 간격
 
-        // 컴포넌트 참조
-        protected IEnemyMovement _movement;
-        protected Transform _playerTransform;
-        protected HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+        // 컴포넌트 참조 (런타임 캐싱, 직렬화 불필요)
+        [System.NonSerialized] protected IEnemyMovement _movement;
+        [System.NonSerialized] protected Transform _playerTransform;
+        [System.NonSerialized] protected HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
         // Ground 경계 정보
         protected GroundBounds _groundBounds;

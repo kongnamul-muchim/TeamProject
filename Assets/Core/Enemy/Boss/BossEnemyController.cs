@@ -63,9 +63,6 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private bool isDefaultFacingLeft = true;
         [SerializeField] private SpriteRenderer bossSpriteRenderer;
 
-        // Player 의태 상태 캐싱 (매 프레임 FindObjectOfType 방지)
-        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
-
         protected override void Awake()
         {
             base.Awake();
@@ -487,13 +484,7 @@ namespace HideAndInk.Core.Enemy.Boss
             return visionSensor.CanSee(_playerTransform.gameObject);
         }
 
-        /// <summary>
-        /// 의태 상태 업데이트
-        /// </summary>
-        private bool IsPlayerCamouflaging()
-        {
-            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
-        }
+        // IsPlayerCamouflaging()은 부모 EnemyAIController에서 protected로 상속됨
 
         /// <summary>
         /// 의심도 업데이트 (시야/근접 기반)

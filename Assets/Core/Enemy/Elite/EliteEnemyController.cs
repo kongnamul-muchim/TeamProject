@@ -58,8 +58,7 @@ namespace HideAndInk.Core.Enemy.Elite
         private Mesh _detectionRangeMesh;
         private bool _isMeshInitialized;
 
-        // Player 의태 상태 캐싱
-        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+        // Player 의태 상태는 부모 EnemyAIController._camouflageAdapter 사용
 
         protected override void InitializeMovement()
         {
