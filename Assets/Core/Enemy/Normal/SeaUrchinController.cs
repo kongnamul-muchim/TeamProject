@@ -55,6 +55,10 @@ namespace HideAndInk.Core.Enemy.Normal
         private float _stationaryTimer;
         private bool _isStationary;
 
+        // 캐싱
+        private bool _hasRollingParam;
+        private static readonly int IsRollingHash = Animator.StringToHash("IsRolling");
+
         /// <summary>
         /// 풀 참조 설정
         /// </summary>
@@ -79,13 +83,30 @@ namespace HideAndInk.Core.Enemy.Normal
             // Rigidbody가 이미 있든 새로 추가했든 항상 Damping 설정 (prefab 기본값 0 방지)
             _rigidbody.linearDamping = 2f;
 
-            // Collider가 없으면 SphereCollider 자동 추가 (Trigger)
+            // Collider 통일: 있으면 Trigger로 강제, 없으면 SphereCollider(Trigger) 추가
             Collider existingCollider = GetComponent<Collider>();
-            if (existingCollider == null)
+            if (existingCollider != null)
+            {
+                existingCollider.isTrigger = true;
+            }
+            else
             {
                 SphereCollider sphere = gameObject.AddComponent<SphereCollider>();
                 sphere.isTrigger = true;
                 sphere.radius = 0.5f;
+            }
+
+            // Animator IsRolling 파라미터 존재 여부 캐싱
+            if (_animator != null)
+            {
+                foreach (AnimatorControllerParameter param in _animator.parameters)
+                {
+                    if (param.name == "IsRolling" && param.type == AnimatorControllerParameterType.Bool)
+                    {
+                        _hasRollingParam = true;
+                        break;
+                    }
+                }
             }
         }
 
@@ -157,18 +178,10 @@ namespace HideAndInk.Core.Enemy.Normal
             Vector3 forceDirection = direction == TideDirection.Right ? Vector3.right : Vector3.left;
             _rigidbody.AddForce(forceDirection * tideForce, ForceMode.Impulse);
 
-            // 애니메이션 재생 (구르기) - Animator + 파라미터 존재 시만
-            if (_animator != null)
+            // 애니메이션 재생 (구르기) - 캐싱된 파라미터 확인 후 설정
+            if (_animator != null && _hasRollingParam)
             {
-                // Animator에 IsRolling 파라미터가 있을 때만 설정
-                foreach (AnimatorControllerParameter param in _animator.parameters)
-                {
-                    if (param.name == "IsRolling" && param.type == AnimatorControllerParameterType.Bool)
-                    {
-                        _animator.SetBool("IsRolling", true);
-                        break;
-                    }
-                }
+                _animator.SetBool(IsRollingHash, true);
             }
         }
 
@@ -269,22 +282,6 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// 물리 충돌 시 튕겨냄 (Trigger가 아닌 Collider용 fallback)
-        /// </summary>
-        private void OnCollisionEnter(Collision collision)
-        {
-            SeaUrchinController otherUrchin = collision.gameObject.GetComponent<SeaUrchinController>();
-            if (otherUrchin != null)
-            {
-                Vector3 pushDirection = (transform.position - otherUrchin.transform.position).normalized;
-                pushDirection.y = 0f;
-
-                _rigidbody.AddForce(pushDirection * bounceForce, ForceMode.Impulse);
-                otherUrchin._rigidbody.AddForce(-pushDirection * bounceForce, ForceMode.Impulse);
-            }
-        }
-
-        /// <summary>
         /// 카메라 렌더러 가시성 체크
         /// </summary>
         private void OnBecameInvisible()
@@ -336,17 +333,9 @@ namespace HideAndInk.Core.Enemy.Normal
                 _rigidbody.angularVelocity = Vector3.zero;
             }
 
-            if (_animator != null)
+            if (_animator != null && _hasRollingParam)
             {
-                // Animator에 IsRolling 파라미터가 있을 때만 설정
-                foreach (AnimatorControllerParameter param in _animator.parameters)
-                {
-                    if (param.name == "IsRolling" && param.type == AnimatorControllerParameterType.Bool)
-                    {
-                        _animator.SetBool("IsRolling", false);
-                        break;
-                    }
-                }
+                _animator.SetBool(IsRollingHash, false);
             }
         }
     }
