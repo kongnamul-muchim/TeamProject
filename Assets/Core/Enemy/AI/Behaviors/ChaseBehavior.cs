@@ -28,6 +28,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         private Vector3 _lastPlayerVelocity;
         private Vector3 _currentChaseTarget;
         private bool _isTargetValid; // 현재 추적 목표가 유효한지
+        private bool _isPaused; // 일시정지 여부 (돌진 대기 중)
 
         /// <summary>
         /// 마지막으로 Player를 본 위치
@@ -73,6 +74,24 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             _playerTransform = playerTransform;
         }
 
+        /// <summary>
+        /// ChaseBehavior 일시정지 (돌진 대기 중일 때 사용)
+        /// 일시정지 중에는 이동 제어를 중단
+        /// </summary>
+        public void SetPaused(bool isPaused)
+        {
+            _isPaused = isPaused;
+            if (isPaused)
+            {
+                _movement.Stop();
+            }
+        }
+
+        /// <summary>
+        /// 현재 일시정지 중인지 여부
+        /// </summary>
+        public bool IsPaused => _isPaused;
+
         public EnemyAIState StateType => EnemyAIState.Chase;
 
         public void OnEnter()
@@ -87,6 +106,9 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         public void OnUpdate(float deltaTime)
         {
+            // 일시정지 중에는 ChaseBehavior의 이동 제어를 중단 (AmbushGimmick이 직접 제어)
+            if (_isPaused) return;
+
             if (_playerTransform == null) return;
 
             // Player 현재 위치

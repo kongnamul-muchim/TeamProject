@@ -71,10 +71,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
         public void OnUpdate(float deltaTime)
         {
-            // 기믹이 이동 제어권을 가지고 있으면 PatrolBehavior는 아무것도 하지 않음
-            if (_movementOverride) return;
-
-            // 기믹이 이동 제어를 원하면 기믹의 목표 사용
+            // 기믹이 이동 제어권을 가지고 있으면 기믹의 목표 사용
             if (_gimmick != null && _gimmick.HasMovementOverride)
             {
                 Vector3? gimmickTarget = _gimmick.GetPatrolTarget(_enemy.Position, _hasGroundBounds ? _groundBounds : default);

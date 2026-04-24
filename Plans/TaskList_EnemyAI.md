@@ -1,9 +1,9 @@
 # Enemy 이동 AI Task List
 
-> **버전:** v2.0
-> **작성일:** 2026-04-21
+> **버전:** v3.0
+> **작성일:** 2026-04-23
 > **담당자:** AI Agent
-> **목표:** Enemy 이동 AI 시스템 구축 (순차적 진행: 몬스터 AI → 보스 기믹 → 정예 기믹)
+> **목표:** Enemy 이동 AI 시스템 구축 + 센서 아키텍처 리팩토링 (Phase 3 완료)
 
 ---
 
@@ -67,9 +67,9 @@
   - EnemyMovement 연동
 
 ### 6. 일반 몬스터 컨트롤러
-- [ ] `Assets/Core/Enemy/Normal/NormalEnemyController.cs` 생성
-  - 단순 이동 (AI 상태 머신 없음)
-  - Player 접촉 시 보스에게 위치 알림 (이벤트 기반)
+- [x] `Assets/Core/Enemy/Normal/NormalEnemyController.cs` 생성
+  - 부채꼴 시야(ConeVisionSensor)로 Player 감지
+  - Player 감지 시 보스에게 위치 알림
   - Layer "Player" 기반 감지
 
 ### 7. DI Container 연동
@@ -105,12 +105,31 @@
 ### 9. 정예 몬스터 기믹 (Phase 2 완료 후)
 
 ### 9. 정예 몬스터 컨트롤러
-- [ ] `Assets/Core/Enemy/Elite/EliteEnemyController.cs` 생성
+- [x] `Assets/Core/Enemy/Elite/EliteEnemyController.cs` 생성
   - 기믹형 몬스터 베이스
+  - 센서 없이 행동 패턴(IEliteBehavior) 기반
   - 대기 → Player 접근 시 기믹 발동
 - [ ] Ch.1 청새치: 직선 돌진 기믹
 - [ ] Ch.2 바다거북: 해초 먹어치움 기믹
 - [ ] Ch.3 복어: 몸 부풀려 길 막기 기믹
+
+---
+
+## Phase 3: 센서 아키텍처 리팩토링 (완료)
+
+### 10. 일반 몬스터 센서 정리
+- [x] `NormalEnemyController.cs`에 `IVisionSensor` 연동
+- [x] `IVisionSensor` 인터페이스에 setter 메서드 추가 (`SetDistanceOnlyMode`, `SetViewRadius`, `SetViewAngle`)
+
+### 11. 보스 의심도 시스템 리팩토링
+- [x] `ISuspicionModule.cs` 인터페이스 정의
+- [x] `BossSuspicionSystem.cs` 리팩토링 (모듈 주입 방식)
+- [x] `AmbushSuspicionModule.cs` 생성 (의심도 계산 추출)
+- [x] `BossEnemyController.cs` 수정 (센서 직접 제어 → 시스템 통합)
+
+### 12. 정예 몬스터 프레임워크
+- [x] `IEliteBehavior.cs` 인터페이스 정의
+- [x] `EliteEnemyController.cs` 생성
 
 ---
 
@@ -120,7 +139,7 @@
 |-------|------|-----------|
 | **Phase 1** | 코어 Enemy AI | 3-4시간 |
 | **Phase 2** | 보스 기믹 | 2-3시간 |
-| **Phase 3** | 정예 기믹 | 2-3시간 |
+| **Phase 3** | 센서 아키텍처 리팩토링 | 2-3시간 |
 
 ---
 

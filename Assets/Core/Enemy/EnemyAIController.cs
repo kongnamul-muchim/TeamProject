@@ -14,10 +14,14 @@ namespace HideAndInk.Core.Enemy
     /// </summary>
     public abstract class EnemyAIController : MonoBehaviour, IEnemy
     {
-        [Header("기본 설정")]
+        [Header("이동 물리 설정 (공통)")]
+        [Tooltip("기본 이동 속도")]
         [SerializeField] protected float moveSpeed = 3f;
+        [Tooltip("가속도 (값이 클수록 빠르게 최고속도 도달)")]
         [SerializeField] protected float acceleration = 8f;
+        [Tooltip("마찰력 (0~1, 1에 가까울수록 미끄러짐)")]
         [SerializeField] protected float friction = 0.9f;
+        [Tooltip("최대 이동 속도 제한")]
         [SerializeField] protected float maxSpeed = 5f;
 
         [Header("시야 설정")]
@@ -34,6 +38,7 @@ namespace HideAndInk.Core.Enemy
         // 컴포넌트 참조
         protected IEnemyMovement _movement;
         protected Transform _playerTransform;
+        protected HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
         // Ground 경계 정보
         protected GroundBounds _groundBounds;
@@ -251,6 +256,65 @@ namespace HideAndInk.Core.Enemy
         }
 
         /// <summary>
+        /// 이동 방향에 따라 스프라이트 좌우 반전 (공통 메서드)
+        /// </summary>
+        /// <param name="sr">SpriteRenderer</param>
+        /// <param name="isDefaultFacingLeft">기본 에셋이 왼쪽을 보고 있는지 여부</param>
+        /// <param name="velocityX">X축 이동 속도</param>
+        protected void UpdateSpriteFlipX(SpriteRenderer sr, bool isDefaultFacingLeft, float velocityX)
+        {
+            if (sr == null) return;
+
+            // 이동 중일 때만 방향 전환 (정지 시 현재 방향 유지)
+            if (Mathf.Abs(velocityX) < 0.01f) return;
+
+            bool movingRight = velocityX > 0;
+
+            if (isDefaultFacingLeft)
+            {
+                sr.flipX = movingRight;
+            }
+            else
+            {
+                sr.flipX = !movingRight;
+            }
+        }
+
+        /// <summary>
+        /// CamouflageAdapter 캐싱 (Start에서 한 번만 호출)
+        /// </summary>
+        protected virtual void CacheCamouflageAdapter()
+        {
+            _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+        }
+
+        /// <summary>
+        /// Player가 의태 중인지 확인
+        /// </summary>
+        protected bool IsPlayerCamouflaging()
+        {
+            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
+        }
+
+        /// <summary>
+        /// 순찰 목표 지점 선택 (공통 메서드)
+        /// Ground 범위 내로 제한된 목표 위치 반환
+        /// </summary>
+        /// <param name="distance">이동 거리</param>
+        /// <returns>목표 위치</returns>
+        protected Vector3 PickPatrolTarget(float distance)
+        {
+            Vector2 randomDirection = Random.insideUnitCircle.normalized;
+            Vector3 currentPos = transform.position;
+            Vector3 target = new Vector3(
+                currentPos.x + randomDirection.x * distance,
+                currentPos.y,
+                currentPos.z + randomDirection.y * distance);
+
+            return ClampToGroundBounds(target);
+        }
+
+        /// <summary>
         /// Player 찾기 (Tag "Player" 우선, 실패 시 레이어 기반 탐색)
         /// </summary>
         protected virtual void FindPlayer()
@@ -263,16 +327,16 @@ namespace HideAndInk.Core.Enemy
                 return;
             }
 
-            // 2순위: 레이어 기반 탐색 (FindObjectsByType으로 최적화)
+            // 2순위: 레이어 기반 탐색 (GameObject 기반으로 최적화)
             int playerLayer = LayerMask.NameToLayer("Player");
             if (playerLayer >= 0)
             {
-                var transforms = FindObjectsByType<Transform>(FindObjectsSortMode.None);
-                foreach (var t in transforms)
+                var gameObjects = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+                foreach (var go in gameObjects)
                 {
-                    if (t.gameObject.layer == playerLayer)
+                    if (go.layer == playerLayer)
                     {
-                        _playerTransform = t;
+                        _playerTransform = go.transform;
                         return;
                     }
                 }
@@ -295,12 +359,14 @@ namespace HideAndInk.Core.Enemy
 
         /// <summary>
         /// IEnemy.Update 구현
+        /// MonoBehaviour.Update와 동일한 동작 보장
         /// </summary>
         public void Update(float deltaTime)
         {
             if (!_isActive) return;
             UpdateAI(deltaTime);
             UpdateMovement(deltaTime);
+            UpdateViewDirection();
         }
     }
 }

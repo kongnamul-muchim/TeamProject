@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk.GamePlayEmbedded::HideAndInk.Core.Enemy.Boss.Gimmicks.RelentlessChaseGimmick
   suspicionDecayMultiplier: 0.3
   searchRadiusMultiplier: 1.25
-  patrolAreaRadius: 8
+  patrolAreaRadius: 5
