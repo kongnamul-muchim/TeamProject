@@ -53,7 +53,6 @@ public class Underwater : ScriptableRendererFeature
 
                 builder.UseTexture(source, AccessFlags.Read);
                 builder.SetRenderAttachment(temp, 0, AccessFlags.Write);
-                builder.AllowPassOptimization(false);
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
@@ -74,7 +73,6 @@ public class Underwater : ScriptableRendererFeature
                 passData.source = temp;
                 builder.UseTexture(temp, AccessFlags.Read);
                 builder.SetRenderAttachment(source, 0, AccessFlags.Write);
-                builder.AllowPassOptimization(false);
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
