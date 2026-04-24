@@ -7,11 +7,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// Ch.5 청새치 보스 기믹 (ScriptableObject)
     /// Aim→Charge 2단계 돌진 + 예측 이동 + 스턴 처리
     /// 스태미나 기반 3종 패턴: 기본 돌진 / 연속 돌진 / 광역 돌격
+    /// 
+    /// 시각적 피드백:
+    /// - Aim: 붉은 경고선이 Player 방향으로 표시
+    /// - Charge: 돌진 타입별 Trail 효과 (기본=적색, 연속=주황, 광역=자주)
+    /// - Collision: 충돌 이펙트 + 스턴
     /// </summary>
     [CreateAssetMenu(menuName = "Enemy Gimmicks/Swordfish Gimmick", fileName = "SwordfishGimmick")]
     public sealed class SwordfishGimmick : ScriptableObject, IEnemyGimmick
     {
         public GimmickType Type => GimmickType.Swordfish;
+
+        /// <summary>
+        /// 돌진 타입 (BossEnemyController에서 시각 처리 구분용)
+        /// </summary>
+        public enum SwordfishChargeType
+        {
+            Basic,   // 기본 돌진
+            Double,  // 연속 돌진 (2회)
+            Wide     // 광역 돌격 (넓은 범위)
+        }
 
         #region Inspector Parameters
 
@@ -60,23 +75,24 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [Tooltip("기본 돌진 쿨타임 (초)")]
         [SerializeField] private float chargeCooldown = 2f;
 
+        [Header("시각 효과 길이")]
+        [Tooltip("조준 경고선 길이 (m)")]
+        [SerializeField] private float aimIndicatorLength = 15f;
+
         #endregion
 
         #region State
 
-        private enum ChargeType { Basic, Double, Wide }
         private enum State { Idle, Aiming, Charging, Cooldown, PostChargePatrol }
 
         private Transform _bossTransform;
         private State _currentState = State.Idle;
-        private ChargeType _currentChargeType = ChargeType.Basic;
+        private SwordfishChargeType _currentChargeType = SwordfishChargeType.Basic;
         private float _stateTimer;
         private float _currentStamina;
 
         // 돌진 관련
-        private Vector3 _chargeTarget;
         private Vector3 _chargeDirection;
-        private Vector3 _chargeStartPos;
         private float _chargeDistanceTraveled;
         private bool _hasHitWall;
 
@@ -93,27 +109,46 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         #endregion
 
-        #region Callbacks
+        #region Visual Callbacks
 
         /// <summary>
-        /// 돌진 속도 제어 (chargeSpeed 적용/해제)
+        /// [시각] 조준 시작 — BossEnemyController에서 경고선 생성
+        /// </summary>
+        public System.Action OnAimStarted;
+
+        /// <summary>
+        /// [시각] 조준 중 매 프레임 Player 방향 업데이트 (normalized)
+        /// </summary>
+        public System.Action<Vector3> OnAimUpdated;
+
+        /// <summary>
+        /// [시각] 조준 종료 — 경고선 제거
+        /// </summary>
+        public System.Action OnAimEnded;
+
+        /// <summary>
+        /// [시각] 돌진 시작 (타입 + 방향) — Trail/이펙트 생성
+        /// </summary>
+        public System.Action<SwordfishChargeType, Vector3> OnChargeStarted;
+
+        /// <summary>
+        /// [시각] 돌진 종료 (타입 + 충돌 여부) — Trail 제거 + 충돌 이펙트
+        /// </summary>
+        public System.Action<SwordfishChargeType, bool> OnChargeEnded;
+
+        /// <summary>
+        /// [시각] 스턴 시작 — 스턴 이펙트/애니메이션
+        /// </summary>
+        public System.Action<float> OnStunStarted;
+
+        #endregion
+
+        #region Control Callbacks
+
+        /// <summary>
+        /// 돌진 속도 제어
         /// </summary>
         public System.Action<float> OnSpeedOverride;
-
-        /// <summary>
-        /// 돌진 시작 시 호출 (돌진 방향 전달)
-        /// </summary>
-        public System.Action<Vector3> OnDashStarted;
-
-        /// <summary>
-        /// 돌진 완료 시 호출
-        /// </summary>
-        public System.Action OnDashCompleted;
-
-        /// <summary>
-        /// 스턴 상태 진입 시 호출 (스턴 지속 시간 전달)
-        /// </summary>
-        public System.Action<float> OnStun;
 
         /// <summary>
         /// 이동 목표 설정 (MoveTo 호출)
@@ -139,6 +174,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         public bool IsStunned => _currentState == State.Cooldown && _hasHitWall;
 
+        /// <summary>
+        /// 현재 선택된 돌진 타입 (BossEnemyController 시각 처리용)
+        /// </summary>
+        public SwordfishChargeType CurrentChargeType => _currentChargeType;
+
         #endregion
 
         #region IEnemyGimmick
@@ -153,6 +193,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnDeactivate()
         {
+            // 시각적 요소 정리
+            OnAimEnded?.Invoke();
+            OnChargeEnded?.Invoke(_currentChargeType, false);
             _currentState = State.Idle;
         }
 
@@ -162,7 +205,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnPatrolEnter()
         {
-            // 순찰 중 idle 상태 — Player 접근 시 OnChaseEnter에서 조준 시작
             if (_currentState == State.PostChargePatrol)
             {
                 _currentState = State.Idle;
@@ -172,7 +214,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnPatrolUpdate(float deltaTime)
         {
-            // 순찰 중 스태미나 회복
             RegenStamina(deltaTime);
         }
 
@@ -190,17 +231,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnChaseUpdate(float deltaTime)
         {
-            // 스태미나 회복 (항상)
             RegenStamina(deltaTime);
 
             switch (_currentState)
             {
                 case State.Idle:
-                    // Chase 중 Idle이면 조준 시작
-                    if (_currentState == State.Idle)
-                    {
-                        StartAiming();
-                    }
+                    // Chase 중 Idle이면 조준 시작 (스태미나 회복 후 재공격)
+                    StartAiming();
                     break;
 
                 case State.Aiming:
@@ -223,13 +260,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnChaseExit()
         {
-            // Chase 종료 시 돌진/조준 중단
-            if (_currentState == State.Aiming || _currentState == State.Charging)
+            // Chase 종료 시 돌진/조준 중단 + 시각 정리
+            if (_currentState == State.Aiming)
             {
-                _currentState = State.Idle;
-                OnMovementStop?.Invoke();
-                OnSpeedOverride?.Invoke(0f);
+                OnAimEnded?.Invoke();
             }
+            else if (_currentState == State.Charging)
+            {
+                OnChargeEnded?.Invoke(_currentChargeType, false);
+            }
+
+            _currentState = State.Idle;
+            OnMovementStop?.Invoke();
+            OnSpeedOverride?.Invoke(0f);
         }
 
         #endregion
@@ -238,6 +281,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnSearchEnter()
         {
+            OnAimEnded?.Invoke();
             _currentState = State.Idle;
             _hasPostChargeTarget = false;
         }
@@ -257,9 +301,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _stateTimer -= deltaTime;
 
+            // 매 프레임 Player 방향 업데이트 → 경고선 갱신
+            if (_playerTransform != null && _bossTransform != null)
+            {
+                Vector3 dirToPlayer = (_playerTransform.position - _bossTransform.position).normalized;
+                dirToPlayer.y = 0f;
+                OnAimUpdated?.Invoke(dirToPlayer);
+            }
+
             if (_stateTimer <= 0f)
             {
-                // 조준 완료 → 돌진
+                // 조준 완료 → 경고선 제거 후 돌진
+                OnAimEnded?.Invoke();
                 StartCharge();
             }
         }
@@ -272,7 +325,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _chargeDistanceTraveled += chargeSpeed * deltaTime;
 
             // 연속 돌진 1차 완료 체크
-            if (_currentChargeType == ChargeType.Double && _isDoubleChargeFirst && _stateTimer <= 0f)
+            if (_currentChargeType == SwordfishChargeType.Double && _isDoubleChargeFirst && _stateTimer <= 0f)
             {
                 // 1차 완료 → 잠시 대기 후 2차
                 _isDoubleChargeFirst = false;
@@ -282,7 +335,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // 2차 돌진 대기 중 → 2차 시작
-            if (_currentChargeType == ChargeType.Double && !_isDoubleChargeFirst && _stateTimer > 0f && _chargeDistanceTraveled < 0.5f)
+            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst && _stateTimer > 0f && _chargeDistanceTraveled < 0.5f)
             {
                 if (_playerTransform != null)
                 {
@@ -306,7 +359,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             if (_stateTimer <= 0f)
             {
-                // 쿨타임 종료 → PostChargePatrol 또는 Idle
                 if (_hasPostChargeTarget)
                 {
                     StartPostChargePatrol();
@@ -327,7 +379,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return;
             }
 
-            // 목표 도달 확인
             Vector3 currentPos = _bossTransform.position;
             float distanceToTarget = Vector3.Distance(
                 new Vector3(currentPos.x, 0, currentPos.z),
@@ -346,7 +397,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         #region Core Actions
 
         /// <summary>
-        /// 조준 시작 — Player 방향으로 aimDuration초간 경고 후 돌진
+        /// 조준 시작 — Player 방향으로 aimDuration초간 경고선 표시 후 돌진
         /// </summary>
         private void StartAiming()
         {
@@ -355,11 +406,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (!IsPlayerStillInRange()) return;
 
             // 돌진 타입 결정 (스태미나 기반)
-            ChargeType selectedType = SelectChargeType();
+            SwordfishChargeType selectedType = SelectChargeType();
 
-            if (selectedType == ChargeType.Basic && _currentStamina < basicChargeCost)
+            if (selectedType == SwordfishChargeType.Basic && _currentStamina < basicChargeCost)
             {
-                // 스태미나 부족 → 조준 안 함
                 return;
             }
 
@@ -371,6 +421,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnMovementStop?.Invoke();
             OnSpeedOverride?.Invoke(0f);
 
+            // [시각] 조준 경고선 표시
+            OnAimStarted?.Invoke();
+
 #if UNITY_EDITOR
             Debug.Log($"[SwordfishGimmick] 조준 시작! 타입: {_currentChargeType}, 스태미나: {_currentStamina:F0}/{maxStamina}");
 #endif
@@ -379,26 +432,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// <summary>
         /// 스태미나 상황에 따라 돌진 타입 결정
         /// </summary>
-        private ChargeType SelectChargeType()
+        private SwordfishChargeType SelectChargeType()
         {
             // 광역 돌격 (스태미나 충분할 때만)
             if (enableWideCharge && _currentStamina >= wideChargeCost && _currentStamina >= maxStamina * 0.8f)
             {
-                return ChargeType.Wide;
+                return SwordfishChargeType.Wide;
             }
 
-            // 연속 돌진 (스태미나 50% 이상)
+            // 연속 돌진 (스태미나 충분)
             if (enableDoubleCharge && _currentStamina >= doubleChargeCost)
             {
-                return ChargeType.Double;
+                return SwordfishChargeType.Double;
             }
 
             // 기본 돌진
-            return ChargeType.Basic;
+            return SwordfishChargeType.Basic;
         }
 
         /// <summary>
-        /// 돌진 시작 — 예측 위치로 고속 이동
+        /// 돌진 시작 — 예측 위치로 고속 이동 + 시각 효과
         /// </summary>
         private void StartCharge()
         {
@@ -415,7 +468,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _currentStamina = Mathf.Max(0f, _currentStamina - cost);
 
             _currentState = State.Charging;
-            _chargeStartPos = _bossTransform.position;
             _chargeDistanceTraveled = 0f;
             _hasHitWall = false;
 
@@ -423,10 +475,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float speed = chargeSpeed;
 
             // 광역 돌격 설정
-            _isWideCharge = _currentChargeType == ChargeType.Wide;
+            _isWideCharge = _currentChargeType == SwordfishChargeType.Wide;
 
             // 연속 돌진: 1차는 duration 단축
-            if (_currentChargeType == ChargeType.Double)
+            if (_currentChargeType == SwordfishChargeType.Double)
             {
                 _isDoubleChargeFirst = true;
                 duration = chargeDuration * 0.6f;
@@ -438,23 +490,20 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             _stateTimer = duration;
 
-            // Player 예측 위치 계산
+            // Player 예측 위치 계산 (돌진 방향 결정)
             Vector3 playerPos = _playerTransform.position;
             float timeToReach = Vector3.Distance(_bossTransform.position, playerPos) / Mathf.Max(speed, 0.1f);
-            Vector3 predictedPos = playerPos; // 기본: 현재 위치
-
-            // predictionFactor 기반 예측 (PlayerMovementAdapter는 보스 컨트롤러에서 접근)
-            // 예측 위치는 GetPatrolTarget에서 chargeDirection 기반으로 사용
-            _chargeTarget = predictedPos;
-            _chargeDirection = (predictedPos - _bossTransform.position).normalized;
+            _chargeDirection = (playerPos - _bossTransform.position).normalized;
             _chargeDirection.y = 0f;
 
-            // 속도 오버라이드 + 이동 시작
+            // 속도 오버라이드
             OnSpeedOverride?.Invoke(speed);
-            OnDashStarted?.Invoke(_chargeDirection);
+
+            // [시각] 돌진 타입별 Trail/이펙트 시작
+            OnChargeStarted?.Invoke(_currentChargeType, _chargeDirection);
 
 #if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] {_currentChargeType} 돌진! 방향: {_chargeDirection}, 목표: {_chargeTarget}, 남은스태미나: {_currentStamina:F0}");
+            Debug.Log($"[SwordfishGimmick] {_currentChargeType} 돌진! 방향: {_chargeDirection}, 남은스태미나: {_currentStamina:F0}");
 #endif
         }
 
@@ -465,26 +514,20 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (_playerTransform == null || _bossTransform == null) return;
 
-            // 스태미나 추가 차감 (2차 비용)
             float additionalCost = doubleChargeCost * 0.5f;
             _currentStamina = Mathf.Max(0f, _currentStamina - additionalCost);
 
             Vector3 playerPos = _playerTransform.position;
-
-            // 2차는 짧은 예측 (반응성 높임)
-            float predictionTime = 0.3f;
-            Vector3 predictedPos = playerPos; // 예측 생략 (단순화)
-
-            _chargeTarget = predictedPos;
-            _chargeDirection = (predictedPos - _bossTransform.position).normalized;
+            _chargeDirection = (playerPos - _bossTransform.position).normalized;
             _chargeDirection.y = 0f;
             _stateTimer = chargeDuration * 0.5f;
             _chargeDistanceTraveled = 0f;
             _hasHitWall = false;
-            _chargeStartPos = _bossTransform.position;
 
             OnSpeedOverride?.Invoke(chargeSpeed * 1.1f); // 2차는 약간 빠르게
-            OnDashStarted?.Invoke(_chargeDirection);
+
+            // [시각] 2차 돌진 Trail/이펙트
+            OnChargeStarted?.Invoke(SwordfishChargeType.Double, _chargeDirection);
 
 #if UNITY_EDITOR
             Debug.Log($"[SwordfishGimmick] 연속 돌진 2차! 방향: {_chargeDirection}, 남은스태미나: {_currentStamina:F0}");
@@ -492,16 +535,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 돌진 종료 — 정지 + 쿨타임/스턴
+        /// 돌진 종료 — 정지 + 쿨타임/스턴 + 시각 정리
         /// </summary>
         private void EndCharge()
         {
-            // 충돌 이펙트는 BossEnemyController에서 처리
+            // [시각] 돌진 종료 (Trail 제거 + 충돌 이펙트)
+            OnChargeEnded?.Invoke(_currentChargeType, _hasHitWall);
+
             if (_hasHitWall)
             {
                 // 스턴 상태
                 _stateTimer = stunDuration;
-                OnStun?.Invoke(stunDuration);
+                OnStunStarted?.Invoke(stunDuration);
                 OnSpeedOverride?.Invoke(0f);
                 OnMovementStop?.Invoke();
             }
@@ -512,15 +557,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             _currentState = State.Cooldown;
 
-            // 돌진 위치 기억
-            _lastChargeTarget = _chargeTarget;
+            // 돌진 위치 기념
+            _lastChargeTarget = _bossTransform != null ? _bossTransform.position : Vector3.zero;
             _hasPostChargeTarget = true;
 
             // 정지
             OnMovementStop?.Invoke();
 
 #if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] 돌진 종료 → {( _hasHitWall ? "스턴" : "쿨타임" )} ({_stateTimer:F1}초)");
+            Debug.Log($"[SwordfishGimmick] 돌진 종료 → {(_hasHitWall ? "스턴" : "쿨타임")} ({_stateTimer:F1}초)");
 #endif
         }
 
@@ -533,13 +578,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _currentStamina = Mathf.Min(maxStamina, _currentStamina + staminaRegen * deltaTime);
         }
 
-        private float GetChargeCost(ChargeType type)
+        private float GetChargeCost(SwordfishChargeType type)
         {
             return type switch
             {
-                ChargeType.Basic => basicChargeCost,
-                ChargeType.Double => doubleChargeCost,
-                ChargeType.Wide => wideChargeCost,
+                SwordfishChargeType.Basic => basicChargeCost,
+                SwordfishChargeType.Double => doubleChargeCost,
+                SwordfishChargeType.Wide => wideChargeCost,
                 _ => basicChargeCost
             };
         }
@@ -548,7 +593,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             return _currentChargeType switch
             {
-                ChargeType.Wide => wideChargeCooldown,
+                SwordfishChargeType.Wide => wideChargeCooldown,
                 _ => chargeCooldown
             };
         }
@@ -561,9 +606,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_bossTransform == null) return;
 
             float checkRadius = _isWideCharge ? chargeWidth * wideChargeRadiusMultiplier : chargeWidth;
-            float checkDistance = chargeSpeed * Time.deltaTime * 2f;
-
             Vector3 checkOrigin = _bossTransform.position + _chargeDirection * 0.5f;
+
             Collider[] hits = Physics.OverlapSphere(checkOrigin, checkRadius * 0.5f);
 
             foreach (var hit in hits)
@@ -588,8 +632,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (_playerTransform == null || _bossTransform == null) return false;
             float distance = Vector3.Distance(_bossTransform.position, _playerTransform.position);
-
-            // 기본 감지 범위 (BossEnemyController의 visionSensor 범위와 유사)
             return distance <= 15f;
         }
 
@@ -607,7 +649,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         #region PostChargePatrol
 
         /// <summary>
-        /// 돌진 후 기억된 위치로 이동 (재정비)
+        /// 돌진 후 기념된 위치로 이동 (재정비)
         /// </summary>
         private void StartPostChargePatrol()
         {
@@ -618,8 +660,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             _currentState = State.PostChargePatrol;
-            _stateTimer = 5f;
-
             OnMoveTo?.Invoke(_lastChargeTarget);
         }
 
@@ -643,7 +683,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 case State.Charging:
                 {
-                    // 돌진 방향 유지
                     Vector3 target = currentPos + _chargeDirection * 5f;
                     target.y = currentPos.y;
                     return ClampToBounds(target, bounds);
@@ -651,7 +690,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
                 case State.PostChargePatrol:
                 {
-                    // 기억된 위치로 이동
                     if (_hasPostChargeTarget)
                     {
                         Vector3 target = new Vector3(
@@ -665,26 +703,21 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
                 case State.Aiming:
                 case State.Cooldown:
-                    // 조준/쿨다운 중에는 정지
                     return currentPos;
 
                 default:
-                    return null; // 기본 PatrolBehavior 로직 사용
+                    return null;
             }
         }
 
         /// <summary>
-        /// Search 상태 이동 목표: 돌진 종료 위치 수색
+        /// Search 상태 이동 목표: 기본 SearchBehavior 로직 사용
         /// </summary>
         public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
         {
-            // 기본 SearchBehavior 로직 사용
             return null;
         }
 
-        /// <summary>
-        /// Ground 경계 내로 위치 클램핑
-        /// </summary>
         private Vector3 ClampToBounds(Vector3 pos, GroundBounds bounds)
         {
             if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
