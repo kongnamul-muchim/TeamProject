@@ -52,9 +52,12 @@ public class Underwater : ScriptableRendererFeature
             UniversalResourceData resourceData = frameData.Get<UniversalResourceData>();
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
 
-            if (resourceData.isActiveTargetBackBuffer) return;
-
+            // 현재 화면과 깊이 텍스처 가져오기
             TextureHandle source = resourceData.activeColorTexture;
+            TextureHandle depth = resourceData.activeDepthTexture;
+
+            if (!source.IsValid() || resourceData.isActiveTargetBackBuffer) return;
+
             RenderTextureDescriptor desc = cameraData.cameraTargetDescriptor;
             desc.depthBufferBits = 0;
             TextureHandle temp = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "_UnderwaterTemp", false);
@@ -71,6 +74,9 @@ public class Underwater : ScriptableRendererFeature
                 passData.source = source;
 
                 builder.UseTexture(source, AccessFlags.Read);
+                // 깊이 텍스처 사용 선언 (안개 효과용)
+                if (depth.IsValid()) builder.UseTexture(depth, AccessFlags.Read);
+                
                 builder.SetRenderAttachment(temp, 0, AccessFlags.Write);
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
@@ -81,10 +87,12 @@ public class Underwater : ScriptableRendererFeature
                     data.material.SetTexture("_NormalMap", data.normalmap);
                     data.material.SetVector("_normalUV", data.UV);
 
+                    // Render Graph에서는 Blitter가 자동으로 _BlitTexture를 바인딩합니다.
                     Blitter.BlitTexture(context.cmd, data.source, new Vector4(1, 1, 0, 0), data.material, 0);
                 });
             }
 
+            // 결과를 다시 메인 화면으로 복사
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("Underwater Copy Back", out var passData))
             {
                 passData.source = temp;
