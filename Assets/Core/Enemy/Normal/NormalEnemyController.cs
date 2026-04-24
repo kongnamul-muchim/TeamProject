@@ -1,31 +1,34 @@
 using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
+using HideAndInk.Core.Player;
 
 namespace HideAndInk.Core.Enemy.Normal
 {
     /// <summary>
-    /// 일반 몬스터 컨트롤러 (챕터 1 길막용)
-    /// Player 감지 시 접근 → 충돌 시 Rigidbody로 밀어냄
+    /// 일반 몬스터 컨트롤러 (게)
+    /// Player 감지 시 접근 → 접촉 시 데미지 + 넉백
     /// X-Z 평면 이동
     /// </summary>
     public class NormalEnemyController : EnemyAIController
     {
         public override EnemyType Type => EnemyType.Normal;
 
-        [Header("일반 몬스터 설정")]
+        [Header("이동 설정")]
         [Tooltip("기본 이동 속도 (순찰)")]
         [SerializeField] private float patrolSpeed = 1.5f;
-        [Tooltip("Player 추적 속도 (Player보다 느리게 설정 가능)")]
+        [Tooltip("Player 추적 속도")]
         [SerializeField] private float chaseSpeed = 2f;
         [Tooltip("Player 감지 반경 (m)")]
         [SerializeField] private float detectionRadius = 4f;
-        [Tooltip("밀치기 힘 (근접 시 지속적으로 가하는 힘)")]
-        [SerializeField] private float pushForce = 8f;
-        [Tooltip("밀치기 시작 거리 (이 거리 내에 있으면 밀기 시작)")]
-        [SerializeField] private float pushRange = 1.5f;
-        [Tooltip("밀치기 쿨타임 (초)")]
-        [SerializeField] private float pushCooldown = 0.5f;
+
+        [Header("공격 설정")]
+        [Tooltip("넉백 힘 (Player를 밀어내는 힘)")]
+        [SerializeField] private float knockbackForce = 10f;
+        [Tooltip("데미지 쿨타임 (초). 연속 피격 방지")]
+        [SerializeField] private float damageCooldown = 1.5f;
+        [Tooltip("데미지 판정 거리 (m)")]
+        [SerializeField] private float attackRange = 1.5f;
 
         [Header("순찰 패턴")]
         [SerializeField] private float moveInterval = 2f;
@@ -42,7 +45,7 @@ namespace HideAndInk.Core.Enemy.Normal
         [Tooltip("Scene에서 감지 범위 원 표시")]
         [SerializeField] private bool showDetectionRangeInScene = true;
         [Tooltip("시각화 색상")]
-        [SerializeField] private Color detectionRangeColor = new Color(0f, 1f, 0f, 0.3f);
+        [SerializeField] private Color detectionRangeColor = new Color(1f, 0.3f, 0f, 0.3f);
 
         // 상태
         private enum State { Patrol, Chase, Cooldown }
@@ -50,10 +53,12 @@ namespace HideAndInk.Core.Enemy.Normal
         private float _stateTimer;
         private Vector3 _targetPosition;
         private bool _isMoving;
-        private float _pushTimer; // 밀치기 쿨타임
+        private float _damageTimer; // 공격 쿨타임
 
         // 컴포넌트
         private Rigidbody _rigidbody;
+        private PlayerLives _playerLives;
+        private Rigidbody _playerRigidbody;
         // _camouflageAdapter는 부모 클래스에 이미 있음
 
         protected override void InitializeMovement()
@@ -98,15 +103,40 @@ namespace HideAndInk.Core.Enemy.Normal
             // CamouflageAdapter 캐싱 (부모에서 제공)
             CacheCamouflageAdapter();
 
-            _pushTimer = 0f;
+            // PlayerLives + Player Rigidbody 캐싱
+            CachePlayerComponents();
+
+            _damageTimer = 0f;
+        }
+
+        /// <summary>
+        /// PlayerLives와 Player Rigidbody 캐싱
+        /// </summary>
+        private void CachePlayerComponents()
+        {
+            if (_playerTransform != null)
+            {
+                _playerLives = _playerTransform.GetComponent<PlayerLives>();
+                _playerRigidbody = _playerTransform.GetComponent<Rigidbody>();
+            }
+
+            if (_playerLives == null)
+            {
+                _playerLives = FindObjectOfType<PlayerLives>();
+            }
+
+            if (_playerRigidbody == null && _playerTransform != null)
+            {
+                _playerRigidbody = _playerTransform.GetComponent<Rigidbody>();
+            }
         }
 
         protected override void UpdateAI(float deltaTime)
         {
-            // 밀치기 쿨타임 감소
-            if (_pushTimer > 0f)
+            // 공격 쿨타임 감소
+            if (_damageTimer > 0f)
             {
-                _pushTimer -= deltaTime;
+                _damageTimer -= deltaTime;
             }
 
             // Player 감지 체크
@@ -185,7 +215,7 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// Chase 상태 업데이트 (Player 방향으로 이동 + 근접 밀치기)
+        /// Chase 상태 업데이트 (Player 방향으로 이동 + 근접 공격)
         /// </summary>
         private void UpdateChase(float deltaTime)
         {
@@ -198,8 +228,53 @@ namespace HideAndInk.Core.Enemy.Normal
             // Player 방향으로 이동
             _movement.MoveTo(_playerTransform.position);
 
-            // 근접 밀치기 (충돌 없이도 밀어냄)
-            ApplyPushForce(deltaTime);
+            // 근접 공격 체크 (범위 내 + 쿨타임)
+            TryAttackPlayer(deltaTime);
+        }
+
+        /// <summary>
+        /// 근접 공격 시도
+        /// Player가 공격 범위 내에 있으면 데미지 + 넉백
+        /// </summary>
+        private void TryAttackPlayer(float deltaTime)
+        {
+            if (_playerTransform == null) return;
+            if (_damageTimer > 0f) return;
+            if (_playerLives == null) return;
+
+            float distance = Vector3.Distance(transform.position, _playerTransform.position);
+            if (distance > attackRange) return;
+
+            // Player가 무적 상태면 공격 안 함
+            if (_playerLives.IsInvincible) return;
+
+            // 🔴 데미지
+            _playerLives.TakeDamage();
+            _damageTimer = damageCooldown;
+
+            // 💥 넉백
+            ApplyKnockback();
+
+#if UNITY_EDITOR
+            Debug.Log($"[Crab] Attack! Distance: {distance:F2}m, Lives left: {_playerLives.CurrentLives}");
+#endif
+        }
+
+        /// <summary>
+        /// Player를 밀어내는 넉백 적용
+        /// </summary>
+        private void ApplyKnockback()
+        {
+            if (_playerTransform == null || _playerRigidbody == null) return;
+
+            Vector3 knockbackDir = (_playerTransform.position - transform.position).normalized;
+            knockbackDir.y = 0f;
+
+            _playerRigidbody.AddForce(knockbackDir * knockbackForce, ForceMode.Impulse);
+
+#if UNITY_EDITOR
+            Debug.Log($"[Crab] Knockback! Direction: {knockbackDir}, Force: {knockbackForce}");
+#endif
         }
 
         /// <summary>
@@ -244,72 +319,26 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// Player와 충돌 시 밀치기 (보조용)
+        /// 물리 충돌 시 보조 공격 (OnCollisionEnter를 통한 접촉 데미지)
+        /// TryAttackPlayer가 Chase 중 거리 기반으로 처리하지만,
+        /// 물리적으로 부딪혔을 때도 데미지가 들어가도록 보장
         /// </summary>
         private void OnCollisionEnter(Collision collision)
         {
-            if (_pushTimer > 0f) return; // 쿨타임 중이면 무시
+            if (_damageTimer > 0f) return;
+            if (!collision.gameObject.CompareTag("Player")) return;
+            if (_playerLives == null || _playerLives.IsInvincible) return;
 
-            // Player 태그 확인
-            if (collision.gameObject.CompareTag("Player"))
-            {
-                Rigidbody playerRb = collision.gameObject.GetComponent<Rigidbody>();
-                if (playerRb != null)
-                {
-                    // Enemy → Player 방향으로 힘 가하기
-                    Vector3 pushDirection = (collision.transform.position - transform.position).normalized;
-                    pushDirection.y = 0f; // X-Z 평면만
-                    playerRb.AddForce(pushDirection * pushForce * 0.5f, ForceMode.Impulse);
+            // 데미지
+            _playerLives.TakeDamage();
+            _damageTimer = damageCooldown;
 
-                    _pushTimer = pushCooldown;
+            // 넉백
+            ApplyKnockback();
 
 #if UNITY_EDITOR
-                    Debug.Log($"[NormalEnemy] Collision Push! Force: {pushForce * 0.5f}, Direction: {pushDirection}");
+            Debug.Log($"[Crab] Collision Attack! Lives left: {_playerLives.CurrentLives}");
 #endif
-                }
-            }
-        }
-
-        /// <summary>
-        /// 근접 밀치기 (충돌 없이도 Player를 밀어냄)
-        /// Chase 상태에서만 작동
-        /// </summary>
-        private void ApplyPushForce(float deltaTime)
-        {
-            if (_playerTransform == null) return;
-            if (_pushTimer > 0f)
-            {
-                _pushTimer -= deltaTime;
-                return;
-            }
-
-            // Player와의 거리 계산
-            float distance = Vector3.Distance(transform.position, _playerTransform.position);
-
-            // 밀치기 범위 내에 있으면
-            if (distance <= pushRange)
-            {
-                Rigidbody playerRb = _playerTransform.GetComponent<Rigidbody>();
-                if (playerRb != null)
-                {
-                    // Enemy → Player 방향으로 힘 가하기
-                    Vector3 pushDirection = (_playerTransform.position - transform.position).normalized;
-                    pushDirection.y = 0f; // X-Z 평면만
-
-                    // 거리에 비례한 힘 (가까울수록 강하게)
-                    float forceMultiplier = 1f - (distance / pushRange);
-                    float appliedForce = pushForce * forceMultiplier;
-
-                    playerRb.AddForce(pushDirection * appliedForce, ForceMode.Force);
-
-#if UNITY_EDITOR
-                    if (Time.frameCount % 30 == 0) // 0.5초마다 로그
-                    {
-                        Debug.Log($"[NormalEnemy] Proximity Push! Distance: {distance:F2}m, Force: {appliedForce:F2}, Direction: {pushDirection}");
-                    }
-#endif
-                }
-            }
         }
 
         /// <summary>
