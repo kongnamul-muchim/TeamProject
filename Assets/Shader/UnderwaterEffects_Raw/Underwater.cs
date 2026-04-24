@@ -46,10 +46,10 @@ public class Underwater : ScriptableRendererFeature
 
             CommandBuffer cmd = CommandBufferPool.Get("Underwater Effects");
             
-            // 최신 URP에서는 renderer에서 직접 타겟 핸들을 가져옵니다.
+            // 현재 카메라의 컬러 타겟 핸들 가져오기
             RTHandle source = renderingData.cameraData.renderer.cameraColorTargetHandle;
 
-            // 매테리얼 변수 강제 업데이트
+            // 매테리얼 파라미터 실시간 업데이트
             settings.material.SetColor("_color", settings.color);
             settings.material.SetFloat("_dis", settings.distance);
             settings.material.SetFloat("_alpha", settings.alpha);
@@ -57,11 +57,11 @@ public class Underwater : ScriptableRendererFeature
             settings.material.SetTexture("_NormalMap", settings.normalmap);
             settings.material.SetVector("_normalUV", settings.UV);
 
-            // [핵심] Blitter를 이용한 화면 복사 및 쉐이더 적용
-            // 1. 카메라 화면(source)을 임시 텍스처(m_TempTexture)로 옮기면서 수중 쉐이더 적용
+            // Blitter를 사용하여 화면 복사 및 효과 적용
+            // 1. source -> m_TempTexture (쉐이더 적용)
             Blitter.BlitCameraTexture(cmd, source, m_TempTexture, settings.material, 0);
             
-            // 2. 쉐이더가 적용된 임시 텍스처를 다시 카메라 화면(source)으로 덮어쓰기
+            // 2. m_TempTexture -> source (최종 화면에 덮어쓰기)
             Blitter.BlitCameraTexture(cmd, m_TempTexture, source);
 
             context.ExecuteCommandBuffer(cmd);

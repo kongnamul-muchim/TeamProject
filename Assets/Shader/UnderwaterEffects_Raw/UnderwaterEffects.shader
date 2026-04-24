@@ -35,7 +35,8 @@ Shader "Paro222/UnderwaterEffects"
 
             Varyings vert (Attributes input) {
                 Varyings output;
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                // Blitter API가 제공하는 풀스크린 삼각형 좌표를 그대로 사용
+                output.positionCS = float4(input.positionOS.xyz, 1.0);
                 output.uv = input.uv;
                 return output;
             }
@@ -52,10 +53,12 @@ Shader "Paro222/UnderwaterEffects"
                 float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv + offset).r;
                 float depth = Linear01Depth(rawDepth, _ZBufferParams);
                 
-                // 포그 강도 (Distance와 Alpha 기반)
-                float fog = saturate(smoothstep(0, _dis * 0.05, depth) + _alpha);
+                // 포그 강도 개선: 거리에 따른 감쇄와 알파값을 결합
+                // _dis가 클수록 멀리서 안개가 시작됩니다.
+                float fogFactor = saturate(depth / (_dis * 0.1));
+                float finalFog = saturate(fogFactor * _alpha);
 
-                return lerp(col, _color, fog);
+                return lerp(col, _color, finalFog);
             }
             ENDHLSL
         }
