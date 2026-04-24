@@ -99,8 +99,7 @@
 - [ ] Ch.1 가자미 (AmbushGimmick): 매복 위치 이동 (Z 고정)
 - [ ] Ch.2 곰치 (RelentlessChaseGimmick): 집중 순찰 영역 내 X-Z 이동 (Z ±2m)
 - [ ] Ch.3 전기뱀장어 (ElectricZoneGimmick): X-Z 순찰 (Z ±1m)
-- [ ] Ch.4 아귀 (LureBaitGimmick): 미끼 순회 이동 (Z ±2m)
-- [ ] Ch.5 백상아리 (DashChargeGimmick): 절벽 구간 X축 순찰 (Z 고정)
+- [ ] Ch.4 상어 (DashChargeGimmick): 절벽 구간 X축 순찰 (Z 고정)
 
 ### 9. 정예 몬스터 기믹 (Phase 2 완료 후)
 

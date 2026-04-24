@@ -11,8 +11,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         Ambush,             // Ch.1 가자미: 매복 → 기습
         RelentlessChase,    // Ch.2 곰치: 집요한 추격
         ElectricZone,       // Ch.3 전기뱀장어: 감전 구역
-        LureBait,           // Ch.4 아귀: 발광 미끼
-        DashCharge          // Ch.5 백상아리: 초고속 돌진
+        DashCharge          // Ch.4 상어: 초고속 돌진
     }
 
     /// <summary>

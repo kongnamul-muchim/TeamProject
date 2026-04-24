@@ -121,19 +121,7 @@ BossEnemy (Prefab)
 
 **이동 패턴**: X-Z 평면 순찰 (Z ±1m 제한) + 구역 설치
 
-### 3.4 Ch.4 아귀 (LureBaitGimmick)
-
-| 파라미터 | 기본값 | 설명 |
-|----------|--------|------|
-| `Bait Count` | 5 | 동시 미끼 개수 |
-| `Bait Lifetime` | 10 | 미끼 유지 시간 (초) |
-| `Chase Transition Delay` | 2 | Chase 전환 지연 시간 (초) |
-| `Bait Trigger Radius` | 2 | 미끼 감지 반경 (m) |
-| `Bait Prefab` | (할당 필요) | 발광 미끼 프리팹 |
-
-**이동 패턴**: 미끼 배치 위치 순회 (Z ±2m 제한)
-
-### 3.5 Ch.5 백상아리 (DashChargeGimmick)
+### 3.4 Ch.4 상어 (DashChargeGimmick)
 
 | 파라미터 | 기본값 | 설명 |
 |----------|--------|------|
@@ -269,7 +257,6 @@ Scene 뷰에서 다음을 확인:
 | `AmbushGimmick.cs` | 매복 이동 로직 구현 (Z 고정) |
 | `RelentlessChaseGimmick.cs` | 집중 순찰 이동 구현 (Z ±2m) |
 | `ElectricZoneGimmick.cs` | X-Z 순찰 이동 구현 (Z ±1m) |
-| `LureBaitGimmick.cs` | 미끼 순회 이동 구현 (Z ±2m) |
 | `DashChargeGimmick.cs` | 절벽 순찰 이동 구현 (Z 고정) |
 
 ---

@@ -203,9 +203,6 @@ namespace HideAndInk.Core.Enemy.Boss
                 case ElectricZoneGimmick electric:
                     ConnectElectricZoneCallbacks(electric);
                     break;
-                case LureBaitGimmick lure:
-                    ConnectLureBaitCallbacks(lure);
-                    break;
                 case DashChargeGimmick dash:
                     ConnectDashChargeCallbacks(dash);
                     break;
@@ -349,24 +346,6 @@ namespace HideAndInk.Core.Enemy.Boss
         /// </summary>
         private void ConnectElectricZoneCallbacks(ElectricZoneGimmick electric)
         {
-        }
-
-        /// <summary>
-        /// 아귀: 발광 미끼 기믹 콜백
-        /// </summary>
-        private void ConnectLureBaitCallbacks(LureBaitGimmick lure)
-        {
-            if (_isGroundBoundsScanned)
-            {
-                lure.SetGroundBounds(_groundBounds);
-            }
-            lure.OnChaseTriggered = () =>
-            {
-                if (_stateMachine != null)
-                {
-                    _stateMachine.TryTransitionTo(EnemyAIState.Chase);
-                }
-            };
         }
 
         /// <summary>
