@@ -117,6 +117,56 @@ namespace HideAndInk.Player
             }
         }
 
+        private void OnEnable()
+        {
+            // 조류 밀림 이벤트 구독
+            HideAndInk.Core.Events.TideEvents.OnPlayerPushed += OnPlayerPushedByTide;
+        }
+
+        private void OnDisable()
+        {
+            // 조류 밀림 이벤트 해제
+            HideAndInk.Core.Events.TideEvents.OnPlayerPushed -= OnPlayerPushedByTide;
+        }
+
+        /// <summary>
+        /// 조류에 밀렸을 때 처리
+        /// 의태 중이고 타겟과의 거리가 detectionRadius를 벗어나면 의태 해제
+        /// </summary>
+        private void OnPlayerPushedByTide(Vector3 pushDirection, float force)
+        {
+            if (_stateMachine.CurrentState == CamouflageState.None) return;
+            if (_stateMachine.TargetObject == null) return;
+
+            // Player와 타겟 간 거리 체크
+            float distanceToTarget = Vector3.Distance(transform.position, _stateMachine.TargetObject.transform.position);
+
+            // 거리가 탐지 반경을 벗어나면 의태 해제
+            if (distanceToTarget > detectionRadius)
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[CamouflageAdapter] Tide pushed player too far from target ({distanceToTarget:F2}m > {detectionRadius:F2}m). Camouflage cancelled.");
+#endif
+                CancelCamouflageDueToTide();
+            }
+        }
+
+        /// <summary>
+        /// 조류로 인한 의태 해제 처리
+        /// </summary>
+        private void CancelCamouflageDueToTide()
+        {
+            _hasInvokedEndEvent = true;
+            CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+
+            _stateMachine.CancelCamouflage(true);
+            _isRestoringRate = true;
+            _rateRestoreProgress = 0f;
+            StartRestoreOutline();
+            _justTransitionedFromPerfect = false;
+            _transitionTimer = 0f;
+        }
+
         private void Update()
         {
             // 키 입력 처리

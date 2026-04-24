@@ -1,9 +1,9 @@
 # Enemy 이동 AI Task List
 
-> **버전:** v3.0
-> **작성일:** 2026-04-23
+> **버전:** v4.0
+> **작성일:** 2026-04-24
 > **담당자:** AI Agent
-> **목표:** Enemy 이동 AI 시스템 구축 + 센서 아키텍처 리팩토링 (Phase 3 완료)
+> **목표:** 챕터 2 몬스터 3종 구현 (곰치, 성게, 바다거북) + 조류 시스템
 
 ---
 
@@ -133,13 +133,61 @@
 
 ---
 
+## Phase 4: 챕터 2 몬스터 구현 (완료)
+
+### 13. 조류 시스템 (Tide System)
+- [x] `Assets/Core/Environment/TideDirection.cs` 생성
+  - 조류 방향 enum (Left, Right)
+- [x] `Assets/Core/Events/TideEvents.cs` 생성
+  - 조류 발동/종료, Player 밀림 이벤트
+- [x] `Assets/Core/Environment/TideManager.cs` 생성
+  - 빈 게임오브젝트에 붙이는 독립 매니저
+  - 주기적 조류 발동, 성게 풀 연동, Player 밀기
+  - 의태 중 밀림 감소 (`camouflagePushMultiplier`)
+
+### 14. 보스 - 곰치 (Moray Eel)
+- [x] `Assets/Core/Enemy/Boss/Gimmicks/RelentlessChaseGimmick.cs` 생성
+  - ScriptableObject + IEnemyGimmick + CreateAssetMenu
+  - 의심도 하락률 감소 (`suspicionDecayMultiplier`)
+  - 집중 순찰 영역 (`patrolCenter`, `patrolRadius`)
+  - 수색 반경 확대 (`searchRadiusMultiplier`)
+  - BossEnemyController 콜백 연결 코드 이미 존재 (라인 318-345)
+
+### 15. 일반 - 성게 (Sea Urchin)
+- [x] `Assets/Core/Events/EnemyEvents.cs` 생성
+  - `OnPlayerSlowed` 정적 이벤트 (위치, 둔부율, 지속시간)
+- [x] `Assets/Core/Enemy/Normal/SeaUrchinPool.cs` 생성
+  - 성게 오브젝트 풀 관리 (기본 10개)
+  - `SpawnFromTide(direction)` → 카메라 밖에서 소환
+- [x] `Assets/Core/Enemy/Normal/SeaUrchinController.cs` 생성
+  - 조류 힘 적용 (Rigidbody.AddForce)
+  - Player 접촉 시 둔부 이벤트 발생
+  - 성게 간 충돌 시 반대 방향 튕겨냄
+  - 카메라 밖 비활성화 (`deactivateDelay` 초 후 풀 반환)
+
+### 16. 정예 - 바다거북 (Sea Turtle)
+- [x] `Assets/Core/Enemy/Elite/Behaviors/SeaTurtleBehavior.cs` 생성
+  - IEliteBehavior 구현
+  - 시작 시 Camouflageable 태그 오브젝트 캐싱
+  - 활동 범위 내 랜덤 순회 (`patrolRadius`, 기즈모 표시)
+  - 먹이 발견 시 접근 → `consumeTime` 동안 섭취 → `SetActive(false)`
+  - 먹는 중 이동 중지
+
+### 17. 의태 시스템 연동
+- [x] `CamouflageAdapter.cs` 수정
+  - `TideEvents.OnPlayerPushed` 이벤트 구독
+  - 조류에 밀려 타겟과 거리가 `detectionRadius` 초과 시 의태 해제
+
+---
+
 ## 📅 진행 일정
 
-| Phase | 작업 | 예상 소요 |
-|-------|------|-----------|
-| **Phase 1** | 코어 Enemy AI | 3-4시간 |
-| **Phase 2** | 보스 기믹 | 2-3시간 |
-| **Phase 3** | 센서 아키텍처 리팩토링 | 2-3시간 |
+| Phase | 작업 | 예상 소요 | 상태 |
+|-------|------|-----------|------|
+| **Phase 1** | 코어 Enemy AI | 3-4시간 | 진행 중 |
+| **Phase 2** | 보스 기믹 | 2-3시간 | 진행 중 |
+| **Phase 3** | 센서 아키텍처 리팩토링 | 2-3시간 | 완료 |
+| **Phase 4** | 챕터 2 몬스터 구현 | 3-4시간 | 완료 |
 
 ---
 

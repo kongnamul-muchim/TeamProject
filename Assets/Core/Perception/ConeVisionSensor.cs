@@ -29,6 +29,10 @@ namespace HideAndInk.Core.Perception
         [Tooltip("viewDirectionRef가 없을 때 사용할 커스텀 시야 방향")]
         [SerializeField] private Vector3 customViewDirection = Vector3.forward;
 
+        [Header("의심도 설정")]
+        [Tooltip("이 시야 센서가 의심도 상승에 기여하는지 여부 (곰치 등 추격형 보스는 true, 가자미 등 매복형은 false)")]
+        [SerializeField] private bool raisesSuspicion = true;
+
         // 캐싱
         private Vector3 _cachedOrigin;
         private float _cachedViewRadius;
@@ -61,6 +65,11 @@ namespace HideAndInk.Core.Perception
         /// 거리 전용 모드 활성화 여부
         /// </summary>
         public bool IsDistanceOnlyMode => _distanceOnlyMode;
+
+        /// <summary>
+        /// 의심도 상승 기여 여부
+        /// </summary>
+        public bool RaisesSuspicion => raisesSuspicion;
 
         private void OnValidate()
         {

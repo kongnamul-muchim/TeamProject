@@ -54,7 +54,7 @@ namespace HideAndInk.Core.Enemy.Normal
 
         // 컴포넌트
         private Rigidbody _rigidbody;
-        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+        // _camouflageAdapter는 부모 클래스에 이미 있음
 
         protected override void InitializeMovement()
         {

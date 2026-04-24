@@ -63,8 +63,8 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private bool isDefaultFacingLeft = true;
         [SerializeField] private SpriteRenderer bossSpriteRenderer;
 
-        // Player 의태 상태 캐싱 (매 프레임 FindObjectOfType 방지)
-        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+        // Player 의태 상태 캐싱 (부모 클래스에서 제공)
+        // private HideAndInk.Player.CamouflageAdapter _camouflageAdapter; // 부모에 이미 있음
 
         protected override void Awake()
         {
@@ -488,11 +488,17 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// 의태 상태 업데이트
+        /// Player가 시야 내에 있고 의심도 상승 대상인지 확인
         /// </summary>
-        private bool IsPlayerCamouflaging()
+        private bool CanSeePlayerForSuspicion()
         {
-            return _camouflageAdapter != null && _camouflageAdapter.IsCamouflaging;
+            if (visionSensor == null || _playerTransform == null) return false;
+            if (!visionSensor.RaisesSuspicion) return false;
+
+            // Player가 의태 중이면 감지 안 됨
+            if (IsPlayerCamouflaging()) return false;
+
+            return visionSensor.CanSee(_playerTransform.gameObject);
         }
 
         /// <summary>
@@ -522,7 +528,8 @@ namespace HideAndInk.Core.Enemy.Boss
             else
             {
                 // 일반 보스: 시야 기반 의심도 보고 (의태 중이면 무시)
-                if (canSeePlayer)
+                // raisesSuspicion이 true인 센서만 의심도 상승에 기여
+                if (CanSeePlayerForSuspicion())
                 {
                     suspicionSystem.ReportVisionDetection(1f);
                 }

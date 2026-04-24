@@ -27,6 +27,8 @@ namespace HideAndInk.Core.Enemy.Elite
         [SerializeField] private MonoBehaviour eliteBehavior;
         
         [Header("감지 범위 설정")]
+        [Tooltip("Player 감지 활성화 여부 (바다거북 등 오브젝트 전용 몬스터는 false)")]
+        [SerializeField] private bool detectPlayer = true;
         [Tooltip("Player 감지 거리 (X축 기준, m)")]
         [SerializeField] private float detectionRadius = 8f;
         [Tooltip("Player 감지 너비 (Z축 기준, m). 0이면 무한")]
@@ -58,8 +60,8 @@ namespace HideAndInk.Core.Enemy.Elite
         private Mesh _detectionRangeMesh;
         private bool _isMeshInitialized;
 
-        // Player 의태 상태 캐싱
-        private HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
+        // Player 의태 상태 캐싱 (부모 클래스에서 제공)
+        // _camouflageAdapter는 부모 클래스에 이미 있음
 
         protected override void InitializeMovement()
         {
