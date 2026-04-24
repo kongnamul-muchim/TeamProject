@@ -43,12 +43,14 @@ namespace HideAndInk.Core.Enemy.Normal
             {
                 // 풀이 비었으면 확장
                 var urchin = CreateUrchin();
+                urchin.transform.SetParent(null);
                 urchin.SetupForTide(direction, tideForce);
                 urchin.gameObject.SetActive(true);
                 return;
             }
 
             var pooledUrchin = _pool.Dequeue();
+            pooledUrchin.transform.SetParent(null);
             pooledUrchin.SetupForTide(direction, tideForce);
             pooledUrchin.gameObject.SetActive(true);
         }

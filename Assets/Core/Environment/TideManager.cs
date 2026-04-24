@@ -57,12 +57,14 @@ namespace HideAndInk.Core.Environment
             // 성게 풀 초기화
             if (seaUrchinPrefab != null)
             {
+                Debug.Log($"[TideManager] Initializing SeaUrchinPool with prefab: {seaUrchinPrefab.name}, size: {poolSize}");
                 _urchinPool = new GameObject("SeaUrchinPool").AddComponent<SeaUrchinPool>();
                 _urchinPool.Initialize(seaUrchinPrefab, poolSize, transform);
+                Debug.Log($"[TideManager] SeaUrchinPool initialized successfully.");
             }
             else
             {
-                Debug.LogWarning("[TideManager] Sea Urchin Prefab not assigned.");
+                Debug.LogError("[TideManager] Sea Urchin Prefab is NOT assigned! Please assign in Inspector.");
             }
 
             // Player 참조 자동 탐색
@@ -72,12 +74,21 @@ namespace HideAndInk.Core.Environment
                 if (playerObj != null)
                 {
                     playerRigidbody = playerObj.GetComponent<Rigidbody>();
+                    Debug.Log($"[TideManager] Found Player Rigidbody: {playerRigidbody.name}");
+                }
+                else
+                {
+                    Debug.LogWarning("[TideManager] Player with Tag 'Player' not found!");
                 }
             }
 
             if (camouflageAdapter == null)
             {
                 camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
+                if (camouflageAdapter != null)
+                {
+                    Debug.Log($"[TideManager] Found CamouflageAdapter: {camouflageAdapter.name}");
+                }
             }
         }
 

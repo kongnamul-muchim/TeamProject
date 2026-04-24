@@ -11,7 +11,7 @@ namespace HideAndInk.Core.Perception
     public class SuspicionMeterUI : MonoBehaviour
     {
         [Header("의심도 시스템 참조")]
-        [Tooltip("보스의 BossSuspicionSystem 컴포넌트")]
+        [Tooltip("보스의 BossSuspicionSystem 컴포넌트 (직접 할당 시 우선 사용, null이면 SuspicionUIManager 자동 연결)")]
         [SerializeField] private BossSuspicionSystem bossSuspicionSystem;
 
         [Header("UI 참조")]
@@ -34,6 +34,12 @@ namespace HideAndInk.Core.Perception
                 bossSuspicionSystem.OnDetected += OnDetected;
                 bossSuspicionSystem.OnValueChanged += OnValueChanged;
             }
+            else if (SuspicionUIManager.Instance != null)
+            {
+                SuspicionUIManager.Instance.OnLevelChanged += OnLevelChanged;
+                SuspicionUIManager.Instance.OnDetected += OnDetected;
+                SuspicionUIManager.Instance.OnValueChanged += OnValueChanged;
+            }
         }
 
         private void OnDisable()
@@ -43,6 +49,12 @@ namespace HideAndInk.Core.Perception
                 bossSuspicionSystem.OnLevelChanged -= OnLevelChanged;
                 bossSuspicionSystem.OnDetected -= OnDetected;
                 bossSuspicionSystem.OnValueChanged -= OnValueChanged;
+            }
+            else if (SuspicionUIManager.Instance != null)
+            {
+                SuspicionUIManager.Instance.OnLevelChanged -= OnLevelChanged;
+                SuspicionUIManager.Instance.OnDetected -= OnDetected;
+                SuspicionUIManager.Instance.OnValueChanged -= OnValueChanged;
             }
         }
 

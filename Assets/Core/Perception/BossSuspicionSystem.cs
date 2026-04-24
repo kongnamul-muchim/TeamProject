@@ -184,6 +184,11 @@ namespace HideAndInk.Core.Perception
         public SuspicionLevel CurrentLevel => _currentLevel;
         public bool IsCamouflaging => _isCamouflaging;
 
+        private void Awake()
+        {
+            SuspicionUIManager.Instance?.Register(this);
+        }
+
         private void Update()
         {
             // 의심도 모듈 업데이트 (기믹별 계산)
@@ -539,6 +544,8 @@ namespace HideAndInk.Core.Perception
 
         private void OnDestroy()
         {
+            SuspicionUIManager.Instance?.Unregister(this);
+
             if (_floorMaterial != null) DestroyImmediate(_floorMaterial);
             if (_floorMesh != null) DestroyImmediate(_floorMesh);
             if (_floorRenderObject != null) DestroyImmediate(_floorRenderObject);

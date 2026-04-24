@@ -139,15 +139,17 @@ namespace HideAndInk.Core.Enemy.Normal
             Camera mainCamera = Camera.main;
             if (mainCamera == null)
             {
-                // 카메라 없으면 기본 위치
+                // 치에라 없으면 기본 위치
                 return direction == TideDirection.Right
                     ? new Vector3(20f, transform.position.y, transform.position.z)
                     : new Vector3(-20f, transform.position.y, transform.position.z);
             }
 
-            // 카메라 뷰포트 기준 밖 위치
+            // 치에라 뷰포트 기준 밖 위치
             float viewportX = direction == TideDirection.Right ? 1.2f : -0.2f;
-            Vector3 viewportPos = new Vector3(viewportX, 0.5f, 0f);
+            // Z값: 치에라와 성게가 같은 Z 평면에 있도록 치에라로부터의 거리 계산
+            float distanceToCameraPlane = Mathf.Abs(mainCamera.transform.position.z - transform.position.z);
+            Vector3 viewportPos = new Vector3(viewportX, 0.5f, distanceToCameraPlane);
             Vector3 worldPos = mainCamera.ViewportToWorldPoint(viewportPos);
             worldPos.y = transform.position.y; // Y값 유지
 

@@ -492,13 +492,30 @@ namespace HideAndInk.Core.Enemy.Boss
         /// </summary>
         private bool CanSeePlayerForSuspicion()
         {
-            if (visionSensor == null || _playerTransform == null) return false;
-            if (!visionSensor.RaisesSuspicion) return false;
+            if (visionSensor == null)
+            {
+                Debug.LogWarning("[BossEnemyController] visionSensor is null!");
+                return false;
+            }
+            if (_playerTransform == null)
+            {
+                Debug.LogWarning("[BossEnemyController] _playerTransform is null!");
+                return false;
+            }
+            if (!visionSensor.RaisesSuspicion)
+            {
+                Debug.Log("[BossEnemyController] visionSensor.RaisesSuspicion is false!");
+                return false;
+            }
 
             // Player가 의태 중이면 감지 안 됨
             if (IsPlayerCamouflaging()) return false;
 
-            return visionSensor.CanSee(_playerTransform.gameObject);
+            bool canSee = visionSensor.CanSee(_playerTransform.gameObject);
+#if UNITY_EDITOR
+            Debug.Log($"[BossEnemyController] CanSeePlayerForSuspicion: {canSee}, Distance: {Vector3.Distance(transform.position, _playerTransform.position):F1}m");
+#endif
+            return canSee;
         }
 
         /// <summary>
