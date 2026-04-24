@@ -24,7 +24,6 @@ Shader "Paro222/UnderwaterEffects"
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings { float2 uv : TEXCOORD0; float4 positionCS : SV_POSITION; };
 
-            // Render Graph / Blitter API 전용 텍스처 선언
             TEXTURE2D(_BlitTexture); SAMPLER(sampler_BlitTexture);
             TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
             TEXTURE2D(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
@@ -35,30 +34,17 @@ Shader "Paro222/UnderwaterEffects"
 
             Varyings vert (Attributes input) {
                 Varyings output;
-                // Unity 6 Blitter용 표준 버텍스 쉐이더
                 output.positionCS = float4(input.positionOS.xyz, 1.0);
                 output.uv = input.uv;
                 return output;
             }
 
             half4 frag (Varyings input) : SV_Target {
-                // 노멀맵 기반 굴절 오프셋 계산
                 float3 normalSample = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, input.uv * _normalUV.xy + _normalUV.zw * _Time.y));
-                float2 offset = normalSample.xy * _refraction * 0.05;
+                float2 offset = normalSample.xy * _refraction * 0.02;
 
-                // 굴절이 적용된 화면 컬러 샘플링 (_BlitTexture 사용)
                 half4 col = SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, input.uv + offset);
-                
-                // 깊이값 샘플링 및 거리 계산
-                float rawDepth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.uv + offset).r;
-                float depth = Linear01Depth(rawDepth, _ZBufferParams);
-                
-                // 포그 강도 개선: 거리에 따른 감쇄와 알파값을 결합
-                // _dis가 클수록 멀리서 안개가 시작됩니다.
-                float fogFactor = saturate(depth / (_dis * 0.1));
-                float finalFog = saturate(fogFactor * _alpha);
-
-                return lerp(col, _color, finalFog);
+                return lerp(col, _color, _alpha * 0.5);
             }
             ENDHLSL
         }
