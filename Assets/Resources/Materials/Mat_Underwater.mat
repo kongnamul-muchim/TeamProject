@@ -70,7 +70,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
-    - _CausticsIntensity: 0.48
+    - _CausticsIntensity: 0.39
     - _CausticsScale: 2
     - _Cutoff: 0
     - _DetailNormalMapScale: 1
@@ -78,7 +78,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaskHeight: 1.2
+    - _MaskHeight: 0.39
     - _MaskSoftness: 0.5
     - _Metallic: 0
     - _Mode: 0

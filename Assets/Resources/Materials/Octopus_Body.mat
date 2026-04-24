@@ -41,6 +41,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _CausticsTex:
+        m_Texture: {fileID: 2800000, guid: 23643b35e914187488b5d55e3e5ac939, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _ColorPart:
         m_Texture: {fileID: 2800000, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -74,9 +78,13 @@ Material:
     - _BUILTIN_ZTest: 4
     - _BUILTIN_ZWrite: 0
     - _BUILTIN_ZWriteControl: 0
+    - _CausticsIntensity: 0.3
+    - _CausticsScale: 2
     - _ColorMask: 15
     - _EnableExternalAlpha: 0
-    - _OriginalRate: 1
+    - _MaskHeight: -0.21
+    - _MaskSoftness: 0.5
+    - _OriginalRate: 0.4
     - _OutlineAlpha: 0.4
     - _QueueControl: 0
     - _QueueOffset: 0
@@ -91,8 +99,10 @@ Material:
     - _UIMaskSoftnessY: 1
     m_Colors:
     - White: {r: 1, g: 1, b: 1, a: 1}
+    - _CausticsColor: {r: 0.9716981, g: 0.97169155, b: 0.6737718, a: 1}
+    - _CausticsSpeed: {r: 0.5, g: 0.5, b: 0, a: 0}
     - _ClipRect: {r: 0, g: 0, b: 0, a: 0}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.7764706, g: 1, b: 0.9254902, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
