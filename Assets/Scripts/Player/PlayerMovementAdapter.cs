@@ -117,6 +117,16 @@ namespace HideAndInk.Player
         public Rigidbody Rigidbody => _rigidbody;
 
         /// <summary>
+        /// 속도 배율 설정 (성게 둔화 등 외부 효과)
+        /// </summary>
+        /// <param name="multiplier">1.0 = 기본, 0.5 = 50% 느림</param>
+        public void SetSpeedMultiplier(float multiplier)
+        {
+            if (_playerMovement != null)
+                _playerMovement.SpeedMultiplier = multiplier;
+        }
+
+        /// <summary>
         /// 이동 잠금 설정 (의태 시스템에서 사용)
         /// </summary>
         /// <param name="locked">잠금 여부</param>

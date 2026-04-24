@@ -45,6 +45,11 @@ namespace HideAndInk.Core.Interfaces
         bool IsMoving { get; }
 
         /// <summary>
+        /// 속도 배율 (1.0 = 기본, 0.5 = 50% 느림)
+        /// </summary>
+        float SpeedMultiplier { get; set; }
+
+        /// <summary>
         /// 상태 업데이트 (매 프레임 호출)
         /// </summary>
         /// <param name="deltaTime">경과 시간</param>

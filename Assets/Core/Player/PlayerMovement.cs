@@ -19,6 +19,7 @@ namespace HideAndInk.Core.Player
         private Vector2 _inputDirection;
         private bool _isMoving;
         private MoveDirection _direction;
+        private float _speedMultiplier = 1f;
 
         /// <summary>
         /// 현재 속도 벡터
@@ -34,6 +35,15 @@ namespace HideAndInk.Core.Player
         /// 이동 중인지 여부
         /// </summary>
         public bool IsMoving => _isMoving;
+
+        /// <summary>
+        /// 속도 배율 (1.0 = 기본, 외부 효과로 변경 가능)
+        /// </summary>
+        public float SpeedMultiplier
+        {
+            get => _speedMultiplier;
+            set => _speedMultiplier = Mathf.Max(0f, value);
+        }
 
         /// <summary>
         /// 생성자
@@ -121,9 +131,9 @@ namespace HideAndInk.Core.Player
             // 대각선 이동 시 벡터 정규화 (속도 유지)
             Vector2 normalizedDirection = _inputDirection.normalized;
             
-            // 수평/수직 속도 분리 적용
-            float targetHorizontalSpeed = normalizedDirection.x * _horizontalSpeed;
-            float targetVerticalSpeed = normalizedDirection.y * _verticalSpeed;
+            // 수평/수직 속도 분리 적용 + 속도 배율 반영
+            float targetHorizontalSpeed = normalizedDirection.x * _horizontalSpeed * _speedMultiplier;
+            float targetVerticalSpeed = normalizedDirection.y * _verticalSpeed * _speedMultiplier;
             Vector2 targetVelocity = new Vector2(targetHorizontalSpeed, targetVerticalSpeed);
 
             // 가속도로 현재 속도→목표 속도 보간
