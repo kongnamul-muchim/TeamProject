@@ -28,6 +28,10 @@ namespace HideAndInk.Core.Environment
         [Tooltip("조류 지속 시간 (초)")]
         [SerializeField] private float tideDuration = 3f;
 
+        [Header("조류 방향")]
+        [Tooltip("true=매번 랜덤, false=항상 오른쪽→왼쪽(Left)")]
+        [SerializeField] private bool randomTideDirection = false;
+
         [Header("성게 풀 설정")]
         [Tooltip("성게 프리팹")]
         [SerializeField] private GameObject seaUrchinPrefab;
@@ -128,8 +132,10 @@ namespace HideAndInk.Core.Environment
             _tideActiveTimer = 0f;
             _tideTimer = 0f;
 
-            // 랜덤 방향 선택
-            _currentDirection = (TideDirection)Random.Range(0, 2);
+            // 방향 선택 (고정 또는 랜덤)
+            _currentDirection = randomTideDirection
+                ? (TideDirection)Random.Range(0, 2)
+                : TideDirection.Left;
 
 #if UNITY_EDITOR
             Debug.Log($"[TideManager] Tide started: {_currentDirection} (Force: {tideForce})");

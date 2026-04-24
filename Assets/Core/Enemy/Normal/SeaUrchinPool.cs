@@ -10,6 +10,12 @@ namespace HideAndInk.Core.Enemy.Normal
     /// </summary>
     public class SeaUrchinPool : MonoBehaviour
     {
+        [Header("소환 설정")]
+        [Tooltip("조류 1회당 최소 소환 수")]
+        [SerializeField] private int minSpawnCount = 3;
+        [Tooltip("조류 1회당 최대 소환 수")]
+        [SerializeField] private int maxSpawnCount = 5;
+
         private GameObject _prefab;
         private int _poolSize;
         private Queue<SeaUrchinController> _pool;
@@ -35,24 +41,34 @@ namespace HideAndInk.Core.Enemy.Normal
         }
 
         /// <summary>
-        /// 조류 방향에서 성게 소환
+        /// 조류 방향에서 여러 마리 성게 소환
         /// </summary>
         public void SpawnFromTide(TideDirection direction, float tideForce)
         {
-            if (_pool.Count == 0)
+            int spawnCount = Random.Range(minSpawnCount, maxSpawnCount + 1);
+
+            for (int i = 0; i < spawnCount; i++)
             {
-                // 풀이 비었으면 확장
-                var urchin = CreateUrchin();
+                SeaUrchinController urchin;
+
+                if (_pool.Count == 0)
+                {
+                    // 풀이 비었으면 확장
+                    urchin = CreateUrchin();
+                }
+                else
+                {
+                    urchin = _pool.Dequeue();
+                }
+
                 urchin.transform.SetParent(null);
                 urchin.SetupForTide(direction, tideForce);
                 urchin.gameObject.SetActive(true);
-                return;
             }
 
-            var pooledUrchin = _pool.Dequeue();
-            pooledUrchin.transform.SetParent(null);
-            pooledUrchin.SetupForTide(direction, tideForce);
-            pooledUrchin.gameObject.SetActive(true);
+#if UNITY_EDITOR
+            Debug.Log($"[SeaUrchinPool] Spawned {spawnCount} sea urchins (Tide: {direction}, Force: {tideForce})");
+#endif
         }
 
         /// <summary>
