@@ -1,9 +1,10 @@
 # Phase 2: 보스 기믹 설계 문서
 
-> **버전:** v1.0
-> **작성일:** 2026-04-21
+> **버전:** v1.1
+> **작성일:** 2026-04-24
 > **문서 상태:** 구현완료
 > **참조:** `Plans/EnemyAI_기획서.md`
+> **변경:** 아귀(LureBaitGimmick) 보스 제거 — 소스/에셋 완전 삭제
 
 ---
 
@@ -38,14 +39,12 @@ Assets/Core/Enemy/Boss/Gimmicks/
 ├── AmbushGimmick.cs              # Ch.1 가자미 (매복 → 기습)
 ├── RelentlessChaseGimmick.cs     # Ch.2 곰치 (집요한 추격)
 ├── ElectricZoneGimmick.cs        # Ch.3 전기뱀장어 (감전 구역)
-├── LureBaitGimmick.cs            # Ch.4 아귀 (발광 미끼)
-└── DashChargeGimmick.cs          # Ch.5 백상아리 (초고속 돌진)
+└── DashChargeGimmick.cs          # Ch.4 상어 (초고속 돌진)
 
 Assets/ScriptableObjects/Gimmicks/ (생성 예정)
 ├── Gimmick_Ambush_Flounder.asset
 ├── Gimmick_Relentless_Moray.asset
 ├── Gimmick_ElectricZone_Eel.asset
-├── Gimmick_LureBait_Angler.asset
 └── Gimmick_DashCharge_Shark.asset
 ```
 
@@ -200,15 +199,23 @@ BossEnemyController
 
 ---
 
-### 2.4 Ch.4 아귀 (Anglerfish) - 발광 미끼 기믹
+### 2.4 Ch.4 상어 (Shark) - 초고속 돌진 기믹
 
 | 항목 | 내용 |
 |------|------|
-| **파일** | `LureBaitGimmick.cs` |
-| **타입** | `GimmickType.LureBait` |
-| **핵심** | Patrol 중 맵 랜덤 위치에 미끼 5개 배치 |
+| **파일** | `DashChargeGimmick.cs` |
+| **타입** | `GimmickType.DashCharge` |
+| **핵심** | Chase 전환 시 Player 위치 기록 → 직선 돌진 |
 
 #### 동작 흐름
+```
+[Patrol] 절벽 구간 빠르게 순찰
+    ↓ Player 발견 → Chase 전환
+[Chase] Player 위치 기록 → 그 방향으로 직선 돌진 (속도 15)
+    ↓ 돌진 중 경로상 엄폐물 충돌
+[파괴] CamouflageTarget 비활성화 (SetActive(false))
+    ↓ 최대 20m 돌진 또는 Player 위치 도달
+[정지] 2초간 정지 → Patrol 복귀
 ```
 [Patrol] Ground 범위 내 랜덤 위치 5곳에 미끼 배치
     ↓ 10초 경과
@@ -380,16 +387,16 @@ BossEnemy (Prefab)
 
 ### 3.3 챕터별 보스 설정값
 
-| 설정 | Ch.1 가자미 | Ch.2 곰치 | Ch.3 전기뱀장어 | Ch.4 아귀 | Ch.5 백상아리 |
-|------|-------------|-----------|-----------------|-----------|---------------|
-| **Gimmick Type** | Ambush | RelentlessChase | ElectricZone | LureBait | DashCharge |
-| **Patrol Speed** | 1.5 | 1.5 | 2.5 | 1 | 3 |
-| **Chase Speed** | 5 | 6 | 5 | 7 | 5 |
-| **Search Speed** | 2 | 3 | 3 | 3 | 2 |
-| **View Radius** | 4 | 6 | 5 | 4 | 7 |
-| **View Angle** | 45° | 90° | 60° | 45° | 120° |
-| **View Direction** | (90,0,0) | (90,0,0) | (90,0,0) | (90,0,0) | (90,0,0) |
-| **필요 프리팹** | 없음 | 없음 | ElectricZone | LureBait | 없음 |
+| 설정 | Ch.1 가자미 | Ch.2 곰치 | Ch.3 전기뱀장어 | Ch.4 상어 |
+|------|-------------|-----------|-----------------|-----------|
+| **Gimmick Type** | Ambush | RelentlessChase | ElectricZone | DashCharge |
+| **Patrol Speed** | 1.5 | 1.5 | 2.5 | 3 |
+| **Chase Speed** | 5 | 6 | 5 | 5 |
+| **Search Speed** | 2 | 3 | 3 | 2 |
+| **View Radius** | 4 | 6 | 5 | 7 |
+| **View Angle** | 45° | 90° | 60° | 120° |
+| **View Direction** | (90,0,0) | (90,0,0) | (90,0,0) | (90,0,0) |
+| **필요 프리팹** | 없음 | 없음 | ElectricZone | 없음 |
 
 ---
 
@@ -398,8 +405,7 @@ BossEnemy (Prefab)
 | 레이어명 | 용도 | 충돌 설정 |
 |----------|------|-----------|
 | **Trap** | 감전 구역 등 함정 | Player와 충돌 |
-| **Lure** | 발광 미끼 | Player와 충돌 |
-| **CamouflageTarget** | 엄폐물 (기존) | 백상아리 돌진에 파괴 |
+| **CamouflageTarget** | 엄폐물 (기존) | 상어 돌진에 파괴 |
 
 ---
 
@@ -442,7 +448,6 @@ public sealed class MyNewGimmick : ScriptableObject, IEnemyGimmick
 ## 6. TODO / 향후 작업
 
 - [ ] ElectricZone 프리팹 생성 (3D/2D 결정 후)
-- [ ] LureBait 프리팹 생성 (3D/2D 결정 후)
 - [ ] SuspicionMeter에 `SetDecayRate()` 메서드 추가 (곰치 기믹 연동)
 - [ ] PlayerController에 `SetStunned(duration)` 메서드 추가 (감전 연동)
 - [ ] 기믹별 사운드 이펙트 연동

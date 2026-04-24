@@ -1,8 +1,9 @@
 # Phase 3: 센서 아키텍처 리팩토링
 
-> **버전:** v1.0
-> **작성일:** 2026-04-23
+> **버전:** v1.1
+> **작성일:** 2026-04-24
 > **문서 상태:** 계획 중
+> **변경:** 정예 몬스터 항목 업데이트 — 청새치+바다거북
 > **참조:** `Plans/Phase2_BossGimmicks_Design.md`, `Plans/TaskList_EnemyAI.md`
 
 ---
@@ -62,18 +63,14 @@
 정예 몬스터는 센서 없이 행동 패턴 기반 기믹 구현
 
 ### 작업 항목
-- [ ] `IEliteBehavior.cs` 인터페이스 정의
+- [x] `IEliteBehavior.cs` 인터페이스 정의
   - `OnPlayerApproached(distance)`
   - `OnUpdate(deltaTime)`
-- [ ] `EliteEnemyController.cs` 생성
+- [x] `EliteEnemyController.cs` 생성
   - 기믹형 몬스터 베이스
   - 대기 → Player 접근 시 기믹 발동
-- [ ] Ch.1 청새치: `DashTriggerBehavior` 구현
-  - 직선 돌진 기믹
-- [ ] Ch.2 바다거북: `SeaweedEatBehavior` 구현
-  - 해초 감지 → 섭취 기믹
-- [ ] Ch.3 복어: `BlockPathBehavior` 구현
-  - Player 근접 → 몸 부풀려 길 막기
+- [x] 청새치: `SwordfishBehavior.cs` — 2단계 돌진(조준→돌진) + 스태미나 3종 패턴 개선 완료
+- [x] 바다거북: `SeaTurtleBehavior.cs` — 해초 감지 → 섭취 기믹 (현행 유지)
 
 ---
 
