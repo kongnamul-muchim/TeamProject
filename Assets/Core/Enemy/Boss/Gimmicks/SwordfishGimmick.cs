@@ -689,6 +689,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // 정지
             OnMovementStop?.Invoke();
+        }
 
         #endregion
 
