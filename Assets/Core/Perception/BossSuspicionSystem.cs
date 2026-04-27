@@ -42,6 +42,8 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float camouflageDecreaseSpeed = 15f;
 
         [Header("의심 범위 바닥 시각화")]
+        [Tooltip("의심 범위 바닥 표시 활성화")]
+        [SerializeField] private bool showSuspicionRadiusInGame = true;
         [Tooltip("의심 범위 바닥 표시 색상")]
         [SerializeField] private Color suspicionFloorColor = new Color(1f, 0f, 0f, 0.5f);
         [Tooltip("바닥 메쉬 세그먼트 수 (높을수록 부드러움)")]
@@ -218,7 +220,8 @@ namespace HideAndInk.Core.Perception
             CheckLevelChange();
 
             // 인게임 의심 범위 바닥 업데이트
-            UpdateSuspicionFloorVisual();
+            if (showSuspicionRadiusInGame)
+                UpdateSuspicionFloorVisual();
 
             // 이벤트 발생
             OnValueChanged?.Invoke(CurrentValue);
