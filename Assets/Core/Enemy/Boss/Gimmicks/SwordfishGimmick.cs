@@ -607,9 +607,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // [Controller] 돌진 시작 알림 (ChaseBehavior 정지 + 애니메이션)
             OnChargeStarted?.Invoke(_currentChargeType, _chargeDirection);
 
-            // [시각] 돌진 타입별 Trail 효과 (기믹 내부 처리)
-            ShowTrailEffect(_currentChargeType);
-
 #if UNITY_EDITOR
             Debug.Log($"[SwordfishGimmick] {_currentChargeType} 돌진! 방향: {_chargeDirection}, 예측위치: {predictedPos}, 남은스태미나: {_currentStamina:F0}");
 #endif
@@ -648,8 +645,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // [Controller] 돌진 시작 알림 (ChaseBehavior 정지 + 애니메이션)
             OnChargeStarted?.Invoke(SwordfishChargeType.Double, _chargeDirection);
 
-            // [시각] 2차 돌진 Trail 효과 (기믹 내부 처리)
-            ShowTrailEffect(SwordfishChargeType.Double);
+
 
 #if UNITY_EDITOR
             Debug.Log($"[SwordfishGimmick] 연속 돌진 2차! 방향: {_chargeDirection}, 예측위치: {predictedPos}, 남은스태미나: {_currentStamina:F0}");
@@ -668,9 +664,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // [시각] 돌진 Trail 제거 (기믹 내부 처리)
             ClearTrailEffect();
-
-            // [시각] 충돌 이펙트 (기믹 내부 처리)
-            if (_hasHitWall) ShowImpactEffect(_currentChargeType);
 
             // [Controller] 돌진 종료 알림 (ChaseBehavior 재개 + 애니메이션 리셋)
             OnChargeEnded?.Invoke(_currentChargeType, _hasHitWall);
@@ -735,13 +728,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         /// <summary>
         /// 돌진 중 충돌 체크 (벽/장애물)
+        /// 발 아래 Ground는 제외하고, 전방 Obstacle만 감지
         /// </summary>
         private void CheckChargeCollision()
         {
             if (_bossTransform == null) return;
 
             float checkRadius = _isWideCharge ? chargeWidth * wideChargeRadiusMultiplier : chargeWidth;
-            Vector3 checkOrigin = _bossTransform.position + _chargeDirection * 0.5f;
+            Vector3 checkOrigin = _bossTransform.position + _chargeDirection * 0.5f + Vector3.up * 0.3f;
 
             int hitCount = Physics.OverlapSphereNonAlloc(checkOrigin, checkRadius * 0.5f, _collisionBuffer);
 
@@ -752,22 +746,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 if (hit.transform == _bossTransform) continue;
                 if (hit.transform.IsChildOf(_bossTransform)) continue;
 
-                int layer = hit.gameObject.layer;
-                if (layer == _obstacleLayer || layer == _groundLayer)
+                // Obstacle 레이어만 벽으로 판정 (Ground는 바닥이므로 제외)
+                if (hit.gameObject.layer == _obstacleLayer)
                 {
-                    // 충돌점이 돌진 방향 앞쪽에 있는지 확인 (발 아래 바닥 제외)
-                    Vector3 hitPos = hit.ClosestPoint(checkOrigin);
-                    Vector3 dirToHit = (hitPos - _bossTransform.position).normalized;
-                    float forwardDot = Vector3.Dot(_chargeDirection, dirToHit);
-
-                    if (forwardDot > 0.3f) // 전방 73도 이내일 때만 벽 충돌
-                    {
-                        _hasHitWall = true;
+                    _hasHitWall = true;
 #if UNITY_EDITOR
-                        Debug.Log($"[SwordfishGimmick] 돌진 충돌! 대상:{hit.name} 레이어:{LayerMask.LayerToName(layer)} forwardDot:{forwardDot:F2}");
+                    Debug.Log($"[SwordfishGimmick] 돌진 충돌! 대상:{hit.name}");
 #endif
-                        return;
-                    }
+                    return;
                 }
             }
         }
