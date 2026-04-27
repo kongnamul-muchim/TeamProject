@@ -191,6 +191,12 @@ namespace HideAndInk.Core.Enemy.Boss
                 ConnectGimmickCallbacks();
                 _activeGimmick.OnActivate(transform);
 
+                // SwordfishGimmick에 Player Transform 전달
+                if (_activeGimmick is SwordfishGimmick swordfish && _playerTransform != null)
+                {
+                    swordfish.RefreshPlayerTransform(_playerTransform);
+                }
+
                 // AmbushGimmick일 경우 의심도 모듈을 BossSuspicionSystem에 주입
                 if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
                 {
@@ -451,7 +457,8 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _lastChargeType = chargeType;
 
-                // 돌진 방향으로 이동 목표 설정
+                // 돌진 방향으로 이동 목표 설정 (Velocity 기반 이동 보조)
+                // 실제 이동은 Gimmick의 OnSpeedOverride + UpdateMovement의 Velocity 적용으로 처리
                 Vector3 chargeTarget = transform.position + direction * 20f;
                 chargeTarget.y = transform.position.y;
                 _movement.MoveTo(chargeTarget);
@@ -674,6 +681,12 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_playerTransform != null && _chaseBehavior != null)
             {
                 _chaseBehavior.SetPlayerTransform(_playerTransform);
+            }
+
+            // SwordfishGimmick에 Player Transform 갱신
+            if (_playerTransform != null && _activeGimmick is SwordfishGimmick swordfish)
+            {
+                swordfish.RefreshPlayerTransform(_playerTransform);
             }
 
             // Player 감지

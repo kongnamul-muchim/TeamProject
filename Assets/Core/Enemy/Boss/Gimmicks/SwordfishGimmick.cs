@@ -107,6 +107,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         // Player Transform 캐싱
         private Transform _playerTransform;
 
+        // Player Movement Adapter (예측 이동용)
+        private HideAndInk.Player.PlayerMovementAdapter _playerMovementAdapter;
+
+        // 캐싱된 레이어 마스크
+        private int _obstacleLayer;
+        private int _groundLayer;
+
+        // 충돌 체크용 NonAlloc 버퍼
+        private Collider[] _collisionBuffer = new Collider[16];
+
         #endregion
 
         #region Visual Callbacks
@@ -189,6 +199,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _currentStamina = maxStamina;
             _currentState = State.Idle;
             CachePlayerTransform();
+            CachePlayerMovementAdapter();
+            CacheLayers();
         }
 
         public void OnDeactivate()
@@ -330,12 +342,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 // 1차 완료 → 잠시 대기 후 2차
                 _isDoubleChargeFirst = false;
                 _stateTimer = doubleChargeInterval;
+                _chargeDistanceTraveled = 0f; // 2차 대비 초기화
                 OnMovementStop?.Invoke();
                 return;
             }
 
-            // 2차 돌진 대기 중 → 2차 시작
-            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst && _stateTimer > 0f && _chargeDistanceTraveled < 0.5f)
+            // 2차 돌진 대기 중 (interval 동안) → 2차 시작
+            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst && _stateTimer > 0f)
             {
                 if (_playerTransform != null)
                 {
@@ -359,13 +372,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             if (_stateTimer <= 0f)
             {
-                if (_hasPostChargeTarget)
+                // Player가 근처에 있으면 PostChargePatrol 스킵 (바로 재공격)
+                if (_hasPostChargeTarget && !IsPlayerClose())
                 {
                     StartPostChargePatrol();
                 }
                 else
                 {
                     _currentState = State.Idle;
+                    _hasPostChargeTarget = false;
                     OnSpeedOverride?.Invoke(0f);
                 }
             }
@@ -492,8 +507,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // Player 예측 위치 계산 (돌진 방향 결정)
             Vector3 playerPos = _playerTransform.position;
+            Vector3 playerVelocity = Vector3.zero;
+
+            if (_playerMovementAdapter != null)
+            {
+                Vector2 vel2D = _playerMovementAdapter.CurrentVelocity;
+                playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
+            }
+
             float timeToReach = Vector3.Distance(_bossTransform.position, playerPos) / Mathf.Max(speed, 0.1f);
-            _chargeDirection = (playerPos - _bossTransform.position).normalized;
+            Vector3 predictedPos = playerPos + (playerVelocity * timeToReach * predictionFactor);
+            _chargeDirection = (predictedPos - _bossTransform.position).normalized;
             _chargeDirection.y = 0f;
 
             // 속도 오버라이드
@@ -503,7 +527,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnChargeStarted?.Invoke(_currentChargeType, _chargeDirection);
 
 #if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] {_currentChargeType} 돌진! 방향: {_chargeDirection}, 남은스태미나: {_currentStamina:F0}");
+            Debug.Log($"[SwordfishGimmick] {_currentChargeType} 돌진! 방향: {_chargeDirection}, 예측위치: {predictedPos}, 남은스태미나: {_currentStamina:F0}");
 #endif
         }
 
@@ -517,8 +541,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float additionalCost = doubleChargeCost * 0.5f;
             _currentStamina = Mathf.Max(0f, _currentStamina - additionalCost);
 
+            // 2차는 짧은 예측 (반응성 높임)
             Vector3 playerPos = _playerTransform.position;
-            _chargeDirection = (playerPos - _bossTransform.position).normalized;
+            Vector3 playerVelocity = Vector3.zero;
+
+            if (_playerMovementAdapter != null)
+            {
+                Vector2 vel2D = _playerMovementAdapter.CurrentVelocity;
+                playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
+            }
+
+            float predictionTime = 0.3f;
+            Vector3 predictedPos = playerPos + (playerVelocity * predictionTime);
+            _chargeDirection = (predictedPos - _bossTransform.position).normalized;
             _chargeDirection.y = 0f;
             _stateTimer = chargeDuration * 0.5f;
             _chargeDistanceTraveled = 0f;
@@ -530,7 +565,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnChargeStarted?.Invoke(SwordfishChargeType.Double, _chargeDirection);
 
 #if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] 연속 돌진 2차! 방향: {_chargeDirection}, 남은스태미나: {_currentStamina:F0}");
+            Debug.Log($"[SwordfishGimmick] 연속 돌진 2차! 방향: {_chargeDirection}, 예측위치: {predictedPos}, 남은스태미나: {_currentStamina:F0}");
 #endif
         }
 
@@ -608,16 +643,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float checkRadius = _isWideCharge ? chargeWidth * wideChargeRadiusMultiplier : chargeWidth;
             Vector3 checkOrigin = _bossTransform.position + _chargeDirection * 0.5f;
 
-            Collider[] hits = Physics.OverlapSphere(checkOrigin, checkRadius * 0.5f);
+            int hitCount = Physics.OverlapSphereNonAlloc(checkOrigin, checkRadius * 0.5f, _collisionBuffer);
 
-            foreach (var hit in hits)
+            for (int i = 0; i < hitCount; i++)
             {
+                var hit = _collisionBuffer[i];
                 if (hit.CompareTag("Player")) continue;
                 if (hit.transform == _bossTransform) continue;
                 if (hit.transform.IsChildOf(_bossTransform)) continue;
 
                 int layer = hit.gameObject.layer;
-                if (layer == LayerMask.NameToLayer("Obstacle") || layer == LayerMask.NameToLayer("Ground"))
+                if (layer == _obstacleLayer || layer == _groundLayer)
                 {
                     _hasHitWall = true;
 #if UNITY_EDITOR
@@ -626,6 +662,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// Player가 가까이 있는지 확인 (PostChargePatrol 스킵용)
+        /// </summary>
+        private bool IsPlayerClose()
+        {
+            if (_playerTransform == null || _bossTransform == null) return false;
+            float distance = Vector3.Distance(_bossTransform.position, _playerTransform.position);
+            return distance <= 8f;
         }
 
         private bool IsPlayerStillInRange()
@@ -642,6 +688,34 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 _playerTransform = playerObj.transform;
             }
+        }
+
+        private void CachePlayerMovementAdapter()
+        {
+            if (_playerTransform != null)
+            {
+                _playerMovementAdapter = _playerTransform.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
+            }
+
+            if (_playerMovementAdapter == null)
+            {
+                _playerMovementAdapter = GameObject.FindObjectOfType<HideAndInk.Player.PlayerMovementAdapter>();
+            }
+        }
+
+        private void CacheLayers()
+        {
+            _obstacleLayer = LayerMask.NameToLayer("Obstacle");
+            _groundLayer = LayerMask.NameToLayer("Ground");
+        }
+
+        /// <summary>
+        /// Player Transform 갱신 (BossEnemyController에서 매 프레임 또는 Player 재생성 시 호출)
+        /// </summary>
+        public void RefreshPlayerTransform(Transform playerTransform)
+        {
+            _playerTransform = playerTransform;
+            CachePlayerMovementAdapter();
         }
 
         #endregion
@@ -685,7 +759,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 {
                     Vector3 target = currentPos + _chargeDirection * 5f;
                     target.y = currentPos.y;
-                    return ClampToBounds(target, bounds);
+                    Vector3 clamped = ClampToBounds(target, bounds);
+                    // Clamp된 위치와 원래 위치가 다르면 벽에 도달한 것 → 충돌 처리
+                    if (clamped != target)
+                    {
+                        _hasHitWall = true;
+                    }
+                    return clamped;
                 }
 
                 case State.PostChargePatrol:
@@ -695,7 +775,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                         Vector3 target = new Vector3(
                             _lastChargeTarget.x,
                             currentPos.y,
-                            currentPos.z);
+                            _lastChargeTarget.z);
                         return ClampToBounds(target, bounds);
                     }
                     return currentPos;
