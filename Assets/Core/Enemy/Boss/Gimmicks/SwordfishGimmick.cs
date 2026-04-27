@@ -196,6 +196,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         public SwordfishChargeType CurrentChargeType => _currentChargeType;
 
+        /// <summary>
+        /// 현재 전투 사이클 중인지 여부 (Idle 제외한 모든 상태)
+        /// CheckStateTransitions에서 Chase → Search 전환 방지용
+        /// </summary>
+        public bool IsInCombatCycle => _currentState != State.Idle;
+
         #endregion
 
         #region IEnemyGimmick
@@ -401,9 +407,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 }
                 else
                 {
-                    _currentState = State.Idle;
                     _hasPostChargeTarget = false;
-                    OnSpeedOverride?.Invoke(0f);
+                    // 바로 Aiming 시작 (1프레임 지연으로 ChaseBehavior가 움직이는 현상 방지)
+                    StartAiming();
                 }
             }
         }
@@ -479,20 +485,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         private SwordfishChargeType SelectChargeType()
         {
-            // 광역 돌격 (스태미나 충분할 때만)
-            if (enableWideCharge && _currentStamina >= wideChargeCost && _currentStamina >= maxStamina * 0.8f)
-            {
-                return SwordfishChargeType.Wide;
-            }
+            // 사용 가능한 돌진 타입 수집
+            var available = new System.Collections.Generic.List<SwordfishChargeType>();
+            available.Add(SwordfishChargeType.Basic); // Basic은 항상 가능
 
-            // 연속 돌진 (스태미나 충분)
             if (enableDoubleCharge && _currentStamina >= doubleChargeCost)
-            {
-                return SwordfishChargeType.Double;
-            }
+                available.Add(SwordfishChargeType.Double);
 
-            // 기본 돌진 (스태미나 부족해도 가능)
-            return SwordfishChargeType.Basic;
+            if (enableWideCharge && _currentStamina >= wideChargeCost && _currentStamina >= maxStamina * 0.8f)
+                available.Add(SwordfishChargeType.Wide);
+
+            // 무작위 선택
+            return available[Random.Range(0, available.Count)];
         }
 
         /// <summary>

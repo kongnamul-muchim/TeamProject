@@ -902,7 +902,9 @@ namespace HideAndInk.Core.Enemy.Boss
                     else
                     {
                         // 일반 보스: ChaseBehavior의 거리 체크로 Player 놓침 판단 (의태 무시)
-                        if (_chaseBehavior != null && _chaseBehavior.IsPlayerOutOfRange())
+                        // 청새치: 전투 사이클 중(조준/돌진/쿨타임)에는 Chase 유지 (Player가 멀어져도 Search 전환하지 않음)
+                        bool isSwordfishCycling = _activeGimmick is SwordfishGimmick swordfishCheck && swordfishCheck.IsInCombatCycle;
+                        if (!isSwordfishCycling && _chaseBehavior != null && _chaseBehavior.IsPlayerOutOfRange())
                         {
                             if (_playerTransform != null)
                             {
