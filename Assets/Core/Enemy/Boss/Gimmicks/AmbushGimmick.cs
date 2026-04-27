@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
 
@@ -111,6 +112,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (_bossTransform == null || _playerTransform == null)
             {
+                Debug.LogWarning($"[AmbushGimmick] PatrolUpdate skipped: boss={_bossTransform != null}, player={_playerTransform != null}");
                 CachePlayerTransform();
                 return;
             }
@@ -125,11 +127,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _movementSinceLastPit = 0f;
                 OnSpawnPit?.Invoke(_bossTransform.position);
                 AddVisitedPosition(_bossTransform.position);
+                Debug.Log($"[AmbushGimmick] Pit spawned at {_bossTransform.position}, total visited: {_visitedPositions.Count}");
             }
 
             // Player 근처 매복 위치로 계속 이동 (Pit 회피 적용)
             UpdateAmbushTarget();
-            if (_ambushTarget != Vector3.zero)
+            Debug.Log($"[AmbushGimmick] PatrolUpdate: target={_ambushTarget}, bossPos={_bossTransform.position}, dist={Vector3.Distance(_bossTransform.position, _ambushTarget):F2}");
+            if (_ambushTarget != Vector3.zero && Vector3.Distance(_bossTransform.position, _ambushTarget) > 0.5f)
             {
                 OnDashMoveTo?.Invoke(_ambushTarget);
             }

@@ -212,7 +212,10 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (_activeGimmick == null || _stateMachine == null) return;
 
-            switch (_stateMachine.CurrentState)
+            var state = _stateMachine.CurrentState;
+            Debug.Log($"[BossEnemyController] State={state}, Gimmick={_activeGimmick?.GetType().Name}");
+
+            switch (state)
             {
                 case EnemyAIState.Patrol: _activeGimmick.OnPatrolUpdate(deltaTime); break;
                 case EnemyAIState.Chase: _activeGimmick.OnChaseUpdate(deltaTime); break;
