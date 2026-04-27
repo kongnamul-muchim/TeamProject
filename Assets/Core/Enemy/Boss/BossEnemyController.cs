@@ -924,15 +924,6 @@ namespace HideAndInk.Core.Enemy.Boss
                 Vector3 newPos = transform.position + chargeDir * chargeSpd * deltaTime;
                 newPos.y = transform.position.y;
 
-                // 활동 범위 제한
-                if (maxMoveRadius > 0f)
-                {
-                    Vector3 offset = newPos - _startPosition;
-                    float dist = new Vector3(offset.x, 0f, offset.z).magnitude;
-                    if (dist > maxMoveRadius)
-                        newPos = _startPosition + new Vector3(offset.x, 0f, offset.z).normalized * maxMoveRadius;
-                }
-
                 transform.position = newPos;
                 return;
             }
@@ -994,10 +985,10 @@ namespace HideAndInk.Core.Enemy.Boss
             if (sg != null && sg.ShouldFacePlayer && _playerTransform != null)
             {
                 float dirToPlayer = _playerTransform.position.x - transform.position.x;
-                bool faceLeft = dirToPlayer < 0;
-                transform.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                bool movingRight = dirToPlayer > 0;
+                transform.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
                 if (enemyForward != null)
-                    enemyForward.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                    enemyForward.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
                 return;
             }
 
@@ -1005,10 +996,10 @@ namespace HideAndInk.Core.Enemy.Boss
             if (sg != null && sg.CurrentStateName == "Charging")
             {
                 Vector3 chargeDir = sg.GetChargeDirection();
-                bool faceLeft = chargeDir.x < 0;
-                transform.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                bool movingRight = chargeDir.x > 0;
+                transform.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
                 if (enemyForward != null)
-                    enemyForward.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                    enemyForward.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
                 return;
             }
 
