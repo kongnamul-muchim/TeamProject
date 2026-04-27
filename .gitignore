@@ -66,3 +66,6 @@ crashlytics-build.properties
 
 # Custom custom logs rules for this project
 /Logs/
+
+# Windows artifact
+nul

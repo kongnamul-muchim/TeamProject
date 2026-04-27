@@ -19,6 +19,25 @@ namespace HideAndInk.CameraSystem
         [SerializeField] private bool followX = true;
         [SerializeField] private bool followY = true;
 
+        [Header("Z축 깊이 추적")]
+        [SerializeField] private bool followZ;
+        [SerializeField] private float zDepthFactor = 0.3f;
+        [SerializeField] private float zBaseOffset = -10f;
+
+        [Header("X축 흔들림 (Sway)")]
+        [SerializeField] private bool enableXSway = true;
+        [SerializeField] private float swayAmplitude = 0.15f;
+        [SerializeField] private float swayFrequency = 0.5f;
+
+        private float _originTargetY;
+        private float _swayTimer;
+
+        private void Start()
+        {
+            if (target != null)
+                _originTargetY = target.position.y;
+        }
+
         private void LateUpdate()
         {
             if (target == null) return;
@@ -28,12 +47,27 @@ namespace HideAndInk.CameraSystem
             if (!followX) targetPos.x = transform.position.x;
             if (!followY) targetPos.y = transform.position.y;
 
+            // Z축 깊이: 캐릭터가 위로 올라가면 카메라가 앞으로 다가감
+            if (followZ)
+            {
+                float deltaY = target.position.y - _originTargetY;
+                targetPos.z = zBaseOffset + deltaY * zDepthFactor;
+            }
+
+            // X축 흔들림: 부드러운 사인파로 좌우 미세 이동
+            if (enableXSway)
+            {
+                _swayTimer += Time.deltaTime;
+                targetPos.x += Mathf.Sin(_swayTimer * swayFrequency * Mathf.PI * 2f) * swayAmplitude;
+            }
+
             transform.position = Vector3.Lerp(transform.position, targetPos, smoothSpeed * Time.deltaTime);
         }
 
         public void SetTarget(Transform newTarget)
         {
             target = newTarget;
+            _originTargetY = target != null ? target.position.y : 0f;
         }
     }
 }

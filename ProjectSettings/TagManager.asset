@@ -43,5 +43,41 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Background
+    uniqueID: 2683795819
+    locked: 0
+  - name: distant
+    uniqueID: 2636448539
+    locked: 0
+  - name: distant02
+    uniqueID: 1087684587
+    locked: 0
+  - name: midground
+    uniqueID: 3097158599
+    locked: 0
+  - name: Background_Near
+    uniqueID: 3583738687
+    locked: 0
+  - name: Player
+    uniqueID: 149697889
+    locked: 0
+  - name: New Layer 8
+    uniqueID: 1412017211
+    locked: 0
+  - name: New Layer 9
+    uniqueID: 777937569
+    locked: 0
+  - name: New Layer 10
+    uniqueID: 3794878711
+    locked: 0
+  - name: New Layer 11
+    uniqueID: 2631193079
+    locked: 0
+  - name: New Layer 12
+    uniqueID: 273537729
+    locked: 0
+  - name: foreground
+    uniqueID: 3758733175
+    locked: 0
   m_RenderingLayers:
   - Default

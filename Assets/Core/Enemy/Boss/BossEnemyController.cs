@@ -91,7 +91,6 @@ namespace HideAndInk.Core.Enemy.Boss
         // Player 목숨/데미지
         private HideAndInk.Core.Player.PlayerLives _bossPlayerLives;
         private Rigidbody _bossPlayerRigidbody;
-
         protected override void Awake()
         {
             base.Awake();
