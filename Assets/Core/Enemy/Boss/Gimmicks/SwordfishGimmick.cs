@@ -755,11 +755,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 int layer = hit.gameObject.layer;
                 if (layer == _obstacleLayer || layer == _groundLayer)
                 {
-                    _hasHitWall = true;
+                    // 충돌점이 돌진 방향 앞쪽에 있는지 확인 (발 아래 바닥 제외)
+                    Vector3 hitPos = hit.ClosestPoint(checkOrigin);
+                    Vector3 dirToHit = (hitPos - _bossTransform.position).normalized;
+                    float forwardDot = Vector3.Dot(_chargeDirection, dirToHit);
+
+                    if (forwardDot > 0.3f) // 전방 73도 이내일 때만 벽 충돌
+                    {
+                        _hasHitWall = true;
 #if UNITY_EDITOR
-                    Debug.Log($"[SwordfishGimmick] 돌진 충돌! 대상: {hit.name}, 레이어: {LayerMask.LayerToName(layer)}");
+                        Debug.Log($"[SwordfishGimmick] 돌진 충돌! 대상:{hit.name} 레이어:{LayerMask.LayerToName(layer)} forwardDot:{forwardDot:F2}");
 #endif
-                    return;
+                        return;
+                    }
                 }
             }
         }
@@ -960,8 +968,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 };
                 main.maxParticles = 20;
 
-                var emission = ps.emission;
-                emission.SetBurst(0, new ParticleSystem.Burst(0f, 15));
+                ps.Emit(15);
 
                 var shape = ps.shape;
                 shape.shapeType = ParticleSystemShapeType.Sphere;
