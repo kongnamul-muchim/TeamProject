@@ -456,14 +456,14 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
 
-            // ─── [Controller] 돌진 종료: ChaseBehavior 재개 + 애니메이션 리셋 ───
+            // ─── [Controller] 돌진 종료: 애니메이션 리셋 ───
+            // ChaseBehavior는 쿨타임 중에도 Paused 유지 (Player 추적 방지)
+            // StartAiming에서 다시 Pause, OnChaseExit에서 Unpause
             swordfish.OnChargeEnded = (chargeType, hitWall) =>
             {
 #if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnChargeEnded 타입:{chargeType} wallHit:{hitWall} 위치:{transform.position} → ChaseBehavior 재개");
+                Debug.Log($"[SwordfishTrace] OnChargeEnded 타입:{chargeType} wallHit:{hitWall} 위치:{transform.position}");
 #endif
-                _chaseBehavior?.SetPaused(false);
-
                 if (bossAnimator != null)
                 {
                     bossAnimator.speed = 1f;

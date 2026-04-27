@@ -682,8 +682,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             else
             {
                 _stateTimer = GetChargeCooldown();
+                OnSpeedOverride?.Invoke(0f);
+                OnMovementStop?.Invoke();
 #if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] EndCharge → 쿨타임 ({_stateTimer:F1}초) speed 유지: chargeSpeed");
+                Debug.Log($"[SwordfishTrace] EndCharge → 쿨타임 ({_stateTimer:F1}초) speed=0");
 #endif
             }
 
