@@ -1288,7 +1288,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uCE04\uCE04\uCE04\uCE04"
+  m_Text: TEST
 --- !u!222 &402308814
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1586,7 +1586,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &558489847
 Transform:
   m_ObjectHideFlags: 0
@@ -2185,7 +2185,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &663806521
 Transform:
   m_ObjectHideFlags: 0
@@ -2421,8 +2421,14 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   bossAnimator: {fileID: 0}
   chaseAnimationLength: 0.5
+  bossKnockbackForce: 12
   isDefaultFacingLeft: 1
   bossSpriteRenderer: {fileID: 0}
+  aimIndicatorPrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
+  impactEffectPrefab: {fileID: 0}
+  aimIndicatorColor: {r: 1, g: 0.2, b: 0.2, a: 0.7}
+  aimIndicatorLength: 15
 --- !u!114 &710864468
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2458,6 +2464,7 @@ MonoBehaviour:
     m_Bits: 128
   viewDirectionRef: {fileID: 0}
   customViewDirection: {x: 90, y: 0, z: 0}
+  raisesSuspicion: 1
 --- !u!1 &775550627
 GameObject:
   m_ObjectHideFlags: 0
@@ -3490,6 +3497,66 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &955635109
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 955635111}
+  - component: {fileID: 955635110}
+  m_Layer: 0
+  m_Name: CausticsEffect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &955635110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 955635109}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0777d029ed3dffa4692f417d4aba19ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.DecalProjector
+  m_Material: {fileID: 2100000, guid: c4e4f4d5db06b174490c7e8c95e0c1a1, type: 2}
+  m_DrawDistance: 1000
+  m_FadeScale: 0.5
+  m_StartAngleFade: 180
+  m_EndAngleFade: 180
+  m_UVScale: {x: 100, y: 100}
+  m_UVBias: {x: 0, y: 0}
+  m_RenderingLayerMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ScaleMode: 0
+  m_Offset: {x: 0, y: 0, z: 50}
+  m_Size: {x: 100, y: 5, z: 100}
+  m_FadeFactor: 0.449
+  version: 1
+  m_DecalLayerMask: 1
+--- !u!4 &955635111
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 955635109}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.34, y: -4.1, z: -13.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1023240337
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6876,7 +6943,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "\uB450\uC787\uB450\uC787"
+  m_Text: "\uBC31\uADF8\uB77C\uC6B4\uB4DC 1"
 --- !u!222 &1968272510
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8041,3 +8108,4 @@ SceneRoots:
   - {fileID: 1242336918}
   - {fileID: 423734672}
   - {fileID: 2085621534}
+  - {fileID: 955635111}
