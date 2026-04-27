@@ -400,14 +400,14 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── 돌진 속도 제어 ───
             swordfish.OnSpeedOverride = (speed) =>
             {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnSpeedOverride({speed:F1}) 현재위치:{transform.position} IsMoving:{_movement.IsMoving}");
-#endif
                 _movement.Speed = speed;
                 if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
                 {
                     em.SetMaxSpeed(speed);
                 }
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnSpeedOverride({speed:F1}) 설정후 Speed:{_movement.Speed:F1} IsMoving:{_movement.IsMoving} 위치:{transform.position}");
+#endif
             };
 
             // ─── 목표 위치로 이동 ───
