@@ -332,7 +332,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 case EnemyAIState.Chase:
                     if (isAmbushGimmick)
                     {
-                        if (suspicionValue < ambushDropThreshold)
+                        // Ambush: PreDelay/Dash 중에는 강제로 Patrol 복귀하지 않음
+                        bool inCombatCycle = _combatCycle != null && _combatCycle.IsInCombatCycle;
+                        if (!inCombatCycle && suspicionValue < ambushDropThreshold)
                             _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
                     }
                     else
