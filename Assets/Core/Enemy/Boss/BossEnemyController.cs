@@ -934,9 +934,9 @@ namespace HideAndInk.Core.Enemy.Boss
             transform.position = newPosition;
 
 #if UNITY_EDITOR
-            if (velocity.sqrMagnitude > 0.01f)
+            if (velocity.sqrMagnitude > 5f)
             {
-                Debug.Log($"[SwordfishTrace] UpdateMovement 속도:{velocity} IsMoving:{_movement.IsMoving} 새위치:{newPosition} Speed:{_movement.Speed:F1}");
+                Debug.Log($"[SwordfishTrace] UpdateMovement charge! 속도:{velocity} IsMoving:{_movement.IsMoving} 이전위치:{transform.position - velocity * deltaTime} 새위치:{transform.position} Speed:{_movement.Speed:F1}");
             }
 #endif
 
