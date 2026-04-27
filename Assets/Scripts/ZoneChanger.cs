@@ -23,23 +23,23 @@ public class ZoneChanger : MonoBehaviour
     public GameObject[] activateZones;
 
     [Header("자동 탐색 (Inspector 할당 없을 시 사용)")]
-    [Tooltip("비활성화할 구역 번호 (예: 1 = Zone_1_*)")]
-    public int fromZoneNumber;
+    [Tooltip("비활성화할 구역 번호 (예: 0 = Zone_0_*, 1 = Zone_1_*). -1이면 자동 탐색 안 함")]
+    public int fromZoneNumber = -1;
 
-    [Tooltip("활성화할 구역 번호 (예: 2 = Zone_2_*)")]
-    public int toZoneNumber;
+    [Tooltip("활성화할 구역 번호 (예: 1 = Zone_1_*, 2 = Zone_2_*). -1이면 자동 탐색 안 함")]
+    public int toZoneNumber = -1;
 
     private bool _alreadyTriggered = false;
 
     private void Start()
     {
         // 자동 탐색: Inspector 할당이 없으면 이름으로 찾기
-        if ((deactivateZones == null || deactivateZones.Length == 0) && fromZoneNumber > 0)
+        if ((deactivateZones == null || deactivateZones.Length == 0) && fromZoneNumber >= 0)
         {
             deactivateZones = FindZoneObjects(fromZoneNumber);
         }
 
-        if ((activateZones == null || activateZones.Length == 0) && toZoneNumber > 0)
+        if ((activateZones == null || activateZones.Length == 0) && toZoneNumber >= 0)
         {
             activateZones = FindZoneObjects(toZoneNumber);
         }
@@ -103,8 +103,8 @@ public class ZoneChanger : MonoBehaviour
 
         if (changed)
         {
-            string fromName = fromZoneNumber > 0 ? $"Zone_{fromZoneNumber}" : "?";
-            string toName = toZoneNumber > 0 ? $"Zone_{toZoneNumber}" : "?";
+            string fromName = fromZoneNumber >= 0 ? $"Zone_{fromZoneNumber}" : "?";
+            string toName = toZoneNumber >= 0 ? $"Zone_{toZoneNumber}" : "?";
             Debug.Log($"[ZoneChanger] 구역 전환 완료: {fromName} → {toName}");
         }
         else
