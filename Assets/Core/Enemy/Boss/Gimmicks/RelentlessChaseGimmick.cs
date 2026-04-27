@@ -11,7 +11,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// - 집중 순찰 영역 (중심점 + 반경)
     /// </summary>
     [CreateAssetMenu(fileName = "RelentlessChaseGimmick", menuName = "HideAndInk/Enemy/Gimmicks/RelentlessChase")]
-    public class RelentlessChaseGimmick : ScriptableObject, IEnemyGimmick
+    public class RelentlessChaseGimmick : ScriptableObject, IEnemyGimmick,
+        IGimmickPlayerAware, IGimmickViewDirection, IGimmickCombatCycle, IGimmickTransitionOverride
     {
         public GimmickType Type => GimmickType.RelentlessChase;
 
@@ -170,5 +171,23 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             originalSpeed = speed;
         }
+
+        #region Interface Implementations
+
+        void IGimmickPlayerAware.SetPlayerTransform(Transform playerTransform) { }
+        void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion) { }
+        void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging) { }
+        void IGimmickPlayerAware.SetPlayerVisible(bool isVisible) { }
+
+        bool IGimmickViewDirection.OverridesViewDirection => false;
+        Vector3 IGimmickViewDirection.GetViewDirectionVector() => Vector3.right;
+        bool IGimmickViewDirection.ShowChargeIndicator => false;
+
+        bool IGimmickCombatCycle.IsInCombatCycle => false;
+        bool IGimmickCombatCycle.IsCharging => false;
+
+        bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion) => false;
+
+        #endregion
     }
 }

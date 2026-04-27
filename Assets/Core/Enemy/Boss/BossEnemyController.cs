@@ -3,17 +3,13 @@ using HideAndInk.Core.Enemy.AI;
 using HideAndInk.Core.Enemy.AI.Behaviors;
 using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Perception;
-using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Enemy.Boss.Gimmicks;
+using HideAndInk.Core.Player;
+using HideAndInk.Core.Enemy.Movement;
+using HideAndInk.Core.Interfaces;
 
 namespace HideAndInk.Core.Enemy.Boss
 {
-    /// <summary>
-    /// 보스 몬스터 컨트롤러
-    /// AI 상태 머신 (Patrol → Chase → Search) + 의심도 연동
-    /// X-Z 평면 이동
-    /// Ground 경계 검증 + 일반 몬스터 알림 연동 + 보스 기믹 시스템 포함
-    /// </summary>
     public class BossEnemyController : EnemyAIController
     {
         public override EnemyType Type => EnemyType.Boss;
@@ -21,122 +17,137 @@ namespace HideAndInk.Core.Enemy.Boss
         [Header("보스 설정")]
         [SerializeField] private ConeVisionSensor visionSensor;
         [SerializeField] private BossSuspicionSystem suspicionSystem;
-        [SerializeField] private HideAndInk.Core.Perception.VisionConeRenderer visionConeRenderer;
+        [SerializeField] private VisionConeRenderer visionConeRenderer;
+        [Tooltip("시야 없이 거리만으로 Chase 진입하는 거리 (m). 0 이하이면 비활성화")]
+        [SerializeField] private float proximityChaseDistance = 10f;
 
         [Header("상태별 속도")]
         [SerializeField] private float patrolSpeed = 2f;
         [SerializeField] private float chaseSpeed = 5f;
         [SerializeField] private float searchSpeed = 3f;
-
-        [Header("탐색 설정")]
         [SerializeField] private float searchDistance = 3f;
         [SerializeField] private float searchDuration = 5f;
 
         [Header("기믹 설정")]
-        [Tooltip("보스 기믹 ScriptableObject (우선 사용)")]
         [SerializeField] private ScriptableObject gimmickAsset;
-        [Tooltip("직접 할당한 MonoBehaviour 기믹 (gimmickAsset가 없을 때 사용)")]
         [SerializeField] private MonoBehaviour customGimmick;
 
-        // AI 상태 머신
+        [Header("의심도 설정")]
+        [SerializeField] private float chaseSuspicionDecayMultiplier = 0.5f;
+
+        [Header("돌진 인디케이터")]
+        [SerializeField] private float chargeIndicatorLength = 12f;
+        [SerializeField] private float chargeIndicatorWidth = 1.5f;
+
+        [Header("스프라이트 (Animator-safe flipX)")]
+        [Tooltip("Animator가 붙은 SpriteRenderer. flipX로 좌우 반전")]
+        [SerializeField] private SpriteRenderer bossSprite;
+
+        [Header("데미지")]
+        [SerializeField] private float knockbackForce = 12f;
+
         private EnemyAIStateMachine _stateMachine;
         private PatrolBehavior _patrolBehavior;
         private ChaseBehavior _chaseBehavior;
         private SearchBehavior _searchBehavior;
-
-        // 기믹 시스템
         private IEnemyGimmick _activeGimmick;
+        private PlayerLives _playerLives;
+        private Rigidbody _playerRigidbody;
 
-        [Header("의심도 설정")]
-        [Tooltip("Chase 진입 시 의심도 값 (0~100)")]
-        [SerializeField] private float chaseStartSuspicion = 100f;
-        [Tooltip("Chase 중 의심도 하락 배율 (1=기본, 0.5=절반 속도)")]
-        [SerializeField] private float chaseSuspicionDecayMultiplier = 0.5f;
+        // 기믹 인터페이스 캐싱 (SOLID - ISP)
+        private IGimmickPlayerAware _playerAware;
+        private IGimmickViewDirection _viewDir;
+        private IGimmickCombatCycle _combatCycle;
+        private IGimmickTransitionOverride _transitionOverride;
 
-        [Header("애니메이션")]
-        [SerializeField] private Animator bossAnimator;
-        [Tooltip("Chase 애니메이션 길이 (초). 속도 계산에 사용됨")]
-        [SerializeField] private float chaseAnimationLength = 0.5f;
-
-        [Header("공격/데미지")]
-        [Tooltip("보스 접촉 시 Player 넉백 힘")]
-        [SerializeField] private float bossKnockbackForce = 12f;
-
-        [Header("이동 범위 제한")]
-        [Tooltip("보스 활동 반경 (0=제한 없음). 시작 위치 기준 원형 제한")]
-        [SerializeField] private float maxMoveRadius = 0f;
-        private Vector3 _startPosition;
-        [Tooltip("기본 에셋이 왼쪽을 보고 있는지 여부 (true: 왼쪽 기본, false: 오른쪽 기본)")]
-        [SerializeField] private bool isDefaultFacingLeft = true;
-        [SerializeField] private SpriteRenderer bossSpriteRenderer;
-
-        // Player 의태 상태 캐싱 (부모 클래스에서 제공)
-        // private HideAndInk.Player.CamouflageAdapter _camouflageAdapter; // 부모에 이미 있음
-
-        // Player 목숨/데미지
-        private HideAndInk.Core.Player.PlayerLives _bossPlayerLives;
-        private Rigidbody _bossPlayerRigidbody;
-        protected override void Awake()
-        {
-            base.Awake();
-        }
+        // 돌진 인디케이터 (청새치 Aiming 시 붉은 사각형)
+        private LineRenderer _chargeIndicator;
 
         protected override void Start()
         {
+            isDefaultFacingLeft = true; // 청새치 Sprite: Y=0에서 왼쪽 바라봄
             base.Start();
-            
-            // 스프라이트 렌더러 자동 할당 (없을 경우)
-            if (bossSpriteRenderer == null)
-            {
-                bossSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            }
-
-            // 필수 컴포넌트 체크 (Inspector 할당 누락 방지)
-            if (visionSensor == null)
-                Debug.LogWarning("[BossEnemyController] visionSensor가 할당되지 않았습니다! Player 감지 불가.");
-            if (suspicionSystem == null)
-                Debug.LogWarning("[BossEnemyController] suspicionSystem이 할당되지 않았습니다! 의심도 시스템 미동작.");
-            if (visionConeRenderer == null)
-                Debug.LogWarning("[BossEnemyController] visionConeRenderer가 할당되지 않았습니다! 시야각 시각화 미표시.");
-            if (bossAnimator == null)
-                Debug.LogWarning("[BossEnemyController] bossAnimator가 할당되지 않았습니다! 애니메이션 미동작.");
-            if (bossSpriteRenderer == null)
-                Debug.LogWarning("[BossEnemyController] bossSpriteRenderer를 찾을 수 없습니다! 방향 전환 불가.");
-
-            // 시작 위치 저장 (활동 범위 제한용)
-            _startPosition = transform.position;
-
-            CacheCamouflageAdapter();
+            CacheCamouflageAdapter(); // 의태 감지를 위해 반드시 필요
             CacheBossPlayerComponents();
-            InitializeGimmick();      // 기믹 먼저 초기화
-            InitializeBehaviors();    // Behavior 생성 시 기믹 사용
+            SetupRigidbody();
+            InitializeGimmick();
+            InitializeBehaviors();
             InitializeStateMachine();
+            InitializeChargeIndicator(); // Indicator는 Start에서 미리 생성
         }
 
-        /// <summary>
-        /// AI Behavior 초기화
-        /// </summary>
+        #region Gimmick
+
+        private void InitializeGimmick()
+        {
+            if (gimmickAsset != null)
+                _activeGimmick = gimmickAsset as IEnemyGimmick;
+            else if (customGimmick != null)
+                _activeGimmick = customGimmick as IEnemyGimmick;
+
+            if (_activeGimmick == null) return;
+
+            ConnectGimmickCallbacks();
+            _activeGimmick.OnActivate(transform);
+
+            // 기믹 인터페이스 캐싱 (as 패턴: 미구현 시 null)
+            _playerAware = _activeGimmick as IGimmickPlayerAware;
+            _viewDir = _activeGimmick as IGimmickViewDirection;
+            _combatCycle = _activeGimmick as IGimmickCombatCycle;
+            _transitionOverride = _activeGimmick as IGimmickTransitionOverride;
+
+            if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
+            {
+                suspicionSystem.SetSuspicionRadius(ambush.SuspicionRadius);
+                suspicionSystem.linkedGimmick = ambush; // Editor OnValidate용
+                var suspicionModule = new AmbushSuspicionModule(ambush);
+                suspicionSystem.SetSuspicionModule(suspicionModule);
+
+                if (_isGroundBoundsScanned)
+                    ambush.SetGroundBounds(_groundBounds);
+            }
+        }
+
+        private void ConnectGimmickCallbacks()
+        {
+            switch (_activeGimmick)
+            {
+                case AmbushGimmick ambush:
+                    ambush.OnSpeedOverride = (s) => { _movement.Speed = s; if (_movement is EnemyMovement em) em.SetMaxSpeed(Mathf.Max(s, 1f)); };
+                    ambush.OnMovementStop = () => _movement.Stop();
+                    ambush.OnMovementResume = () => { _movement.Speed = chaseSpeed; if (_movement is EnemyMovement em) em.SetMaxSpeed(chaseSpeed); };
+                    ambush.OnVisibilityToggle = (v) => visionSensor?.SetDistanceOnlyMode(v);
+                    ambush.OnDashMoveTo = (t) => _movement.MoveTo(t);
+                    break;
+
+                case RelentlessChaseGimmick relentless:
+                    relentless.OnSuspicionDecayRateOverride = (m) => suspicionSystem?.SetSuspicionDecayMultiplier(m);
+                    break;
+
+                case SwordfishGimmick swordfish:
+                    swordfish.OnSpeedOverride = (s) => { _movement.Speed = s; if (_movement is EnemyMovement em) em.SetMaxSpeed(Mathf.Max(s, 1f)); };
+                    swordfish.OnMoveTo = (t) => _movement.MoveTo(t);
+                    swordfish.OnMovementStop = () => _movement.Stop();
+                    swordfish.OnChasePauseRequest = (p) => _chaseBehavior?.SetPaused(p);
+                    break;
+
+                case DashChargeGimmick dash:
+                    dash.OnSpeedOverride = (s) => _movement.Speed = s;
+                    dash.OnDashCompleted = () => _stateMachine?.TryTransitionTo(EnemyAIState.Patrol);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region AI Initialization
+
         private void InitializeBehaviors()
         {
-            _patrolBehavior = new PatrolBehavior(
-                enemy: this,
-                movement: _movement,
-                gimmick: _activeGimmick);
+            _patrolBehavior = new PatrolBehavior(this, _movement, _activeGimmick);
+            _chaseBehavior = new ChaseBehavior(this, _movement, _playerTransform, predictionTime: 0.5f);
+            _searchBehavior = new SearchBehavior(this, _movement, _activeGimmick, searchDuration, searchDistance);
 
-            _chaseBehavior = new ChaseBehavior(
-                enemy: this,
-                movement: _movement,
-                playerTransform: _playerTransform,
-                predictionTime: 0.5f);
-
-            _searchBehavior = new SearchBehavior(
-                enemy: this,
-                movement: _movement,
-                gimmick: _activeGimmick,
-                searchDuration: searchDuration,
-                searchDistance: searchDistance);
-
-            // Ground 경계 전달
             if (_isGroundBoundsScanned)
             {
                 _patrolBehavior.SetGroundBounds(_groundBounds);
@@ -145,959 +156,542 @@ namespace HideAndInk.Core.Enemy.Boss
             }
         }
 
-        /// <summary>
-        /// 기믹 초기화 (ScriptableObject 우선, 그 다음 customGimmick)
-        /// </summary>
-        private void InitializeGimmick()
-        {
-            // 1순위: ScriptableObject (gimmickAsset)
-            if (gimmickAsset != null)
-            {
-                _activeGimmick = gimmickAsset as IEnemyGimmick;
-                if (_activeGimmick == null)
-                {
-                    Debug.LogError($"[BossEnemyController] gimmickAsset이 IEnemyGimmick을 구현하지 않았습니다: {gimmickAsset.GetType().Name}");
-                }
-                else
-                {
-#if UNITY_EDITOR
-                    Debug.Log($"[BossEnemyController] ScriptableObject gimmick loaded: {_activeGimmick.Type}");
-#endif
-                }
-            }
-            // 2순위: MonoBehaviour (customGimmick)
-            else if (customGimmick != null)
-            {
-                _activeGimmick = customGimmick as IEnemyGimmick;
-                if (_activeGimmick == null)
-                {
-                    Debug.LogError($"[BossEnemyController] customGimmick이 IEnemyGimmick을 구현하지 않았습니다: {customGimmick.GetType().Name}");
-                }
-                else
-                {
-#if UNITY_EDITOR
-                    Debug.Log($"[BossEnemyController] MonoBehaviour gimmick loaded: {_activeGimmick.Type}");
-#endif
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[BossEnemyController] No gimmick assigned. Set gimmickAsset or customGimmick.");
-            }
-
-            // 기믹 콜백 연결
-            if (_activeGimmick != null)
-            {
-                ConnectGimmickCallbacks();
-                _activeGimmick.OnActivate(transform);
-
-                // SwordfishGimmick에 Player Transform 전달
-                if (_activeGimmick is SwordfishGimmick swordfish && _playerTransform != null)
-                {
-                    swordfish.RefreshPlayerTransform(_playerTransform);
-                }
-
-                // AmbushGimmick일 경우 의심도 모듈을 BossSuspicionSystem에 주입
-                if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
-                {
-                    suspicionSystem.SetSuspicionRadius(ambush.SuspicionRadius);
-#if UNITY_EDITOR
-                    suspicionSystem.linkedGimmick = ambush; // 에디터에서 OnValidate용
-#endif
-                    // 의심도 모듈 주입 (거리 기반 계산)
-                    var suspicionModule = new AmbushSuspicionModule(ambush);
-                    suspicionSystem.SetSuspicionModule(suspicionModule);
-
-                    // Ground Bounds 전달 (매복 위치 생성 시 사용)
-                    if (_isGroundBoundsScanned)
-                    {
-                        ambush.SetGroundBounds(_groundBounds);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 기믹 콜백 연결
-        /// </summary>
-        private void ConnectGimmickCallbacks()
-        {
-            if (_activeGimmick == null) return;
-
-            switch (_activeGimmick)
-            {
-                case AmbushGimmick ambush:
-                    ConnectAmbushCallbacks(ambush);
-                    break;
-                case RelentlessChaseGimmick relentless:
-                    ConnectRelentlessChaseCallbacks(relentless);
-                    break;
-                case ElectricZoneGimmick electric:
-                    ConnectElectricZoneCallbacks(electric);
-                    break;
-                case DashChargeGimmick dash:
-                    ConnectDashChargeCallbacks(dash);
-                    break;
-                case SwordfishGimmick swordfish:
-                    ConnectSwordfishCallbacks(swordfish);
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 가자미: 매복 기믹 콜백
-        /// </summary>
-        private void ConnectAmbushCallbacks(AmbushGimmick ambush)
-        {
-            // 속도 제어
-            ambush.OnSpeedOverride = (speed) =>
-            {
-                _movement.Speed = speed;
-                // EnemyMovement의 _maxSpeed도 함께 조정 (돌진 속도 제한 해제)
-                if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
-                {
-                    em.SetMaxSpeed(speed);
-                }
-            };
-
-            // 이동 멈춤/재개
-            ambush.OnMovementStop = () => _movement.Stop();
-            ambush.OnMovementResume = () =>
-            {
-                _movement.Speed = chaseSpeed;
-                // EnemyMovement의 _maxSpeed도 Chase 속도로 복원
-                if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
-                {
-                    em.SetMaxSpeed(chaseSpeed);
-                }
-            };
-
-            // 시야 모드 전환 (거리 전용 모드 ↔ 일반 시야)
-            ambush.OnVisibilityToggle = (ambushMode) =>
-            {
-                if (visionSensor != null)
-                {
-                    visionSensor.SetDistanceOnlyMode(ambushMode);
-                }
-            };
-
-            // 의심도 상승 (AmbushSuspicionModule에서 전담 처리하므로 콜백 연결 제거 - 이중 상승 방지)
-            // ambush.OnSuspicionIncrease = (rate, deltaTime) => ...
-
-            // 매복 위치 재설정 (Player 근처 랜덤 위치로 이동)
-            ambush.OnRelocateAmbush = (targetPosition) =>
-            {
-                Vector3 clampedTarget = ClampToGroundBounds(targetPosition);
-                _movement.MoveTo(clampedTarget);
-            };
-
-            // PatrolBehavior 이동 제어권 토글
-            ambush.OnPatrolBehaviorOverride = (isOverridden) =>
-            {
-                if (_patrolBehavior != null)
-                {
-                    _patrolBehavior.SetMovementOverride(isOverridden);
-                }
-            };
-
-            // 돌진 모드 토글 (돌진 중에는 ChaseBehavior 이동 제어 중단)
-            ambush.OnDashModeToggle = (isDashing) =>
-            {
-                if (_chaseBehavior != null)
-                {
-                    _chaseBehavior.SetPaused(isDashing);
-                }
-            };
-
-            // 돌진 완료 → 일반 ChaseBehavior로 복귀
-            ambush.OnDashCompleted = (dashTarget) =>
-            {
-                // 돌진 완료 후 ChaseBehavior가 계속 Player 추적
-                // 상태 전환 불필요 (이미 Chase 상태)
-            };
-
-            // 돌진 이동 요청 (ChaseBehavior 이동 중단 후 직접 제어)
-            ambush.OnDashMoveTo = (target) =>
-            {
-                _movement.MoveTo(target);
-            };
-
-            // 돌진 애니메이션 제어 (속도 조절 + Trigger)
-            ambush.OnDashAnimationTrigger = (duration) =>
-            {
-                if (bossAnimator != null)
-                {
-                    // 애니메이션 속도를 돌진 시간에 맞춰 조절
-                    // Speed = AnimationLength / Duration
-                    bossAnimator.speed = chaseAnimationLength / duration;
-                    bossAnimator.SetTrigger("OnDash");
-                }
-            };
-
-            // 돌진 애니메이션 종료 시 속도 복원
-            ambush.OnDashAnimationEnd = () =>
-            {
-                if (bossAnimator != null)
-                {
-                    bossAnimator.speed = 1f;
-                }
-            };
-        }
-
-        /// <summary>
-        /// 곰치: 집요한 추격 기믹 콜백
-        /// </summary>
-        private void ConnectRelentlessChaseCallbacks(RelentlessChaseGimmick relentless)
-        {
-            relentless.SetOriginalSpeed(patrolSpeed);
-
-            // Chase 시 의심도 하락률 감소
-            relentless.OnSuspicionDecayRateOverride = (multiplier) =>
-            {
-                if (suspicionSystem != null)
-                {
-                    suspicionSystem.SetSuspicionDecayMultiplier(multiplier);
-                }
-            };
-
-            // Search 수색 반경 확대 (SearchBehavior에 전달)
-            relentless.OnSearchRadiusOverride = (multiplier) =>
-            {
-                // SearchBehavior는 현재 고정 _searchDistance를 사용하므로
-                // RelentlessChaseGimmick.GetSearchTarget()에서 이미 searchRadiusMultiplier를 적용하므로
-                // 여기서는 별도 처리 불필요 (기믹이 직접 계산)
-            };
-
-            // 집중 순찰 영역 설정 (PatrolBehavior에 전달)
-            relentless.OnPatrolAreaOverride = (center, radius) =>
-            {
-                // PatrolBehavior는 현재 기믹의 GetPatrolTarget()을 사용하므로
-                // 여기서는 별도 처리 불필요 (기믹이 직접 계산)
-            };
-        }
-
-        /// <summary>
-        /// 전기뱀장어: 감전 구역 기믹 콜백
-        /// </summary>
-        private void ConnectElectricZoneCallbacks(ElectricZoneGimmick electric)
-        {
-        }
-
-        /// <summary>
-        /// 백상아리: 초고속 돌진 기믹 콜백
-        /// </summary>
-        private void ConnectDashChargeCallbacks(DashChargeGimmick dash)
-        {
-            dash.OnSpeedOverride = (speed) => _movement.Speed = speed;
-            dash.OnDashCompleted = () =>
-            {
-                if (_stateMachine != null)
-                {
-                    _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
-                }
-            };
-        }
-
-        /// <summary>
-        /// 청새치: 조준 → 예측 돌진 기믹 콜백 + 시각적 피드백
-        /// </summary>
-        private void ConnectSwordfishCallbacks(SwordfishGimmick swordfish)
-        {
-            // ─── 돌진 속도 제어 ───
-            swordfish.OnSpeedOverride = (speed) =>
-            {
-                _movement.Speed = speed;
-                if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
-                {
-                    em.SetMaxSpeed(speed);
-                }
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnSpeedOverride({speed:F1}) 설정후 Speed:{_movement.Speed:F1} IsMoving:{_movement.IsMoving} 위치:{transform.position}");
-#endif
-            };
-
-            // ─── 목표 위치로 이동 ───
-            swordfish.OnMoveTo = (target) =>
-            {
-                _movement.MoveTo(target);
-            };
-
-            // ─── 이동 정지 ───
-            swordfish.OnMovementStop = () =>
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnMovementStop 위치:{transform.position} velocity:{_movement.Velocity}");
-#endif
-                _movement.Stop();
-            };
-
-            // ─── ChaseBehavior 정지/재개 (조준/돌진 중 Player 추적 방지) ───
-            swordfish.OnChasePauseRequest = (pause) =>
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnChasePauseRequest({pause})");
-#endif
-                _chaseBehavior?.SetPaused(pause);
-            };
-
-            // ─── [Controller] 돌진 시작: ChaseBehavior 정지 + 이동 목표 + 애니메이션 ───
-            swordfish.OnChargeStarted = (chargeType, direction) =>
-            {
-                // 돌진 방향으로 이동 목표 설정
-                Vector3 chargeTarget = transform.position + direction * 20f;
-                chargeTarget.y = transform.position.y;
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnChargeStarted 타입:{chargeType} 현재위치:{transform.position} 방향:{direction} MoveTo목표:{chargeTarget}");
-#endif
-                _movement.MoveTo(chargeTarget);
-
-                // ChaseBehavior 정지 (돌진 중 Player 추적 방지)
-                _chaseBehavior?.SetPaused(true);
-
-                // 애니메이션
-                if (bossAnimator != null)
-                {
-                    bossAnimator.speed = 1f;
-                    bossAnimator.SetTrigger("OnDash");
-                }
-            };
-
-            // ─── [Controller] 돌진 종료: 애니메이션 리셋 ───
-            // ChaseBehavior는 쿨타임 중에도 Paused 유지 (Player 추적 방지)
-            // StartAiming에서 다시 Pause, OnChaseExit에서 Unpause
-            swordfish.OnChargeEnded = (chargeType, hitWall) =>
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnChargeEnded 타입:{chargeType} wallHit:{hitWall} 위치:{transform.position}");
-#endif
-                if (bossAnimator != null)
-                {
-                    bossAnimator.speed = 1f;
-                    bossAnimator.ResetTrigger("OnDash");
-                }
-            };
-
-            // ─── [Controller] 스턴 시작: 이동 정지 + ChaseBehavior 정지 + 애니메이션 정지 ───
-            swordfish.OnStunStarted = (duration) =>
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnStunStarted({duration:F1}초) 위치:{transform.position} → Stop, ChaseBehavior정지");
-#endif
-                _movement.Stop();
-                _chaseBehavior?.SetPaused(true);
-
-                if (bossAnimator != null)
-                {
-                    bossAnimator.speed = 0f; // 스턴 중 애니메이션 정지
-                }
-            };
-        }
-
-        /// <summary>
-        /// AI 상태 머신 초기화
-        /// </summary>
         private void InitializeStateMachine()
         {
-            _stateMachine = new EnemyAIStateMachine(
-                patrolState: _patrolBehavior,
-                chaseState: _chaseBehavior,
-                searchState: _searchBehavior);
-
-            // 이벤트 핸들러를 Initialize 전에 등록해야 초기 상태 설정이 적용됨
+            _stateMachine = new EnemyAIStateMachine(_patrolBehavior, _chaseBehavior, _searchBehavior);
             _stateMachine.OnStateChanged += OnAIStateChanged;
             _stateMachine.Initialize(EnemyAIState.Patrol);
-
-            // 초기 속도
             _movement.Speed = patrolSpeed;
         }
+
+        #endregion
+
+        #region AI Update
 
         protected override void UpdateAI(float deltaTime)
         {
             if (_stateMachine == null) return;
 
-            // Player Transform 재확인 (null이면 재탐색)
-            if (_playerTransform == null)
-            {
-                FindPlayer();
-            }
+            if (_playerTransform == null) FindPlayer();
+            if (_playerTransform == null) return;
 
-            // ChaseBehavior의 PlayerTransform 업데이트 (매 프레임)
-            if (_playerTransform != null && _chaseBehavior != null)
-            {
-                _chaseBehavior.SetPlayerTransform(_playerTransform);
-            }
+            _chaseBehavior?.SetPlayerTransform(_playerTransform);
 
-            // SwordfishGimmick에 Player Transform 갱신
-            if (_playerTransform != null && _activeGimmick is SwordfishGimmick swordfish)
-            {
-                swordfish.RefreshPlayerTransform(_playerTransform);
-            }
-
-            // Player 감지
             bool canSeePlayer = CanSeePlayer();
 
-            // 의태 상태 업데이트
+            // 기믹에 Player Transform + 의심도 + 의태 + 시야 상태 전달 (IGimmickPlayerAware)
+            _playerAware?.SetPlayerTransform(_playerTransform);
+            _playerAware?.SetCamouflageState(IsPlayerCamouflaging());
+            _playerAware?.SetPlayerVisible(canSeePlayer);
+            if (_playerAware != null && suspicionSystem != null)
+            {
+                _playerAware.SetSuspicionLevel(Mathf.Clamp01(suspicionSystem.CurrentValue / 100f));
+            }
             UpdateCamouflageState();
-
-            // 의심도 업데이트 (시야/근접 기반)
             UpdateSuspicion(canSeePlayer);
-
-            // 시야각 가시성 업데이트 (의심도 레벨 기반)
             UpdateVisionConeVisibility();
-
-            // 상태 전환 체크
             CheckStateTransitions(canSeePlayer);
-
-            // AI 상태 업데이트
             _stateMachine.Update(deltaTime);
-
-            // 기믹 상태 업데이트
             UpdateGimmick(deltaTime);
+            RestoreSpeedAfterGimmick();
         }
 
-        /// <summary>
-        /// 의태 상태 업데이트
-        /// </summary>
         private void UpdateCamouflageState()
         {
             if (suspicionSystem == null) return;
-
             bool isCamouflaging = IsPlayerCamouflaging();
             bool isPerfect = _camouflageAdapter != null && _camouflageAdapter.IsPerfect;
             suspicionSystem.SetCamouflageState(isCamouflaging, isPerfect);
         }
 
-        /// <summary>
-        /// 기믹 상태 업데이트 (현재 AI 상태에 따라 호출)
-        /// </summary>
         private void UpdateGimmick(float deltaTime)
         {
-            if (_activeGimmick == null) return;
+            if (_activeGimmick == null || _stateMachine == null) return;
 
             switch (_stateMachine.CurrentState)
             {
-                case EnemyAIState.Patrol:
-                    _activeGimmick.OnPatrolUpdate(deltaTime);
-                    break;
-                case EnemyAIState.Chase:
-                    _activeGimmick.OnChaseUpdate(deltaTime);
-                    break;
-                case EnemyAIState.Search:
-                    _activeGimmick.OnSearchUpdate(deltaTime);
-                    break;
+                case EnemyAIState.Patrol: _activeGimmick.OnPatrolUpdate(deltaTime); break;
+                case EnemyAIState.Chase: _activeGimmick.OnChaseUpdate(deltaTime); break;
+                case EnemyAIState.Search: _activeGimmick.OnSearchUpdate(deltaTime); break;
             }
         }
 
         /// <summary>
-        /// Player가 시야 내에 있는지 확인 (순수 시야각 기반)
-        /// 상태 전환용: 의태 여부와 관계없이 시야각/거리/장애물만 체크
+        /// 기믹이 제어권을 반납했는데 speed가 0인 상태면 현재 상태에 맞게 복원
+        /// 모든 기믹의 speed 복원 누락을 안전하게 처리
         /// </summary>
-        private bool CanSeePlayer()
+        private void RestoreSpeedAfterGimmick()
         {
-            if (visionSensor == null || _playerTransform == null) return false;
+            if (_activeGimmick == null || _stateMachine == null) return;
+            if (_activeGimmick.HasMovementOverride) return; // 기믹이 아직 제어 중
 
-            return visionSensor.CanSee(_playerTransform.gameObject);
-        }
-
-        /// <summary>
-        /// Player가 시야 내에 있고 의심도 상승 대상인지 확인
-        /// </summary>
-        private bool CanSeePlayerForSuspicion()
-        {
-            if (visionSensor == null)
+            // 현재 상태에 맞는 목표 속도
+            float targetSpeed = _stateMachine.CurrentState switch
             {
-                Debug.LogWarning("[BossEnemyController] visionSensor is null!");
-                return false;
-            }
-            if (_playerTransform == null)
-            {
-                Debug.LogWarning("[BossEnemyController] _playerTransform is null!");
-                return false;
-            }
-            if (!visionSensor.RaisesSuspicion)
-            {
-                Debug.Log("[BossEnemyController] visionSensor.RaisesSuspicion is false!");
-                return false;
-            }
+                EnemyAIState.Patrol => patrolSpeed,
+                EnemyAIState.Chase => chaseSpeed,
+                EnemyAIState.Search => searchSpeed,
+                _ => patrolSpeed
+            };
 
-            // Player가 의태 중이면 감지 안 됨
-            if (IsPlayerCamouflaging()) return false;
-
-            bool canSee = visionSensor.CanSee(_playerTransform.gameObject);
+            // 속도가 비정상적으로 낮으면 복원 (0.5f 이하는 기믹이 0으로 내려놓은 것으로 간주)
+            if (_movement != null && _movement.Speed < targetSpeed * 0.5f && _movement.Speed < 1f)
+            {
+                float prevSpeed = _movement.Speed;
+                _movement.Speed = targetSpeed;
 #if UNITY_EDITOR
-            Debug.Log($"[BossEnemyController] CanSeePlayerForSuspicion: {canSee}, Distance: {Vector3.Distance(transform.position, _playerTransform.position):F1}m");
-#endif
-            return canSee;
-        }
-
-        /// <summary>
-        /// 의심도 업데이트 (시야/근접 기반)
-        /// AmbushGimmick일 경우 의심도 계산은 AmbushSuspicionModule에서 전담 (이중 상승 방지)
-        /// </summary>
-        private void UpdateSuspicion(bool canSeePlayer)
-        {
-            if (suspicionSystem == null) return;
-
-            // 가자미 기믹이 활성화되어 있으면
-            if (_activeGimmick is AmbushGimmick)
-            {
-                // Chase 중에는 의심도 상승 차단 (하락만 허용)
-                if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
-                {
-                    suspicionSystem.BlockSuspicionIncrease();
-                }
-                else
-                {
-                    suspicionSystem.AllowSuspicionIncrease();
-                }
-                // 의심도 계산은 AmbushSuspicionModule에서 전담 (거리 기반, 모든 상태 커버)
-                // 컨트롤러에서는 의태 상태만 전달
-                return;
-            }
-            else
-            {
-                // 일반 보스: 시야 기반 의심도 보고 (의태 중이면 무시)
-                // raisesSuspicion이 true인 센서만 의심도 상승에 기여
-                if (CanSeePlayerForSuspicion())
-                {
-                    suspicionSystem.ReportVisionDetection(1f);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 시야각 및 의심 범위 바닥 가시성 업데이트 (상태 기반)
-        /// Patrol (Ambush): SuspicionRadiusFloor ON, VisionConeFloor OFF
-        /// Chase: SuspicionRadiusFloor OFF, VisionConeFloor ON
-        /// Search: 둘 다 OFF
-        /// </summary>
-        private void UpdateVisionConeVisibility()
-        {
-            if (_stateMachine == null) return;
-
-            var currentState = _stateMachine.CurrentState;
-            bool isAmbush = _activeGimmick is AmbushGimmick;
-
-            // VisionConeFloor: ChaseOnly 모드일 때 SetChasing으로 제어
-            if (visionConeRenderer != null)
-            {
-                bool isChasing = (currentState == EnemyAIState.Chase);
-                visionConeRenderer.SetChasing(isChasing);
-            }
-
-            // SuspicionRadiusFloor: Ambush일 때 Hidden, 일반 보스는 ChaseOnly
-            if (suspicionSystem != null)
-            {
-                if (isAmbush)
-                {
-                    suspicionSystem.SetFloorVisibilityMode(HideAndInk.Core.Perception.SuspicionFloorVisibilityMode.Hidden);
-                }
-                else
-                {
-                    suspicionSystem.SetFloorVisibilityMode(HideAndInk.Core.Perception.SuspicionFloorVisibilityMode.ChaseOnly);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 상태 전환 조건 체크
-        /// </summary>
-        private void CheckStateTransitions(bool canSeePlayer)
-        {
-            if (_stateMachine == null || suspicionSystem == null) return;
-
-            var currentState = _stateMachine.CurrentState;
-            var suspicionLevel = suspicionSystem.CurrentLevel;
-
-            // Ambush 기믹 전용: 의심도 기반 상태 전환
-            bool isAmbushGimmick = _activeGimmick is AmbushGimmick;
-            float ambushDropThreshold = isAmbushGimmick ? (_activeGimmick as AmbushGimmick).SuspicionDropThreshold : 0f;
-            float suspicionValue = suspicionSystem.CurrentValue;
-
-            switch (currentState)
-            {
-                case EnemyAIState.Patrol:
-                    // Patrol → Chase: 시야각에 Player가 보이면 즉시 추적 (의태 무관)
-                    if (canSeePlayer)
-                    {
-                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
-                    }
-                    break;
-
-                case EnemyAIState.Chase:
-                    // Chase → Search: Player가 추적 범위를 벗어나면 Search (의태 무시, 거리 기반)
-                    // Ambush 기믹: 의심도가 임계값 이하로 떨어지면 바로 Patrol 복귀 (Search 걸러뜀)
-                    if (isAmbushGimmick)
-                    {
-                        if (suspicionValue < ambushDropThreshold)
-                        {
-#if UNITY_EDITOR
-                            Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Patrol (Re-ambush)");
-#endif
-                            _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
-                        }
-                    }
-                    else
-                    {
-                        // 일반 보스: ChaseBehavior의 거리 체크로 Player 놓침 판단 (의태 무시)
-                        // 청새치: 전투 사이클 중(조준/돌진/쿨타임)에는 Chase 유지 (Player가 멀어져도 Search 전환하지 않음)
-                        bool isSwordfishCycling = _activeGimmick is SwordfishGimmick swordfishCheck && swordfishCheck.IsInCombatCycle;
-                        bool isOutOfRange = _chaseBehavior != null && _chaseBehavior.IsPlayerOutOfRange();
-#if UNITY_EDITOR
-                        if (isOutOfRange)
-                        {
-                            Debug.Log($"[SwordfishTrace] CheckStateTransitions Chase→Search: combatCycle={isSwordfishCycling} outOfRange={isOutOfRange}");
-                        }
-#endif
-                        if (!isSwordfishCycling && isOutOfRange)
-                        {
-                            if (_playerTransform != null)
-                            {
-                                _searchBehavior.SetLastKnownPosition(_playerTransform.position);
-                            }
-                            _stateMachine.TryTransitionTo(EnemyAIState.Search);
-                        }
-                    }
-                    break;
-
-                case EnemyAIState.Search:
-                    // Search → Chase: Player 재발견
-                    if (canSeePlayer)
-                    {
-                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
-                    }
-                    // Ambush 전용: 의심도 하락으로 매복 복귀
-                    else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
-                    {
-#if UNITY_EDITOR
-                        Debug.Log($"[BossEnemyController] Ambush: Suspicion dropped in Search ({suspicionValue:F1} < {ambushDropThreshold:F1}) → Patrol (Re-ambush)");
-#endif
-                        _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
-                    }
-                    // Search → Patrol: 탐색 시간 초과
-                    else if (_searchBehavior.IsSearchTimeout())
-                    {
-                        _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
-                    }
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// AI 상태 변경 시 호출
-        /// </summary>
-        private void OnAIStateChanged(EnemyAIState previous, EnemyAIState current)
-        {
-            // 상태별 속도 변경
-            switch (current)
-            {
-                case EnemyAIState.Patrol:
-                    _movement.Speed = patrolSpeed;
-                    if (bossAnimator != null) bossAnimator.SetBool("IsChase", false);
-                    // Patrol 복귀 시 의심도 하락 배율 복원
-                    if (suspicionSystem != null)
-                    {
-                        suspicionSystem.SetSuspicionDecayMultiplier(1f);
-                    }
-                    // Patrol: 매복 모드 (거리 전용 360도)
-                    if (_activeGimmick is AmbushGimmick && visionSensor != null)
-                    {
-                        visionSensor.SetDistanceOnlyMode(true);
-#if UNITY_EDITOR
-                        Debug.Log($"[BossEnemyController] Patrol: 360도 거리 전용 모드 활성화");
-#endif
-                    }
-                    break;
-                case EnemyAIState.Chase:
-                    _movement.Speed = chaseSpeed;
-                    if (bossAnimator != null) bossAnimator.SetBool("IsChase", true);
-                    // Chase 진입 시 의심도 100% 설정
-                    if (suspicionSystem != null)
-                    {
-                        suspicionSystem.SetSuspicion(chaseStartSuspicion);
-                        suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
-                    }
-                    // Chase: 360도 감지 (매복 보스는 Player 위치 이미 파악)
-                    if (_activeGimmick is AmbushGimmick && visionSensor != null)
-                    {
-                        visionSensor.SetDistanceOnlyMode(true);
-#if UNITY_EDITOR
-                        Debug.Log($"[BossEnemyController] Chase: 360도 거리 전용 모드 활성화");
-#endif
-                    }
-                    break;
-                case EnemyAIState.Search:
-                    _movement.Speed = searchSpeed;
-                    // Search: 부채꼴 모드 복귀 (일반 수색)
-                    if (_activeGimmick is AmbushGimmick && visionSensor != null)
-                    {
-                        visionSensor.SetDistanceOnlyMode(false);
-#if UNITY_EDITOR
-                        Debug.Log($"[BossEnemyController] Search: 부채꼴 모드 복귀");
-#endif
-                    }
-                    break;
-            }
-
-            // 기믹 상태 변경 알림
-            if (_activeGimmick != null)
-            {
-                // 이전 상태 Exit
-                switch (previous)
-                {
-                    case EnemyAIState.Patrol:
-                        _activeGimmick.OnPatrolExit();
-                        break;
-                    case EnemyAIState.Chase:
-                        _activeGimmick.OnChaseExit();
-                        break;
-                    case EnemyAIState.Search:
-                        _activeGimmick.OnSearchExit();
-                        break;
-                }
-
-                // 현재 상태 Enter
-                switch (current)
-                {
-                    case EnemyAIState.Patrol:
-                        _activeGimmick.OnPatrolEnter();
-                        break;
-                    case EnemyAIState.Chase:
-                        _activeGimmick.OnChaseEnter();
-                        break;
-                    case EnemyAIState.Search:
-                        _activeGimmick.OnSearchEnter();
-                        break;
-                }
-            }
-        }
-
-        #region 일반 몬스터 알림 연동
-
-        /// <summary>
-        /// 일반 몬스터가 Player 위치를 알림
-        /// Player 위치가 Ground 위에 있으면 해당 위치로 이동
-        /// </summary>
-        public void AlertPlayerPosition(Vector3 playerPosition)
-        {
-            // Player 위치가 Ground 위에 있는지 검증
-            if (_movement.IsPositionOnGround(playerPosition))
-            {
-                // 탐색 상태에 마지막 위치 전달
-                _searchBehavior.SetLastKnownPosition(playerPosition);
-
-                // Chase 상태로 전환
-                if (_stateMachine != null)
-                {
-                    _stateMachine.TryTransitionTo(EnemyAIState.Chase);
-                }
-
-#if UNITY_EDITOR
-                Debug.Log($"[BossEnemy] Player position alerted: {playerPosition}");
-#endif
-            }
-            else
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[BossEnemy] Alert ignored - Player position not on Ground: {playerPosition}");
+                Debug.Log($"[BossEnemyController] Gimmick speed restored: {prevSpeed:F1} → {targetSpeed:F1} ({_stateMachine.CurrentState})");
 #endif
             }
         }
 
         #endregion
 
+        #region Detection & Suspicion
+
+        private bool CanSeePlayer()
+        {
+            return visionSensor != null && _playerTransform != null &&
+                   visionSensor.CanSee(_playerTransform.gameObject);
+        }
+
         /// <summary>
-        /// 이동 처리 오버라이드
-        /// Chase 상태에서는 Ground 검증을 완화 (Player 추적 우선)
-        /// Swordfish 차징 중에는 직접 Transform 조작
+        /// 시야 없이 거리만으로 Player 감지 (Chase 진입용)
+        /// AmbushGimmick 등 시야를 가리는 기믹에서도 동작하도록 보장
         /// </summary>
+        private bool IsPlayerCloseEnough()
+        {
+            if (_playerTransform == null) return false;
+            if (proximityChaseDistance <= 0f) return false;
+            if (IsPlayerCamouflaging()) return false; // 의태 중엔 근접 감지 안 함
+
+            float distance = Vector3.Distance(transform.position, _playerTransform.position);
+            return distance <= proximityChaseDistance;
+        }
+
+        private void UpdateSuspicion(bool canSeePlayer)
+        {
+            if (suspicionSystem == null) return;
+
+            if (_activeGimmick is AmbushGimmick)
+            {
+                if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
+                    suspicionSystem.BlockSuspicionIncrease();
+                else
+                    suspicionSystem.AllowSuspicionIncrease();
+                return;
+            }
+
+            if (canSeePlayer && !IsPlayerCamouflaging() && visionSensor != null && visionSensor.RaisesSuspicion)
+            {
+                suspicionSystem.ReportVisionDetection(1f);
+            }
+        }
+
+        private void UpdateVisionConeVisibility()
+        {
+            if (visionConeRenderer != null)
+                visionConeRenderer.SetChasing(_stateMachine != null && _stateMachine.IsChase);
+
+            if (suspicionSystem != null)
+            {
+                suspicionSystem.SetFloorVisibilityMode(
+                    _activeGimmick is AmbushGimmick
+                        ? SuspicionFloorVisibilityMode.Hidden
+                        : SuspicionFloorVisibilityMode.ChaseOnly);
+            }
+        }
+
+        #endregion
+
+        #region State Transitions
+
+        private void CheckStateTransitions(bool canSeePlayer)
+        {
+            if (_stateMachine == null || suspicionSystem == null) return;
+
+            var currentState = _stateMachine.CurrentState;
+            float suspicionValue = suspicionSystem.CurrentValue;
+            bool isAmbushGimmick = _activeGimmick is AmbushGimmick;
+            float ambushDropThreshold = isAmbushGimmick ? ((AmbushGimmick)_activeGimmick).SuspicionDropThreshold : 0f;
+
+            switch (currentState)
+            {
+                case EnemyAIState.Patrol:
+                    if (canSeePlayer || IsPlayerCloseEnough())
+                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    break;
+
+                case EnemyAIState.Chase:
+                    if (isAmbushGimmick)
+                    {
+                        if (suspicionValue < ambushDropThreshold)
+                            _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                    }
+                    else
+                    {
+                        bool inCombatCycle = _combatCycle != null && _combatCycle.IsInCombatCycle;
+                        bool shouldLosePlayer = _chaseBehavior != null && (
+                            _chaseBehavior.IsPlayerOutOfRange() ||
+                            (IsPlayerCamouflaging() && !inCombatCycle) // 의태 + 전투 사이클 無 → Player 놓침
+                        );
+                        if (!inCombatCycle && shouldLosePlayer)
+                        {
+                            float normalized = Mathf.Clamp01(suspicionValue / 100f);
+
+                            if (_transitionOverride != null && _transitionOverride.ShouldSkipSearchOnLostPlayer(normalized))
+                            {
+                                // 의심도 Safe → Patrol 직행 (위치 기억 안 함)
+                                _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                            }
+                            else if (IsPlayerCamouflaging())
+                            {
+                                // 의태로 놓침 → 위치 정보 없이 Search (기억 안 함)
+                                _stateMachine.TryTransitionTo(EnemyAIState.Search);
+                            }
+                            else
+                            {
+                                // 의심도 높음 → Search (마지막 위치 기억)
+                                if (_playerTransform != null)
+                                    _searchBehavior.SetLastKnownPosition(_playerTransform.position);
+                                _stateMachine.TryTransitionTo(EnemyAIState.Search);
+                            }
+                        }
+                    }
+                    break;
+
+                case EnemyAIState.Search:
+                    if (canSeePlayer)
+                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
+                        _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                    else if (_searchBehavior.IsSearchTimeout())
+                        _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                    break;
+            }
+        }
+
+        private void OnAIStateChanged(EnemyAIState previous, EnemyAIState current)
+        {
+            switch (current)
+            {
+                case EnemyAIState.Patrol:
+                    _movement.Speed = patrolSpeed;
+                    if (suspicionSystem != null)
+                    {
+                        suspicionSystem.SetVisionIncreaseSpeed(10f); // Patrol 중 기본 상승
+                        suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                    }
+                    break;
+                case EnemyAIState.Chase:
+                    _movement.Speed = chaseSpeed;
+                    if (suspicionSystem != null)
+                    {
+                        // Chase 중 빠른 의심도 상승 (점프 없이 rate 기반)
+                        suspicionSystem.SetVisionIncreaseSpeed(30f);
+                        suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
+                    }
+                    break;
+                case EnemyAIState.Search:
+                    _movement.Speed = searchSpeed;
+                    if (suspicionSystem != null)
+                    {
+                        suspicionSystem.SetVisionIncreaseSpeed(15f); // Search 중 중간 상승
+                        suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                    }
+                    break;
+            }
+
+            // Gimmick enter/exit
+            if (_activeGimmick != null)
+            {
+                switch (previous)
+                {
+                    case EnemyAIState.Patrol: _activeGimmick.OnPatrolExit(); break;
+                    case EnemyAIState.Chase: _activeGimmick.OnChaseExit(); break;
+                    case EnemyAIState.Search: _activeGimmick.OnSearchExit(); break;
+                }
+                switch (current)
+                {
+                    case EnemyAIState.Patrol: _activeGimmick.OnPatrolEnter(); break;
+                    case EnemyAIState.Chase: _activeGimmick.OnChaseEnter(); break;
+                    case EnemyAIState.Search: _activeGimmick.OnSearchEnter(); break;
+                }
+            }
+        }
+
+        protected override void OnGroundEdgeReached()
+        {
+            base.OnGroundEdgeReached();
+
+            // PatrolBehavior가 같은 경계 목표를 반복하지 않도록 강제 전환
+            if (_activeGimmick == null || !_activeGimmick.HasMovementOverride)
+            {
+                // 보스의 현재 이동 방향 기준 반대 방향으로 새 Patrol 목표 설정
+                if (_movement != null)
+                {
+                    float reverseX = _movement.Velocity.x > 0f ? -1f : 1f;
+                    Vector3 newTarget = transform.position + new Vector3(reverseX * 5f, 0f, 0f);
+                    _movement.MoveTo(newTarget);
+                }
+
+                // PatrolBehavior의 현재 목표를 무효화 (다음 OnUpdate에서 PickNewTarget 실행 유도)
+                if (_patrolBehavior != null)
+                {
+                    _patrolBehavior.InvalidateTarget();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Movement & Direction
+
         protected override void UpdateMovement(float deltaTime)
         {
-            if (_movement == null) return;
+            base.UpdateMovement(deltaTime);
 
-            // Swordfish 차징 중: 직접 Transform 이동 (EnemyMovement 속도 이슈 우회)
-            if (_activeGimmick is SwordfishGimmick sg && sg.CurrentStateName == "Charging")
+            if (_isGroundBoundsScanned)
             {
-                // Gimmick에서 차징 방향과 속도를 받아 직접 이동
-                Vector3 chargeDir = sg.GetChargeDirection();
-                float chargeSpd = sg.GetChargeSpeed();
-                Vector3 newPos = transform.position + chargeDir * chargeSpd * deltaTime;
-                newPos.y = transform.position.y;
-
-                transform.position = newPos;
-                return;
-            }
-
-            _movement.Update(deltaTime);
-
-            // Chase 상태에서는 Ground 검증을 스킵 (Player 추적 우선)
-            bool isChasing = _stateMachine != null && _stateMachine.IsChase;
-
-            if (_movement.IsMoving && !isChasing)
-            {
-                if (!_movement.IsGroundAhead())
-                {
-                    _movement.Stop();
-                    OnGroundEdgeReached();
-                    return;
-                }
-            }
-
-            // 속도를 실제 Transform에 적용 (X-Z 평면, Y축 고정)
-            Vector3 velocity = _movement.Velocity;
-            Vector3 newPosition = transform.position;
-            newPosition.x += velocity.x * deltaTime;
-            newPosition.z += velocity.z * deltaTime;
-            transform.position = newPosition;
-
-            // 활동 범위 제한 (원형)
-            if (maxMoveRadius > 0f)
-            {
-                Vector3 offset = transform.position - _startPosition;
-                float dist = new Vector3(offset.x, 0f, offset.z).magnitude;
-                if (dist > maxMoveRadius)
-                {
-                    Vector3 clamped = _startPosition + new Vector3(offset.x, 0f, offset.z).normalized * maxMoveRadius;
-                    clamped.y = transform.position.y;
-                    transform.position = clamped;
-                    _movement.Stop();
-                }
+                Vector3 clamped = _groundBounds.ClampXZ(transform.position);
+                clamped.y = transform.position.y;
+                transform.position = clamped;
             }
         }
 
-        /// <summary>
-        /// 이동 방향에 따라 스프라이트 좌우 반전
-        /// </summary>
-        private void UpdateSpriteDirection()
-        {
-            UpdateSpriteFlipX(bossSpriteRenderer, isDefaultFacingLeft, _movement?.Velocity.x ?? 0f);
-        }
-
-        /// <summary>
-        /// 방향 업데이트: transform + enemyForward 회전 (시야 센서 연동)
-        /// Swordfish 조준/차징 중에는 Player/돌진 방향으로 회전
-        /// </summary>
         protected override void UpdateViewDirection()
         {
-            SwordfishGimmick sg = _activeGimmick as SwordfishGimmick;
+            // 쿨타임 감소 (base class 로직 유지)
+            if (_directionChangeTimer > 0f)
+                _directionChangeTimer -= Time.deltaTime;
 
-            // Swordfish 조준 중: Player 방향으로 transform 회전
-            if (sg != null && sg.ShouldFacePlayer && _playerTransform != null)
+            Vector3? facingDir = null;
+
+            // 1순위: 기믹 방향 오버라이드
+            if (_viewDir != null && _viewDir.OverridesViewDirection && _playerTransform != null)
             {
-                float dirToPlayer = _playerTransform.position.x - transform.position.x;
-                bool movingRight = dirToPlayer > 0;
-                transform.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
-                if (enemyForward != null)
-                    enemyForward.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
-                return;
+                facingDir = _viewDir.GetViewDirectionVector();
+
+                if (_viewDir.ShowChargeIndicator)
+                    UpdateChargeIndicator(facingDir.Value);
+                else
+                    HideChargeIndicator();
+            }
+            // 2순위: 이동 방향
+            else
+            {
+                HideChargeIndicator();
+
+                if (_movement == null || !_movement.IsMoving) return;
+                if (_directionChangeTimer > 0f) return; // 쿨타임 중
+
+                float vx = _movement.Velocity.x;
+                if (Mathf.Abs(vx) < 0.01f) return;
+
+                facingDir = vx > 0f ? Vector3.right : Vector3.left;
+
+                // 방향 변경 쿨타임 (base class와 동일한 flicker 방지)
+                MoveDirection newDir = vx > 0f ? MoveDirection.Right : MoveDirection.Left;
+                if (newDir != _lastAppliedDirection)
+                {
+                    _lastAppliedDirection = newDir;
+                    _directionChangeTimer = _directionChangeCooldown;
+                }
             }
 
-            // Swordfish 차징 중: 돌진 방향으로 회전
-            if (sg != null && sg.CurrentStateName == "Charging")
+            if (facingDir.HasValue)
             {
-                Vector3 chargeDir = sg.GetChargeDirection();
-                bool movingRight = chargeDir.x > 0;
-                transform.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
-                if (enemyForward != null)
-                    enemyForward.localEulerAngles = new Vector3(0f, movingRight ? 180f : 0f, 0f);
-                return;
+                ApplyFacingDirection(facingDir.Value);
             }
-
-            // 기본: base class가 transform 회전 처리
-            base.UpdateViewDirection();
         }
 
-        #region Player 데미지 처리
+        /// <summary>
+        /// SpriteRenderer.flipX로 방향 전환 (Animator-safe)
+        /// vision cone 방향도 함께 업데이트
+        /// </summary>
+        private void ApplyFacingDirection(Vector3 dir)
+        {
+            if (bossSprite != null)
+            {
+                bool flip = isDefaultFacingLeft ? dir.x > 0f : dir.x < 0f;
+                bossSprite.flipX = flip;
+
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] Facing: dir.x={dir.x:F2}, flipX={flip}, sprite={bossSprite.flipX}");
+#endif
+            }
+
+            // Vision cone 방향 동기화 (transform.right 대신 custom 방향 사용)
+            if (visionSensor != null)
+            {
+                visionSensor.SetCustomViewDirection(new Vector3(dir.x, 0f, 0f).normalized);
+            }
+        }
+
+        #endregion
+
+        #region Charge Indicator (청새치 돌진 예고)
 
         /// <summary>
-        /// PlayerLives + Rigidbody 캐싱
+        /// 돌진 인디케이터 초기화 (LineRenderer 기반 붉은 사각형)
         /// </summary>
+        private void InitializeChargeIndicator()
+        {
+            if (_chargeIndicator != null) return;
+
+            GameObject ind = new GameObject("ChargeIndicator");
+            ind.transform.SetParent(transform);
+            ind.transform.localPosition = Vector3.zero;
+            ind.layer = gameObject.layer;
+
+            _chargeIndicator = ind.AddComponent<LineRenderer>();
+            _chargeIndicator.useWorldSpace = true;
+            _chargeIndicator.loop = true;
+            _chargeIndicator.positionCount = 4;
+
+            // 붉은색 반투명
+            _chargeIndicator.startColor = new Color(1f, 0f, 0f, 0.6f);
+            _chargeIndicator.endColor = new Color(1f, 0f, 0f, 0.6f);
+
+            // 선 두께
+            _chargeIndicator.startWidth = 0.1f;
+            _chargeIndicator.endWidth = 0.1f;
+
+            // Z-fighting 방지
+            _chargeIndicator.sortingLayerName = "Default";
+            _chargeIndicator.sortingOrder = -1;
+
+            // 재질 (Unlit/Color or Standard)
+            Material mat = new Material(Shader.Find("Unlit/Color"));
+            if (mat != null)
+            {
+                mat.color = new Color(1f, 0f, 0f, 0.6f);
+                _chargeIndicator.material = mat;
+            }
+
+            _chargeIndicator.enabled = false;
+        }
+
+        /// <summary>
+        /// 돌진 방향으로 붉은 사각형 표시
+        /// </summary>
+        private void UpdateChargeIndicator(Vector3 facingDir)
+        {
+            if (_chargeIndicator == null) InitializeChargeIndicator(); // 안전장치
+            if (_chargeIndicator == null) return;
+
+            // 사각형 4개 꼭짓점 (로컬 좌표)
+            // facingDir 방향으로 길게, 수직 방향으로 폭을 줌
+            Vector3 perp = Vector3.Cross(facingDir, Vector3.up).normalized;
+            float halfW = chargeIndicatorWidth * 0.5f;
+
+            // 보스 월드 위치 기준으로 indicator 배치
+            Vector3 bossWorldPos = transform.position;
+
+            // 바닥 높이 찾기 (보스의 groundLayer 사용)
+            float floorY = bossWorldPos.y + 0.05f;
+            int floorLayer = groundLayer.value > 0 ? groundLayer.value : (1 << LayerMask.NameToLayer("Default"));
+            if (Physics.Raycast(bossWorldPos + Vector3.up * 0.1f, Vector3.down,
+                out RaycastHit floorHit, 5f, floorLayer))
+            {
+                floorY = floorHit.point.y + 0.05f;
+            }
+
+            Vector3[] corners = new Vector3[4];
+            Vector3 origin = new Vector3(bossWorldPos.x, floorY, bossWorldPos.z);
+            // 시작점 (보스 위치 약간 앞) — 월드 좌표
+            corners[0] = origin + facingDir * 0.5f + perp * halfW;
+            corners[1] = origin + facingDir * 0.5f - perp * halfW;
+            // 끝점 (chargeIndicatorLength 앞)
+            corners[2] = origin + facingDir * chargeIndicatorLength - perp * halfW;
+            corners[3] = origin + facingDir * chargeIndicatorLength + perp * halfW;
+
+            _chargeIndicator.SetPositions(corners);
+            _chargeIndicator.enabled = true;
+        }
+
+        /// <summary>
+        /// 돌진 인디케이터 숨김
+        /// </summary>
+        private void HideChargeIndicator()
+        {
+            if (_chargeIndicator != null)
+                _chargeIndicator.enabled = false;
+        }
+
+        #endregion
+
+        #region Player Damage
+
+        /// <summary>
+        /// Rigidbody 설정: kinematic + 회전/위치 고정
+        /// (transform.position 직접 제어와 Rigidbody 중력 충돌 방지)
+        /// </summary>
+        private void SetupRigidbody()
+        {
+            var rb = GetComponent<Rigidbody>();
+            if (rb == null) return;
+            rb.isKinematic = true;
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
+            rb.useGravity = false; // 중력 사용 안 함 (script가 직접 제어)
+        }
+
         private void CacheBossPlayerComponents()
         {
             if (_playerTransform != null)
             {
-                _bossPlayerLives = _playerTransform.GetComponent<HideAndInk.Core.Player.PlayerLives>();
-                _bossPlayerRigidbody = _playerTransform.GetComponent<Rigidbody>();
+                _playerLives = _playerTransform.GetComponent<PlayerLives>();
+                _playerRigidbody = _playerTransform.GetComponent<Rigidbody>();
             }
-
-            if (_bossPlayerLives == null)
-            {
-                _bossPlayerLives = FindObjectOfType<HideAndInk.Core.Player.PlayerLives>();
-            }
-
-            if (_bossPlayerRigidbody == null && _playerTransform != null)
-            {
-                _bossPlayerRigidbody = _playerTransform.GetComponent<Rigidbody>();
-            }
+            if (_playerLives == null)
+                _playerLives = FindObjectOfType<PlayerLives>();
+            if (_playerRigidbody == null && _playerTransform != null)
+                _playerRigidbody = _playerTransform.GetComponent<Rigidbody>();
         }
 
-        /// <summary>
-        /// 물리 충돌 시 데미지 처리
-        /// Chase 중이거나 기믹 공격 중(돌진/대시)일 때만 데미지가 들어감
-        /// </summary>
         private void OnCollisionEnter(Collision collision)
         {
             if (!collision.gameObject.CompareTag("Player")) return;
-            if (_bossPlayerLives == null || _bossPlayerLives.IsInvincible) return;
-
-            // 데미지를 줄 수 있는 상태인지 확인
+            if (_playerLives == null || _playerLives.IsInvincible) return;
             if (!CanBossDamagePlayer()) return;
 
-            // 데미지
-            _bossPlayerLives.TakeDamage();
-
-            // 넉백
-            ApplyBossKnockback();
-
-#if UNITY_EDITOR
-            Debug.Log($"[BossEnemy] Contact damage! Lives left: {_bossPlayerLives.CurrentLives}, State: {_stateMachine?.CurrentState}");
-#endif
+            _playerLives.TakeDamage();
+            ApplyKnockback();
         }
 
-        /// <summary>
-        /// 현재 보스가 Player에게 데미지를 줄 수 있는 상태인지 확인
-        /// Chase 중이거나, 기믹이 돌진/대시 공격 중일 때 true
-        /// </summary>
         private bool CanBossDamagePlayer()
         {
-            // 1. Chase 상태면 항상 데미지 가능
             if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
-            {
                 return true;
-            }
 
-            // 2. 기믹별 공격 상태 확인
             if (_activeGimmick != null)
             {
-                switch (_activeGimmick)
-                {
-                    case AmbushGimmick ambush:
-                        return ambush.IsDashing;
-                    case DashChargeGimmick dash:
-                        return dash.IsCharging;
-                    case SwordfishGimmick swordfish:
-                        return swordfish.IsCharging;
-                }
+                // Ambush는 HasMovementOverride로 판정 (항상 override라 dashing 여부와 무관)
+                if (_activeGimmick is AmbushGimmick ambush && ambush.HasMovementOverride) return true;
+                // 그 외 기믹은 IGimmickCombatCycle.IsCharging으로 판정
+                if (_combatCycle != null && _combatCycle.IsCharging) return true;
             }
-
             return false;
         }
 
-        /// <summary>
-        /// Player 넉백 적용
-        /// </summary>
-        private void ApplyBossKnockback()
+        private void ApplyKnockback()
         {
-            if (_playerTransform == null || _bossPlayerRigidbody == null) return;
+            if (_playerTransform == null || _playerRigidbody == null) return;
+            Vector3 dir = (_playerTransform.position - transform.position).normalized;
+            dir.y = 0f;
+            _playerRigidbody.AddForce(dir * knockbackForce, ForceMode.Impulse);
+        }
 
-            Vector3 knockbackDir = (_playerTransform.position - transform.position).normalized;
-            knockbackDir.y = 0f;
+        #endregion
 
-            _bossPlayerRigidbody.AddForce(knockbackDir * bossKnockbackForce, ForceMode.Impulse);
+        #region Alert (일반 몬스터 연동)
 
-#if UNITY_EDITOR
-            Debug.Log($"[BossEnemy] Knockback! Force: {bossKnockbackForce}, Direction: {knockbackDir}");
-#endif
+        public void AlertPlayerPosition(Vector3 playerPosition)
+        {
+            if (!_movement.IsPositionOnGround(playerPosition)) return;
+
+            _searchBehavior.SetLastKnownPosition(playerPosition);
+            _stateMachine?.TryTransitionTo(EnemyAIState.Chase);
         }
 
         #endregion
@@ -1105,13 +699,12 @@ namespace HideAndInk.Core.Enemy.Boss
         protected virtual void OnDestroy()
         {
             if (_stateMachine != null)
-            {
                 _stateMachine.OnStateChanged -= OnAIStateChanged;
-            }
+            _activeGimmick?.OnDeactivate();
 
-            if (_activeGimmick != null)
+            if (_chargeIndicator != null && _chargeIndicator.gameObject != null)
             {
-                _activeGimmick.OnDeactivate();
+                Destroy(_chargeIndicator.gameObject); // GameObject Destroy 시 Material도 자동 해제
             }
         }
     }

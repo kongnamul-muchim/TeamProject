@@ -36,8 +36,6 @@ namespace HideAndInk.Core.Enemy.Normal
         [SerializeField] private float idleTime = 1f;
 
         [Header("스프라이트 방향")]
-        [Tooltip("기본 에셋이 왼쪽을 보고 있는지 여부 (true: 왼쪽 기본, false: 오른쪽 기본)")]
-        [SerializeField] private bool isDefaultFacingLeft = true;
         [SerializeField] private SpriteRenderer enemySpriteRenderer;
         [SerializeField] private Animator enemyAnimator;
 
@@ -76,6 +74,7 @@ namespace HideAndInk.Core.Enemy.Normal
 
         protected override void Start()
         {
+            isDefaultFacingLeft = true; // 게: 기본 왼쪽
             base.Start();
 
             // Rigidbody 확인/추가

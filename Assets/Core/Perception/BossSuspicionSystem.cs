@@ -258,10 +258,12 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 시야 기반 의심도 보고 (Player가 시야각 내에 있을 때)
         /// 의태 중이면 상승 안 함
+        /// 상승 차단 중(Ambush Chase)이면 무시
         /// </summary>
         public void ReportVisionDetection(float intensity = 1f)
         {
             if (_isCamouflaging) return; // 의태 중이면 시야 기반 상승 무시
+            if (_isIncreaseBlocked) return; // 상승 차단 중이면 무시
 
             _currentValue += intensity * visionIncreaseSpeed * Time.deltaTime;
             _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
@@ -311,12 +313,27 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의심도 강제 설정
+        /// 의심도 강제 설정 (내부 전용)
+        /// 외부에서는 AddSuspicion(rate, deltaTime)만 사용
         /// </summary>
-        public void SetSuspicion(float value)
+        private void SetSuspicion(float value)
         {
+            float prev = _currentValue;
             _currentValue = Mathf.Clamp(value, 0f, 100f);
             CheckLevelChange();
+
+#if UNITY_EDITOR
+            if (Mathf.Abs(_currentValue - prev) > 1f)
+                Debug.LogWarning($"[BossSuspicionSystem] SetSuspicion: {prev:F1} → {_currentValue:F1} (점프 발생)");
+#endif
+        }
+
+        /// <summary>
+        /// 시야 기반 의심도 상승 속도 설정 (상태 전환 시 사용)
+        /// </summary>
+        public void SetVisionIncreaseSpeed(float speed)
+        {
+            visionIncreaseSpeed = Mathf.Max(0f, speed);
         }
 
         /// <summary>

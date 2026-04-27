@@ -134,6 +134,14 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 커스텀 시야 방향 설정 (Animator-safe, flipX 사용 시 transform.right 대체)
+        /// </summary>
+        public void SetCustomViewDirection(Vector3 direction)
+        {
+            customViewDirection = direction.normalized;
+        }
+
+        /// <summary>
         /// 특정 대상이 시야 내에 있는지 확인
         /// 거리 전용 모드일 때는 각도/장애물 무시, 거리만 체크
         /// </summary>
