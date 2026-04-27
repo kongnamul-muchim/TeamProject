@@ -62,7 +62,10 @@ namespace HideAndInk.Core.Enemy.Boss
         [Tooltip("보스 접촉 시 Player 넉백 힘")]
         [SerializeField] private float bossKnockbackForce = 12f;
 
-        [Header("스프라이트 방향")]
+        [Header("이동 범위 제한")]
+        [Tooltip("보스 활동 반경 (0=제한 없음). 시작 위치 기준 원형 제한")]
+        [SerializeField] private float maxMoveRadius = 0f;
+        private Vector3 _startPosition;
         [Tooltip("기본 에셋이 왼쪽을 보고 있는지 여부 (true: 왼쪽 기본, false: 오른쪽 기본)")]
         [SerializeField] private bool isDefaultFacingLeft = true;
         [SerializeField] private SpriteRenderer bossSpriteRenderer;
@@ -99,6 +102,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 Debug.LogWarning("[BossEnemyController] bossAnimator가 할당되지 않았습니다! 애니메이션 미동작.");
             if (bossSpriteRenderer == null)
                 Debug.LogWarning("[BossEnemyController] bossSpriteRenderer를 찾을 수 없습니다! 방향 전환 불가.");
+
+            // 시작 위치 저장 (활동 범위 제한용)
+            _startPosition = transform.position;
 
             CacheCamouflageAdapter();
             CacheBossPlayerComponents();
@@ -903,10 +909,33 @@ namespace HideAndInk.Core.Enemy.Boss
         /// <summary>
         /// 이동 처리 오버라이드
         /// Chase 상태에서는 Ground 검증을 완화 (Player 추적 우선)
+        /// Swordfish 차징 중에는 직접 Transform 조작
         /// </summary>
         protected override void UpdateMovement(float deltaTime)
         {
             if (_movement == null) return;
+
+            // Swordfish 차징 중: 직접 Transform 이동 (EnemyMovement 속도 이슈 우회)
+            if (_activeGimmick is SwordfishGimmick sg && sg.CurrentStateName == "Charging")
+            {
+                // Gimmick에서 차징 방향과 속도를 받아 직접 이동
+                Vector3 chargeDir = sg.GetChargeDirection();
+                float chargeSpd = sg.GetChargeSpeed();
+                Vector3 newPos = transform.position + chargeDir * chargeSpd * deltaTime;
+                newPos.y = transform.position.y;
+
+                // 활동 범위 제한
+                if (maxMoveRadius > 0f)
+                {
+                    Vector3 offset = newPos - _startPosition;
+                    float dist = new Vector3(offset.x, 0f, offset.z).magnitude;
+                    if (dist > maxMoveRadius)
+                        newPos = _startPosition + new Vector3(offset.x, 0f, offset.z).normalized * maxMoveRadius;
+                }
+
+                transform.position = newPos;
+                return;
+            }
 
             _movement.Update(deltaTime);
 
@@ -915,10 +944,8 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (_movement.IsMoving && !isChasing)
             {
-                // 이동 방향 앞쪽에 Ground가 있는지 확인
                 if (!_movement.IsGroundAhead())
                 {
-                    // Ground가 없으면 이동 중지 및 방향 전환
                     _movement.Stop();
                     OnGroundEdgeReached();
                     return;
@@ -930,18 +957,21 @@ namespace HideAndInk.Core.Enemy.Boss
             Vector3 newPosition = transform.position;
             newPosition.x += velocity.x * deltaTime;
             newPosition.z += velocity.z * deltaTime;
-            // Y축은 고정
             transform.position = newPosition;
 
-#if UNITY_EDITOR
-            if (velocity.sqrMagnitude > 5f)
+            // 활동 범위 제한 (원형)
+            if (maxMoveRadius > 0f)
             {
-                Debug.Log($"[SwordfishTrace] UpdateMovement charge! 속도:{velocity} IsMoving:{_movement.IsMoving} 이전위치:{transform.position - velocity * deltaTime} 새위치:{transform.position} Speed:{_movement.Speed:F1}");
+                Vector3 offset = transform.position - _startPosition;
+                float dist = new Vector3(offset.x, 0f, offset.z).magnitude;
+                if (dist > maxMoveRadius)
+                {
+                    Vector3 clamped = _startPosition + new Vector3(offset.x, 0f, offset.z).normalized * maxMoveRadius;
+                    clamped.y = transform.position.y;
+                    transform.position = clamped;
+                    _movement.Stop();
+                }
             }
-#endif
-
-            // 스프라이트 방향 업데이트
-            UpdateSpriteDirection();
         }
 
         /// <summary>
@@ -953,29 +983,37 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// 시야 방향 업데이트 (enemyForward만 회전, transform 자체는 회전하지 않음)
-        /// sprite flip은 UpdateSpriteDirection에서 처리하므로 transform 회전은 animation과 충돌 방지
+        /// 방향 업데이트: transform + enemyForward 회전 (시야 센서 연동)
+        /// Swordfish 조준/차징 중에는 Player/돌진 방향으로 회전
         /// </summary>
         protected override void UpdateViewDirection()
         {
-            // Swordfish 조준 중: Player 방향으로 즉시 페이싱 (velocity=0이어도 flip)
-            if (_activeGimmick is SwordfishGimmick sg && sg.ShouldFacePlayer && _playerTransform != null && bossSpriteRenderer != null)
+            SwordfishGimmick sg = _activeGimmick as SwordfishGimmick;
+
+            // Swordfish 조준 중: Player 방향으로 transform 회전
+            if (sg != null && sg.ShouldFacePlayer && _playerTransform != null)
             {
                 float dirToPlayer = _playerTransform.position.x - transform.position.x;
-                UpdateSpriteFlipX(bossSpriteRenderer, isDefaultFacingLeft, dirToPlayer);
+                bool faceLeft = dirToPlayer < 0;
+                transform.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                if (enemyForward != null)
+                    enemyForward.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
                 return;
             }
 
-            // 기본: 이동 방향에 따라 enemyForward(시야 방향)만 회전
-            if (_movement == null || !_movement.IsMoving) return;
-
-            MoveDirection dir = _movement.Direction;
-            bool shouldFaceLeft = dir == MoveDirection.Left;
-
-            if (enemyForward != null)
+            // Swordfish 차징 중: 돌진 방향으로 회전
+            if (sg != null && sg.CurrentStateName == "Charging")
             {
-                enemyForward.localEulerAngles = new Vector3(0f, shouldFaceLeft ? 180f : 0f, 0f);
+                Vector3 chargeDir = sg.GetChargeDirection();
+                bool faceLeft = chargeDir.x < 0;
+                transform.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                if (enemyForward != null)
+                    enemyForward.localEulerAngles = new Vector3(0f, faceLeft ? 180f : 0f, 0f);
+                return;
             }
+
+            // 기본: base class가 transform 회전 처리
+            base.UpdateViewDirection();
         }
 
         #region Player 데미지 처리

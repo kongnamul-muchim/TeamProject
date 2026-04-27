@@ -202,6 +202,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         public bool ShouldFacePlayer => _currentState == State.Aiming;
 
+        /// <summary>
+        /// 현재 상태 이름 (BossEnemyController 직접 Transform 이동용)
+        /// </summary>
+        public string CurrentStateName => _currentState.ToString();
+
+        /// <summary>
+        /// 현재 돌진 방향 (BossEnemyController 직접 Transform 이동용)
+        /// </summary>
+        public Vector3 GetChargeDirection() => _chargeDirection;
+
+        /// <summary>
+        /// 현재 돌진 속도 (BossEnemyController 직접 Transform 이동용)
+        /// </summary>
+        public float GetChargeSpeed()
+        {
+            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst && _isDoubleChargeSecondStarted)
+                return chargeSpeed * 1.1f; // 2차 돌진은 1.1배
+            return chargeSpeed;
+        }
+
         #endregion
 
         #region IEnemyGimmick
