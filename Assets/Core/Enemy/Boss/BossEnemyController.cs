@@ -88,6 +88,18 @@ namespace HideAndInk.Core.Enemy.Boss
                 bossSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
             }
 
+            // 필수 컴포넌트 체크 (Inspector 할당 누락 방지)
+            if (visionSensor == null)
+                Debug.LogWarning("[BossEnemyController] visionSensor가 할당되지 않았습니다! Player 감지 불가.");
+            if (suspicionSystem == null)
+                Debug.LogWarning("[BossEnemyController] suspicionSystem이 할당되지 않았습니다! 의심도 시스템 미동작.");
+            if (visionConeRenderer == null)
+                Debug.LogWarning("[BossEnemyController] visionConeRenderer가 할당되지 않았습니다! 시야각 시각화 미표시.");
+            if (bossAnimator == null)
+                Debug.LogWarning("[BossEnemyController] bossAnimator가 할당되지 않았습니다! 애니메이션 미동작.");
+            if (bossSpriteRenderer == null)
+                Debug.LogWarning("[BossEnemyController] bossSpriteRenderer를 찾을 수 없습니다! 방향 전환 불가.");
+
             CacheCamouflageAdapter();
             CacheBossPlayerComponents();
             InitializeGimmick();      // 기믹 먼저 초기화
@@ -938,6 +950,32 @@ namespace HideAndInk.Core.Enemy.Boss
         private void UpdateSpriteDirection()
         {
             UpdateSpriteFlipX(bossSpriteRenderer, isDefaultFacingLeft, _movement?.Velocity.x ?? 0f);
+        }
+
+        /// <summary>
+        /// 시야 방향 업데이트 (enemyForward만 회전, transform 자체는 회전하지 않음)
+        /// sprite flip은 UpdateSpriteDirection에서 처리하므로 transform 회전은 animation과 충돌 방지
+        /// </summary>
+        protected override void UpdateViewDirection()
+        {
+            // Swordfish 조준 중: Player 방향으로 즉시 페이싱 (velocity=0이어도 flip)
+            if (_activeGimmick is SwordfishGimmick sg && sg.ShouldFacePlayer && _playerTransform != null && bossSpriteRenderer != null)
+            {
+                float dirToPlayer = _playerTransform.position.x - transform.position.x;
+                UpdateSpriteFlipX(bossSpriteRenderer, isDefaultFacingLeft, dirToPlayer);
+                return;
+            }
+
+            // 기본: 이동 방향에 따라 enemyForward(시야 방향)만 회전
+            if (_movement == null || !_movement.IsMoving) return;
+
+            MoveDirection dir = _movement.Direction;
+            bool shouldFaceLeft = dir == MoveDirection.Left;
+
+            if (enemyForward != null)
+            {
+                enemyForward.localEulerAngles = new Vector3(0f, shouldFaceLeft ? 180f : 0f, 0f);
+            }
         }
 
         #region Player 데미지 처리

@@ -196,6 +196,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         public bool IsInCombatCycle => _currentState != State.Idle;
 
+        /// <summary>
+        /// 현재 Player 방향을 바라봐야 하는 상태인지 (조준 중)
+        /// BossEnemyController.UpdateViewDirection에서 사용
+        /// </summary>
+        public bool ShouldFacePlayer => _currentState == State.Aiming;
+
         #endregion
 
         #region IEnemyGimmick
