@@ -43,6 +43,9 @@ namespace HideAndInk.Core.Enemy.Boss
         [Tooltip("Animator가 붙은 SpriteRenderer. flipX로 좌우 반전")]
         [SerializeField] private SpriteRenderer bossSprite;
 
+        [Header("가자미 구덩이 (SandPit)")]
+        [SerializeField] private SandPit sandPitPrefab;
+
         [Header("데미지")]
         [SerializeField] private float knockbackForce = 12f;
 
@@ -118,6 +121,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     ambush.OnMovementResume = () => { _movement.Speed = chaseSpeed; if (_movement is EnemyMovement em) em.SetMaxSpeed(chaseSpeed); };
                     ambush.OnVisibilityToggle = (v) => visionSensor?.SetDistanceOnlyMode(v);
                     ambush.OnDashMoveTo = (t) => _movement.MoveTo(t);
+                    ambush.OnSpawnPit = SpawnSandPitCluster;
                     break;
 
                 case RelentlessChaseGimmick relentless:
@@ -680,6 +684,49 @@ namespace HideAndInk.Core.Enemy.Boss
             Vector3 dir = (_playerTransform.position - transform.position).normalized;
             dir.y = 0f;
             _playerRigidbody.AddForce(dir * knockbackForce, ForceMode.Impulse);
+        }
+
+        #region SandPit (가자미 구덩이)
+
+        /// <summary>
+        /// 가자미가 떠난 자리에 SandPit 클러스터 생성
+        /// </summary>
+        private void SpawnSandPitCluster(Vector3 center)
+        {
+            if (sandPitPrefab == null) return;
+
+            // 메인 Pit
+            SandPit mainPit = Instantiate(sandPitPrefab, center, Quaternion.identity);
+            SubscribeSandPit(mainPit);
+
+            if (!(_activeGimmick is AmbushGimmick ambush)) return;
+
+            // 주변 랜덤 추가 Pit (밸런스: 초반 적음 → 시간 지날수록 많아짐)
+            int extraCount = Random.Range(ambush.PitClusterCount.x, ambush.PitClusterCount.y + 1);
+            for (int i = 0; i < extraCount; i++)
+            {
+                Vector3 offset = Random.insideUnitSphere * ambush.PitClusterRadius;
+                offset.y = 0f;
+                Vector3 pitPos = center + offset;
+
+                SandPit extra = Instantiate(sandPitPrefab, pitPos, Quaternion.identity);
+                SubscribeSandPit(extra);
+            }
+        }
+
+        /// <summary>
+        /// SandPit의 Player 감지 이벤트 → 의심도 증가
+        /// </summary>
+        private void SubscribeSandPit(SandPit pit)
+        {
+            pit.OnPlayerEnterPit = (pos) =>
+            {
+                if (suspicionSystem != null)
+                {
+                    // 밟은 순간 1회 30 의심도 증가 (rate * deltaTime)
+                    suspicionSystem.AddSuspicion(30f, 1f);
+                }
+            };
         }
 
         #endregion

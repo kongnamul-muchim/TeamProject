@@ -28,6 +28,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private float dashDuration = 1.5f;
         [SerializeField] private float dashPreDelay = 0.3f;
 
+        [Header("구덩이(Pit) 설정")]
+        [SerializeField, Tooltip("Pit 생성 간격 (이동 거리 m)")]
+        private float pitSpawnInterval = 3f;
+        [SerializeField, Tooltip("Pit 생성 시 주변 랜덤 범위")]
+        private float pitClusterRadius = 3f;
+        [SerializeField, Tooltip("Pit 생성 시 추가 Pit 개수 (2~4)")]
+        private Vector2Int pitClusterCount = new Vector2Int(2, 4);
+        [SerializeField, Tooltip("목표 위치 선정 시 Pit 회피 반경")]
+        private float positionAvoidRadius = 2f;
+
         private Transform _bossTransform;
         private Transform _playerTransform;
         private GroundBounds _groundBounds;
@@ -41,6 +51,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private Vector3 _dashDirection;
         private Vector3 _ambushTarget;
 
+        // Pit 관련
+        private Vector3 _lastPitSpawnPos;
+        private float _movementSinceLastPit;
+        private List<Vector3> _visitedPositions = new List<Vector3>();
+        private const int MaxVisitedPositions = 30;
+
         #region Callbacks
 
         public System.Action<float> OnSpeedOverride;
@@ -48,6 +64,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public System.Action OnMovementResume;
         public System.Action<bool> OnVisibilityToggle;
         public System.Action<Vector3> OnDashMoveTo;
+        public System.Action<Vector3> OnSpawnPit;
 
         #endregion
 
@@ -57,6 +74,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public float SuspicionRate => suspicionRate;
         public float SuspicionCurveExponent => suspicionCurveExponent;
         public float SuspicionDropThreshold => suspicionDropThreshold;
+        public Vector2Int PitClusterCount => pitClusterCount;
+        public float PitClusterRadius => pitClusterRadius;
 
         #endregion
 
@@ -67,6 +86,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _bossTransform = bossTransform;
             _isDashing = false;
             _isDashPreDelay = false;
+            _movementSinceLastPit = 0f;
+            _lastPitSpawnPos = bossTransform.position;
+            _visitedPositions.Clear();
             CachePlayerTransform();
         }
 
@@ -93,7 +115,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return;
             }
 
-            // Player 근처 매복 위치로 계속 이동
+            // 이동 거리 누적 → 일정 거리마다 Pit 생성
+            float moved = Vector3.Distance(_bossTransform.position, _lastPitSpawnPos);
+            _movementSinceLastPit += moved;
+            _lastPitSpawnPos = _bossTransform.position;
+
+            if (_movementSinceLastPit >= pitSpawnInterval)
+            {
+                _movementSinceLastPit = 0f;
+                OnSpawnPit?.Invoke(_bossTransform.position);
+                AddVisitedPosition(_bossTransform.position);
+            }
+
+            // Player 근처 매복 위치로 계속 이동 (Pit 회피 적용)
             UpdateAmbushTarget();
             if (_ambushTarget != Vector3.zero)
             {
@@ -200,25 +234,64 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 new Vector3(_bossTransform.position.x, 0f, _bossTransform.position.z),
                 new Vector3(_playerTransform.position.x, 0f, _playerTransform.position.z));
 
+            Vector3 baseTarget;
+
             if (currentDist < ambushMinDistance)
             {
                 // 너무 가까우면 반대 방향으로
-                _ambushTarget = _bossTransform.position - dirToPlayer * ambushDistance;
+                baseTarget = _bossTransform.position - dirToPlayer * ambushDistance;
             }
             else if (currentDist > ambushDistance * 1.5f)
             {
                 // 너무 멀면 Player 쪽으로
-                _ambushTarget = _playerTransform.position - dirToPlayer * 2f;
+                baseTarget = _playerTransform.position - dirToPlayer * 2f;
             }
             else
             {
                 // 적정 거리 유지 (Player 주변을 맴돌도록 약간 옆으로)
                 Vector3 perpendicular = Vector3.Cross(dirToPlayer, Vector3.up).normalized;
                 float sideDir = Mathf.Sin(Time.time * 0.5f) > 0f ? 1f : -1f;
-                _ambushTarget = _playerTransform.position + perpendicular * sideDir * ambushDistance * 0.5f;
+                baseTarget = _playerTransform.position + perpendicular * sideDir * ambushDistance * 0.5f;
             }
 
-            _ambushTarget.y = _bossTransform.position.y;
+            baseTarget.y = _bossTransform.position.y;
+
+            // 이미 방문한 위치(Pit)와 가까우면 살짝 회피
+            _ambushTarget = AvoidVisitedPositions(baseTarget);
+        }
+
+        /// <summary>
+        /// 이미 방문한 위치(Pit)와 가까우면 목표를 살짝 비껴서 선정
+        /// </summary>
+        private Vector3 AvoidVisitedPositions(Vector3 target)
+        {
+            for (int i = 0; i < _visitedPositions.Count; i++)
+            {
+                float dist = Vector3.Distance(
+                    new Vector3(target.x, 0f, target.z),
+                    new Vector3(_visitedPositions[i].x, 0f, _visitedPositions[i].z));
+
+                if (dist < positionAvoidRadius)
+                {
+                    // 방문 위치에서 멀어지는 방향으로 목표 회피
+                    Vector3 away = (target - _visitedPositions[i]).normalized;
+                    away.y = 0f;
+                    if (away.sqrMagnitude < 0.01f)
+                        away = Vector3.right;
+
+                    target += away * (positionAvoidRadius - dist + 0.5f);
+                    target.y = _bossTransform.position.y;
+                }
+            }
+            return target;
+        }
+
+        private void AddVisitedPosition(Vector3 pos)
+        {
+            _visitedPositions.Add(pos);
+            // 오래된 위치 제거 (최대 개수 유지)
+            while (_visitedPositions.Count > MaxVisitedPositions)
+                _visitedPositions.RemoveAt(0);
         }
 
         private void CachePlayerTransform()
