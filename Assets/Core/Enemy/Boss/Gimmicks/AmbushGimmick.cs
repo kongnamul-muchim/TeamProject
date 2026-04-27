@@ -51,12 +51,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private float _preDelayTimer;
         private Vector3 _dashDirection;
         private Vector3 _ambushTarget;
+        private bool _isPlayerCamouflaged;
 
         // Pit 관련
         private Vector3 _lastPitSpawnPos;
         private float _movementSinceLastPit;
         private List<Vector3> _visitedPositions = new List<Vector3>();
         private const int MaxVisitedPositions = 30;
+
+        // 의태 무작위 이동
+        private float _randomWanderTimer;
+        private Vector3 _randomWanderTarget;
 
         #region Callbacks
 
@@ -112,7 +117,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (_bossTransform == null || _playerTransform == null)
             {
-                Debug.LogWarning($"[AmbushGimmick] PatrolUpdate skipped: boss={_bossTransform != null}, player={_playerTransform != null}");
                 CachePlayerTransform();
                 return;
             }
@@ -127,13 +131,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _movementSinceLastPit = 0f;
                 OnSpawnPit?.Invoke(_bossTransform.position);
                 AddVisitedPosition(_bossTransform.position);
-                Debug.Log($"[AmbushGimmick] Pit spawned at {_bossTransform.position}, total visited: {_visitedPositions.Count}");
             }
 
             // Player 근처 매복 위치로 계속 이동 (Pit 회피 적용)
             UpdateAmbushTarget();
-            Debug.Log($"[AmbushGimmick] PatrolUpdate: target={_ambushTarget}, bossPos={_bossTransform.position}, dist={Vector3.Distance(_bossTransform.position, _ambushTarget):F2}");
-            if (_ambushTarget != Vector3.zero && Vector3.Distance(_bossTransform.position, _ambushTarget) > 0.5f)
+            if (_ambushTarget != Vector3.zero)
             {
                 OnDashMoveTo?.Invoke(_ambushTarget);
             }
@@ -229,7 +231,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private void UpdateAmbushTarget()
         {
-            if (_bossTransform == null || _playerTransform == null) return;
+            if (_bossTransform == null) return;
+
+            if (_isPlayerCamouflaged || _playerTransform == null)
+            {
+                // 의태 중 or Player 없음 → 무작위 방황 (구덩이 생성으로 의태 오래 방지)
+                UpdateRandomWander();
+                return;
+            }
 
             Vector3 dirToPlayer = (_playerTransform.position - _bossTransform.position).normalized;
             dirToPlayer.y = 0f;
@@ -262,6 +271,33 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // 이미 방문한 위치(Pit)와 가까우면 살짝 회피
             _ambushTarget = AvoidVisitedPositions(baseTarget);
+        }
+
+        /// <summary>
+        /// 의태 중 무작위 방황: GroundBounds 내 랜덤 지점으로 이동
+        /// </summary>
+        private void UpdateRandomWander()
+        {
+            _randomWanderTimer -= Time.deltaTime;
+
+            if (_randomWanderTimer <= 0f || _randomWanderTarget == Vector3.zero)
+            {
+                // 새 무작위 목표 선정
+                if (_hasGroundBounds)
+                {
+                    float x = Random.Range(_groundBounds.MinX + 1f, _groundBounds.MaxX - 1f);
+                    float z = Random.Range(_groundBounds.MinZ + 1f, _groundBounds.MaxZ - 1f);
+                    _randomWanderTarget = new Vector3(x, _bossTransform.position.y, z);
+                }
+                else
+                {
+                    _randomWanderTarget = _bossTransform.position + new Vector3(
+                        Random.Range(-5f, 5f), 0f, Random.Range(-5f, 5f));
+                }
+                _randomWanderTimer = Random.Range(2f, 5f); // 2~5초마다 새 목표
+            }
+
+            _ambushTarget = _randomWanderTarget;
         }
 
         /// <summary>
@@ -351,7 +387,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion) { }
-        void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging) { }
+        void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging)
+        {
+            _isPlayerCamouflaged = isCamouflaging;
+            if (isCamouflaging)
+            {
+                // 의태 시작 → 즉시 새 무작위 목표 선정
+                _randomWanderTimer = 0f;
+            }
+        }
         void IGimmickPlayerAware.SetPlayerVisible(bool isVisible) { }
 
         bool IGimmickViewDirection.OverridesViewDirection => false;

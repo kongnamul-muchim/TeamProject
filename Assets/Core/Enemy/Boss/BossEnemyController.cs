@@ -66,6 +66,9 @@ namespace HideAndInk.Core.Enemy.Boss
         // 돌진 인디케이터 (청새치 Aiming 시 붉은 사각형)
         private LineRenderer _chargeIndicator;
 
+        // 가자미 구덩이 디버프
+        private float _pitDebuffTimer;
+
         protected override void Start()
         {
             isDefaultFacingLeft = true; // 청새치 Sprite: Y=0에서 왼쪽 바라봄
@@ -198,6 +201,7 @@ namespace HideAndInk.Core.Enemy.Boss
             _stateMachine.Update(deltaTime);
             UpdateGimmick(deltaTime);
             RestoreSpeedAfterGimmick();
+            UpdatePitDebuff(deltaTime);
         }
 
         private void UpdateCamouflageState()
@@ -212,10 +216,7 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (_activeGimmick == null || _stateMachine == null) return;
 
-            var state = _stateMachine.CurrentState;
-            Debug.Log($"[BossEnemyController] State={state}, Gimmick={_activeGimmick?.GetType().Name}");
-
-            switch (state)
+            switch (_stateMachine.CurrentState)
             {
                 case EnemyAIState.Patrol: _activeGimmick.OnPatrolUpdate(deltaTime); break;
                 case EnemyAIState.Chase: _activeGimmick.OnChaseUpdate(deltaTime); break;
@@ -696,25 +697,40 @@ namespace HideAndInk.Core.Enemy.Boss
         #region SandPit (가자미 구덩이)
 
         /// <summary>
-        /// 가자미가 떠난 자리에 SandPit 클러스터 생성
+        /// 가자미가 떠난 자리에 SandPit 클러스터 생성 (GroundBounds 내로 클램프)
         /// </summary>
         private void SpawnSandPitCluster(Vector3 center)
         {
             if (sandPitPrefab == null) return;
 
-            // 메인 Pit
-            SandPit mainPit = Instantiate(sandPitPrefab, center, Quaternion.identity);
+            bool hasBounds = _groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ;
+
+            // 메인 Pit (GroundBounds 클램프)
+            Vector3 clampedCenter = center;
+            clampedCenter.y = transform.position.y;
+            if (hasBounds)
+            {
+                clampedCenter.x = _groundBounds.ClampX(clampedCenter.x);
+                clampedCenter.z = _groundBounds.ClampZ(clampedCenter.z);
+            }
+            SandPit mainPit = Instantiate(sandPitPrefab, clampedCenter, Quaternion.identity);
             SubscribeSandPit(mainPit);
 
             if (!(_activeGimmick is AmbushGimmick ambush)) return;
 
-            // 주변 랜덤 추가 Pit (밸런스: 초반 적음 → 시간 지날수록 많아짐)
+            // 주변 랜덤 추가 Pit (각각 GroundBounds 클램프)
             int extraCount = Random.Range(ambush.PitClusterCount.x, ambush.PitClusterCount.y + 1);
             for (int i = 0; i < extraCount; i++)
             {
                 Vector3 offset = Random.insideUnitSphere * ambush.PitClusterRadius;
                 offset.y = 0f;
                 Vector3 pitPos = center + offset;
+                pitPos.y = transform.position.y;
+                if (hasBounds)
+                {
+                    pitPos.x = _groundBounds.ClampX(pitPos.x);
+                    pitPos.z = _groundBounds.ClampZ(pitPos.z);
+                }
 
                 SandPit extra = Instantiate(sandPitPrefab, pitPos, Quaternion.identity);
                 SubscribeSandPit(extra);
@@ -722,7 +738,7 @@ namespace HideAndInk.Core.Enemy.Boss
         }
 
         /// <summary>
-        /// SandPit의 Player 감지 이벤트 → 의심도 증가
+        /// SandPit의 Player 감지 이벤트 → 의심도 증가 + 디버프 (의심도 하락 차단)
         /// </summary>
         private void SubscribeSandPit(SandPit pit)
         {
@@ -730,10 +746,36 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 if (suspicionSystem != null)
                 {
-                    // 밟은 순간 1회 30 의심도 증가 (rate * deltaTime)
+                    // 밟은 순간 1회 30 의심도 증가
                     suspicionSystem.AddSuspicion(30f, 1f);
                 }
+                // 5초간 의심도 하락 차단 디버프
+                _pitDebuffTimer = 5f;
             };
+        }
+
+        /// <summary>
+        /// 구덩이 디버프 업데이트: 의심도 하락을 90% 차단 (5초 지속)
+        /// </summary>
+        private void UpdatePitDebuff(float deltaTime)
+        {
+            if (_pitDebuffTimer > 0f && suspicionSystem != null)
+            {
+                _pitDebuffTimer -= deltaTime;
+                // 의심도 하락을 거의 막음 (최소 0.1 → 90% 감소)
+                suspicionSystem.SetSuspicionDecayMultiplier(0.1f);
+
+                if (_pitDebuffTimer <= 0f)
+                {
+                    // 디버프 종료: 현재 상태에 맞는 배율 복원
+                    float restoreMultiplier = _stateMachine?.CurrentState switch
+                    {
+                        EnemyAIState.Chase => chaseSuspicionDecayMultiplier,
+                        _ => 1f
+                    };
+                    suspicionSystem.SetSuspicionDecayMultiplier(restoreMultiplier);
+                }
+            }
         }
 
         #endregion

@@ -39,6 +39,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 {
                     _hasTriggered = true;
                     OnPlayerEnterPit?.Invoke(transform.position);
+
+                    // 밟힌 구덩이는 즉시 소멸
+                    Destroy(gameObject);
                     return;
                 }
             }
