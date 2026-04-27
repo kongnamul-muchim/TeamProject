@@ -171,6 +171,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         public System.Action OnMovementStop;
 
+        /// <summary>
+        /// ChaseBehavior 정지/재개 요청 (true=정지, false=재개)
+        /// 조준/돌진 중 Player 추적 방지용
+        /// </summary>
+        public System.Action<bool> OnChasePauseRequest;
+
         #endregion
 
         #region Properties
@@ -286,6 +292,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _currentState = State.Idle;
             OnMovementStop?.Invoke();
             OnSpeedOverride?.Invoke(0f);
+            OnChasePauseRequest?.Invoke(false); // ChaseBehavior 재개 (cleanup)
         }
 
         #endregion
@@ -457,6 +464,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 정지 (조준 중에는 움직이지 않음)
             OnMovementStop?.Invoke();
             OnSpeedOverride?.Invoke(0f);
+            OnChasePauseRequest?.Invoke(true); // ChaseBehavior 정지 (Player 추적 방지)
 
             // [시각] 조준 경고선 표시
             OnAimStarted?.Invoke();

@@ -409,7 +409,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 _movement.Speed = speed;
                 if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
                 {
-                    em.SetMaxSpeed(Mathf.Max(speed, chaseSpeed));
+                    em.SetMaxSpeed(speed);
                 }
             };
 
@@ -423,6 +423,12 @@ namespace HideAndInk.Core.Enemy.Boss
             swordfish.OnMovementStop = () =>
             {
                 _movement.Stop();
+            };
+
+            // ─── ChaseBehavior 정지/재개 (조준/돌진 중 Player 추적 방지) ───
+            swordfish.OnChasePauseRequest = (pause) =>
+            {
+                _chaseBehavior?.SetPaused(pause);
             };
 
             // ═══════════════════════════════════════
