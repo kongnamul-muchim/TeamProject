@@ -41,15 +41,7 @@ namespace HideAndInk.Core.Perception
         [Tooltip("의태 중 의심도 하락 속도")]
         [SerializeField] private float camouflageDecreaseSpeed = 15f;
 
-        [Header("Gizmos 시각화 (AmbushGimmick 연동)")]
-        [Tooltip("시각화용 기믹 (에디터에서 Gizmos 업데이트용)")]
-        [SerializeField] public AmbushGimmick linkedGimmick;
-
-        [Header("인게임 의심 범위 시각화")]
-        [Tooltip("의심 범위 바닥 표시 활성화 여부")]
-        [SerializeField] private bool showSuspicionRadiusInGame = true;
-        [Tooltip("바닥 가시성 모드 (AlwaysOn/ChaseOnly/Hidden)")]
-        [SerializeField] private SuspicionFloorVisibilityMode floorVisibilityMode = SuspicionFloorVisibilityMode.AlwaysOn;
+        [Header("의심 범위 바닥 시각화")]
         [Tooltip("의심 범위 바닥 표시 색상")]
         [SerializeField] private Color suspicionFloorColor = new Color(1f, 0f, 0f, 0.5f);
         [Tooltip("바닥 메쉬 세그먼트 수 (높을수록 부드러움)")]
@@ -58,6 +50,11 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float floorYOffset = 0.05f;
         [Tooltip("바닥으로 인식할 레이어")]
         [SerializeField] private LayerMask groundLayer = -1;
+
+#if UNITY_EDITOR
+        [Header("에디터 Gizmos (AmbushGimmick 연동)")]
+        [SerializeField] public AmbushGimmick linkedGimmick;
+#endif
 
         // 상태
         private float _currentValue;
@@ -80,7 +77,7 @@ namespace HideAndInk.Core.Perception
         private Material _floorMaterial;
         private bool _isFloorInitialized = false;
         private bool _needsMeshRebuild = true; // 메쉬 재생성 플래그
-        private SuspicionFloorVisibilityMode _floorVisibilityMode = SuspicionFloorVisibilityMode.AlwaysOn;
+        [SerializeField] private SuspicionFloorVisibilityMode floorVisibilityMode = SuspicionFloorVisibilityMode.AlwaysOn;
         private bool _isFloorVisible = true;
 
         // 의심도 모듈 (기믹별 계산 로직)
@@ -105,7 +102,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void SetFloorVisibilityMode(SuspicionFloorVisibilityMode mode)
         {
-            _floorVisibilityMode = mode;
+            floorVisibilityMode = mode;
             UpdateFloorVisibility();
         }
 
@@ -114,7 +111,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void SetFloorVisibility(bool visible)
         {
-            _floorVisibilityMode = visible ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.Hidden;
+            floorVisibilityMode = visible ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.Hidden;
             UpdateFloorVisibility();
         }
 
@@ -123,7 +120,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void UpdateFloorVisibility()
         {
-            bool shouldBeVisible = _floorVisibilityMode != SuspicionFloorVisibilityMode.Hidden;
+            bool shouldBeVisible = floorVisibilityMode != SuspicionFloorVisibilityMode.Hidden;
             if (_isFloorVisible != shouldBeVisible)
             {
                 _isFloorVisible = shouldBeVisible;
@@ -369,8 +366,6 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void UpdateSuspicionFloorVisual()
         {
-            if (!showSuspicionRadiusInGame) return;
-
             // 가시성 모드 체크 (Hidden이면 렌더링 안 함)
             if (floorVisibilityMode == SuspicionFloorVisibilityMode.Hidden)
             {

@@ -52,8 +52,6 @@ namespace HideAndInk.Core.Perception
         private Material _coneMaterial;
         private ConeVisionSensor _cachedSensor;
         private bool _isInitialized = false;
-        private int _frameCount = 0;
-        private const int LOG_INTERVAL = 120;
 
         // ChaseOnly 모드용 상태
         private bool _isChasing = false;
@@ -139,8 +137,6 @@ namespace HideAndInk.Core.Perception
 
         private void Update()
         {
-            _frameCount++;
-
             if (!_isInitialized)
             {
                 TryInitialize();
@@ -187,12 +183,10 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 메쉬 가시성 토글 (렌더러 비활성화 + 자식 오브젝트 비활성화)
+        /// 메쉬 가시성 토글
         /// </summary>
         private void SetMeshVisible(bool visible)
         {
-            if (_meshRenderer != null)
-                _meshRenderer.enabled = visible;
             if (_renderObject != null)
                 _renderObject.SetActive(visible);
         }

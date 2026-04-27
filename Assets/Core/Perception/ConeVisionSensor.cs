@@ -33,11 +33,6 @@ namespace HideAndInk.Core.Perception
         [Tooltip("이 시야 센서가 의심도 상승에 기여하는지 여부 (곰치 등 추격형 보스는 true, 가자미 등 매복형은 false)")]
         [SerializeField] private bool raisesSuspicion = true;
 
-        // 캐싱
-        private Vector3 _cachedOrigin;
-        private float _cachedViewRadius;
-        private float _cachedViewAngle;
-
         // 거리 전용 모드 (매복 중 360도 감지용)
         private bool _distanceOnlyMode;
 
@@ -136,51 +131,6 @@ namespace HideAndInk.Core.Perception
         public void SetViewAngle(float angle)
         {
             viewAngle = Mathf.Clamp(angle, 0f, 360f);
-        }
-
-        /// <summary>
-        /// 시야 방향에 수직인 '위' 참조 벡터 계산
-        /// 어떤 방향이든 안정적인 부채꼴 생성을 위해 사용
-        /// </summary>
-        public Vector3 GetViewUpReference()
-        {
-            Vector3 dir = GetViewDirection().normalized;
-            float absX = Mathf.Abs(Vector3.Dot(dir, Vector3.right));
-            float absY = Mathf.Abs(Vector3.Dot(dir, Vector3.up));
-            float absZ = Mathf.Abs(Vector3.Dot(dir, Vector3.forward));
-
-            if (absY < absX && absY < absZ)
-                return Vector3.up;
-            else if (absX < absZ)
-                return Vector3.right;
-            else
-                return Vector3.forward;
-        }
-
-        /// <summary>
-        /// 시야 부채꼴의 가장자리 방향 계산 (3D)
-        /// </summary>
-        public Vector3 GetConeEdgeDirection(float azimuthAngle)
-        {
-            Vector3 viewDir = GetViewDirection().normalized;
-            Vector3 upRef = GetViewUpReference();
-
-            // viewDirection에 수직인 기준 벡터
-            Vector3 refPerp = Vector3.Cross(viewDir, upRef).normalized;
-            if (refPerp.sqrMagnitude < 0.001f)
-            {
-                upRef = GetViewUpReference();
-                refPerp = Vector3.Cross(viewDir, upRef).normalized;
-            }
-
-            // 기준 벡터를 viewDirection 축으로 azimuthAngle만큼 회전
-            Vector3 rotatedPerp = Quaternion.AngleAxis(azimuthAngle, viewDir) * refPerp;
-
-            // viewDirection에서 rotatedPerp 방향으로 halfAngle만큼 기울이기
-            float halfAngleRad = (viewAngle / 2f) * Mathf.Deg2Rad;
-            Vector3 edgeDir = Mathf.Cos(halfAngleRad) * viewDir + Mathf.Sin(halfAngleRad) * rotatedPerp;
-
-            return edgeDir.normalized;
         }
 
         /// <summary>
