@@ -67,24 +67,6 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private bool isDefaultFacingLeft = true;
         [SerializeField] private SpriteRenderer bossSpriteRenderer;
 
-        [Header("청새치 시각 효과 (SwordfishGimmick)")]
-        [Tooltip("조준 경고선 프리팹 (비우면 자동 생성)")]
-        [SerializeField] private GameObject aimIndicatorPrefab;
-        [Tooltip("돌진 Trail 이펙트 프리팹")]
-        [SerializeField] private GameObject trailEffectPrefab;
-        [Tooltip("충돌 이펙트 프리팹")]
-        [SerializeField] private GameObject impactEffectPrefab;
-        [Tooltip("조준 경고선 색상")]
-        [SerializeField] private Color aimIndicatorColor = new Color(1f, 0.2f, 0.2f, 0.7f);
-        [Tooltip("조준 경고선 길이 (m)")]
-        [SerializeField] private float aimIndicatorLength = 15f;
-
-        // 청새치 시각 효과 런타임 인스턴스
-        private LineRenderer _aimLineRenderer;
-        private GameObject _aimIndicatorInstance;
-        private GameObject _trailInstance;
-        private SwordfishGimmick.SwordfishChargeType _lastChargeType;
-
         // Player 의태 상태 캐싱 (부모 클래스에서 제공)
         // private HideAndInk.Player.CamouflageAdapter _camouflageAdapter; // 부모에 이미 있음
 
@@ -440,46 +422,10 @@ namespace HideAndInk.Core.Enemy.Boss
                 _chaseBehavior?.SetPaused(pause);
             };
 
-            // ═══════════════════════════════════════
-            //  시각적 피드백 콜백
-            // ═══════════════════════════════════════
-
-            // ─── [시각] 조준 시작: 경고선 생성 ───
-            swordfish.OnAimStarted = () =>
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnAimStarted 위치:{transform.position}");
-#endif
-                ShowAimIndicator();
-            };
-
-            // ─── [시각] 조준 중: 경고선 방향 업데이트 ───
-            swordfish.OnAimUpdated = (directionToPlayer) =>
-            {
-                if (_aimLineRenderer == null) return;
-
-                Vector3 start = transform.position + Vector3.up * 0.05f;
-                Vector3 end = start + directionToPlayer * aimIndicatorLength;
-                _aimLineRenderer.SetPosition(0, start);
-                _aimLineRenderer.SetPosition(1, end);
-            };
-
-            // ─── [시각] 조준 종료: 경고선 제거 ───
-            swordfish.OnAimEnded = () =>
-            {
-#if UNITY_EDITOR
-                Debug.Log($"[SwordfishTrace] OnAimEnded 위치:{transform.position}");
-#endif
-                ClearAimIndicator();
-            };
-
-            // ─── [시각] 돌진 시작: 돌진 타입별 Trail + ChaseBehavior 정지 ───
+            // ─── [Controller] 돌진 시작: ChaseBehavior 정지 + 이동 목표 + 애니메이션 ───
             swordfish.OnChargeStarted = (chargeType, direction) =>
             {
-                _lastChargeType = chargeType;
-
-                // 돌진 방향으로 이동 목표 설정 (Velocity 기반 이동 보조)
-                // 실제 이동은 Gimmick의 OnSpeedOverride + UpdateMovement의 Velocity 적용으로 처리
+                // 돌진 방향으로 이동 목표 설정
                 Vector3 chargeTarget = transform.position + direction * 20f;
                 chargeTarget.y = transform.position.y;
 #if UNITY_EDITOR
@@ -490,9 +436,6 @@ namespace HideAndInk.Core.Enemy.Boss
                 // ChaseBehavior 정지 (돌진 중 Player 추적 방지)
                 _chaseBehavior?.SetPaused(true);
 
-                // Trail 효과
-                ShowTrailEffect(chargeType);
-
                 // 애니메이션
                 if (bossAnimator != null)
                 {
@@ -501,21 +444,13 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
 
-            // ─── [시각] 돌진 종료: Trail 제거 + 충돌 이펙트 + ChaseBehavior 재개 ───
+            // ─── [Controller] 돌진 종료: ChaseBehavior 재개 + 애니메이션 리셋 ───
             swordfish.OnChargeEnded = (chargeType, hitWall) =>
             {
 #if UNITY_EDITOR
                 Debug.Log($"[SwordfishTrace] OnChargeEnded 타입:{chargeType} wallHit:{hitWall} 위치:{transform.position} → ChaseBehavior 재개");
 #endif
-                ClearTrailEffect();
-
-                // ChaseBehavior 재개
                 _chaseBehavior?.SetPaused(false);
-
-                if (hitWall)
-                {
-                    ShowImpactEffect(chargeType);
-                }
 
                 if (bossAnimator != null)
                 {
@@ -524,7 +459,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
 
-            // ─── [시각] 스턴 시작 ───
+            // ─── [Controller] 스턴 시작: 이동 정지 + ChaseBehavior 정지 + 애니메이션 정지 ───
             swordfish.OnStunStarted = (duration) =>
             {
 #if UNITY_EDITOR
@@ -539,145 +474,6 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
             };
         }
-
-        #region Swordfish 시각 효과 (AimIndicator / Trail / Impact)
-
-        /// <summary>
-        /// 조준 경고선 표시 (빨간 직선)
-        /// </summary>
-        private void ShowAimIndicator()
-        {
-            if (aimIndicatorPrefab != null)
-            {
-                _aimIndicatorInstance = Instantiate(aimIndicatorPrefab, transform.position, Quaternion.identity, transform);
-                _aimLineRenderer = _aimIndicatorInstance.GetComponent<LineRenderer>();
-            }
-            else if (_aimLineRenderer == null)
-            {
-                // LineRenderer 자동 생성
-                GameObject go = new GameObject("Swordfish_AimIndicator");
-                go.transform.SetParent(transform);
-                go.transform.localPosition = Vector3.zero;
-                _aimLineRenderer = go.AddComponent<LineRenderer>();
-                _aimLineRenderer.startWidth = 0.15f;
-                _aimLineRenderer.endWidth = 0.03f;
-                _aimLineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-                _aimLineRenderer.startColor = aimIndicatorColor;
-                _aimLineRenderer.endColor = new Color(aimIndicatorColor.r, aimIndicatorColor.g, aimIndicatorColor.b, 0f);
-                _aimLineRenderer.enabled = true;
-            }
-
-            if (_aimLineRenderer != null)
-            {
-                _aimLineRenderer.enabled = true;
-            }
-        }
-
-        /// <summary>
-        /// 조준 경고선 제거
-        /// </summary>
-        private void ClearAimIndicator()
-        {
-            if (_aimLineRenderer != null)
-            {
-                _aimLineRenderer.enabled = false;
-            }
-        }
-
-        /// <summary>
-        /// 돌진 타입별 Trail 효과 표시
-        /// </summary>
-        private void ShowTrailEffect(SwordfishGimmick.SwordfishChargeType chargeType)
-        {
-            ClearTrailEffect();
-
-            if (trailEffectPrefab != null)
-            {
-                _trailInstance = Instantiate(trailEffectPrefab, transform.position, Quaternion.identity, transform);
-            }
-            else
-            {
-                // TrailRenderer 자동 생성 (타입별 색상)
-                GameObject go = new GameObject("Swordfish_Trail");
-                go.transform.SetParent(transform);
-                go.transform.localPosition = Vector3.zero;
-
-                TrailRenderer trail = go.AddComponent<TrailRenderer>();
-                trail.time = 0.3f;
-                trail.startWidth = chargeType == SwordfishGimmick.SwordfishChargeType.Wide ? 1.2f : 0.5f;
-                trail.endWidth = 0f;
-
-                // 돌진 타입별 색상
-                Color trailColor = chargeType switch
-                {
-                    SwordfishGimmick.SwordfishChargeType.Basic => new Color(1f, 0.2f, 0.2f, 0.6f),   // 적색
-                    SwordfishGimmick.SwordfishChargeType.Double => new Color(1f, 0.6f, 0f, 0.6f),    // 주황
-                    SwordfishGimmick.SwordfishChargeType.Wide => new Color(0.8f, 0.2f, 1f, 0.6f),    // 자주
-                    _ => new Color(1f, 0.2f, 0.2f, 0.6f)
-                };
-
-                trail.material = new Material(Shader.Find("Sprites/Default"));
-                trail.startColor = trailColor;
-                trail.endColor = new Color(trailColor.r, trailColor.g, trailColor.b, 0f);
-
-                _trailInstance = go;
-            }
-        }
-
-        /// <summary>
-        /// Trail 효과 제거
-        /// </summary>
-        private void ClearTrailEffect()
-        {
-            if (_trailInstance != null)
-            {
-                Destroy(_trailInstance);
-                _trailInstance = null;
-            }
-        }
-
-        /// <summary>
-        /// 돌진 타입별 충돌 이펙트 표시
-        /// </summary>
-        private void ShowImpactEffect(SwordfishGimmick.SwordfishChargeType chargeType)
-        {
-            if (impactEffectPrefab != null)
-            {
-                GameObject impact = Instantiate(impactEffectPrefab, transform.position, Quaternion.identity);
-                Destroy(impact, 2f);
-            }
-            else
-            {
-                // Particle 시스템 자동 생성
-                GameObject go = new GameObject("Swordfish_Impact");
-                go.transform.position = transform.position;
-
-                ParticleSystem ps = go.AddComponent<ParticleSystem>();
-                var main = ps.main;
-                main.startLifetime = 0.5f;
-                main.startSpeed = 5f;
-                main.startSize = chargeType == SwordfishGimmick.SwordfishChargeType.Wide ? 1.5f : 0.8f;
-                main.startColor = chargeType switch
-                {
-                    SwordfishGimmick.SwordfishChargeType.Basic => new Color(1f, 0.2f, 0.2f),
-                    SwordfishGimmick.SwordfishChargeType.Double => new Color(1f, 0.6f, 0f),
-                    SwordfishGimmick.SwordfishChargeType.Wide => new Color(0.8f, 0.2f, 1f),
-                    _ => new Color(1f, 0.2f, 0.2f)
-                };
-                main.maxParticles = 20;
-
-                var emission = ps.emission;
-                emission.SetBurst(0, new ParticleSystem.Burst(0f, 15));
-
-                var shape = ps.shape;
-                shape.shapeType = ParticleSystemShapeType.Sphere;
-                shape.radius = 0.5f;
-
-                Destroy(go, 1.5f);
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// AI 상태 머신 초기화
@@ -1250,10 +1046,6 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _activeGimmick.OnDeactivate();
             }
-
-            // 청새치 시각 효과 정리
-            ClearAimIndicator();
-            ClearTrailEffect();
         }
     }
 }
