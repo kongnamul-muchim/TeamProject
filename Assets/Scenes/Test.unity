@@ -234,9 +234,9 @@ MonoBehaviour:
   patrolSpeed: 1.5
   chaseSpeed: 2
   detectionRadius: 2
-  pushForce: 8
-  pushRange: 1.5
-  pushCooldown: 0.5
+  knockbackForce: 20
+  damageCooldown: 1.5
+  attackRange: 1.5
   moveInterval: 2
   moveDistance: 2
   idleTime: 1
@@ -361,7 +361,7 @@ Transform:
   m_GameObject: {fileID: 113500302}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 10.96, y: -1.1453199, z: 3.09352}
+  m_LocalPosition: {x: 5.41, y: -1.1453199, z: 3.09352}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -385,7 +385,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!212 &205402305
 SpriteRenderer:
   serializedVersion: 2
@@ -606,11 +606,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
---- !u!1 &341537484 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5182623623668998429, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-  m_PrefabInstance: {fileID: 2938938864327905958}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &397236851
 GameObject:
   m_ObjectHideFlags: 0
@@ -870,7 +865,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!95 &501025840
 Animator:
   serializedVersion: 7
@@ -964,14 +959,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b386c7399431f2d42a7a258ed75a0851, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Elite.Behaviors.SwordfishBehavior
-  chargeSpeed: 8
+  chargeSpeed: 12
+  aimDuration: 0.5
   chargeDuration: 2
-  chargeCooldown: 1
-  chargeDelay: 0.2
+  stunDuration: 0.5
   predictionFactor: 0.7
+  enableDoubleCharge: 1
+  doubleChargeInterval: 0.3
+  maxStamina: 100
+  staminaRegen: 10
+  basicChargeCost: 20
+  doubleChargeCost: 50
+  wideChargeCost: 80
+  enableWideCharge: 1
+  wideChargeRadiusMultiplier: 1.5
+  wideChargeCooldown: 5
+  aimIndicatorPrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
+  impactEffectPrefab: {fileID: 0}
+  aimIndicatorColor: {r: 1, g: 0.2, b: 0.2, a: 0.7}
+  aimIndicatorLength: 15
   enemyAnimator: {fileID: 501025840}
   chargeTriggerName: OnCharge
+  aimTriggerName: OnAim
   chargeAnimationLength: 1
+  chargeCooldown: 1
+  chargeDelay: 0.2
+  chargeWidth: 1.5
 --- !u!114 &501025843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1019,7 +1033,7 @@ Transform:
   m_GameObject: {fileID: 501025839}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -14.62, y: -0.94532, z: 0}
+  m_LocalPosition: {x: 3.49, y: -0.94532, z: 0}
   m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1080,7 +1094,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &518037531
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1171,8 +1185,14 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   bossAnimator: {fileID: 0}
   chaseAnimationLength: 0.5
+  bossKnockbackForce: 12
   isDefaultFacingLeft: 1
   bossSpriteRenderer: {fileID: 0}
+  aimIndicatorPrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
+  impactEffectPrefab: {fileID: 0}
+  aimIndicatorColor: {r: 1, g: 0.2, b: 0.2, a: 0.7}
+  aimIndicatorLength: 15
 --- !u!114 &518037534
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1446,8 +1466,14 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   bossAnimator: {fileID: 710864471}
   chaseAnimationLength: 0.5
+  bossKnockbackForce: 12
   isDefaultFacingLeft: 1
   bossSpriteRenderer: {fileID: 0}
+  aimIndicatorPrefab: {fileID: 0}
+  trailEffectPrefab: {fileID: 0}
+  impactEffectPrefab: {fileID: 0}
+  aimIndicatorColor: {r: 1, g: 0.2, b: 0.2, a: 0.7}
+  aimIndicatorLength: 15
 --- !u!114 &710864469
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1570,8 +1596,10 @@ MonoBehaviour:
   camouflagePushMultiplier: 0.3
   tideInterval: 5
   tideDuration: 3
-  seaUrchinPrefab: {fileID: 341537484}
-  poolSize: 10
+  randomTideDirection: 0
+  seaUrchinPrefab: {fileID: 5182623623668998429, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
+  poolSize: 20
+  spawnInterval: 1
   playerRigidbody: {fileID: 1270047861}
   camouflageAdapter: {fileID: 1270047858}
 --- !u!1 &1253547413
@@ -1898,7 +1926,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b4a25f7475659f4b859bd3863afb2e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.SuspicionMeterUI
-  bossSuspicionSystem: {fileID: 710864470}
+  bossSuspicionSystem: {fileID: 0}
   suspicionFillImage: {fileID: 0}
   suspicionText: {fileID: 1968272509}
   suspicionLevelText: {fileID: 402308813}
@@ -2260,67 +2288,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 857c8c388fdfef34fbec870767022439, type: 3}
---- !u!1001 &2938938864327905958
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 5151677710123714366, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_Controller
-      value: 
-      objectReference: {fileID: 9100000, guid: 3bf366fe02f746c4396e2a1f2b811c08, type: 2}
-    - target: {fileID: 5182623623668998429, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_Name
-      value: Uni
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 1.04983
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 31.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 29.04473
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958904623205043847, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
 --- !u!1001 &5103917319093530386
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2624,5 +2591,4 @@ SceneRoots:
   - {fileID: 516912067}
   - {fileID: 341047487}
   - {fileID: 397236852}
-  - {fileID: 2938938864327905958}
   - {fileID: 205402308}
