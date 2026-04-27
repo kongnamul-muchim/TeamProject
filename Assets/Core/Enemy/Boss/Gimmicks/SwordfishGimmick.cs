@@ -251,6 +251,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnChaseEnter()
         {
             // Chase 진입 시 즉시 조준 시작
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishTrace] OnChaseEnter → StartAiming 호출 (위치: {(_bossTransform != null ? _bossTransform.position.ToString() : "null")})");
+#endif
             StartAiming();
         }
 
@@ -285,6 +288,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnChaseExit()
         {
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishTrace] OnChaseExit (상태: {_currentState}, 위치: {(_bossTransform != null ? _bossTransform.position.ToString() : "null")})");
+#endif
             // Chase 종료 시 돌진/조준 중단 + 시각 정리
             if (_currentState == State.Aiming)
             {
@@ -398,8 +404,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _stateTimer -= deltaTime;
 
+#if UNITY_EDITOR
+            if (_bossTransform != null)
+            {
+                float distToPlayer = _playerTransform != null ? Vector3.Distance(_bossTransform.position, _playerTransform.position) : -1f;
+                Debug.Log($"[SwordfishTrace] UpdateCooldown - timer:{_stateTimer:F2} 위치:{_bossTransform.position} Player거리:{distToPlayer:F1} IsPlayerClose:{IsPlayerClose()}");
+            }
+#endif
+
             if (_stateTimer <= 0f)
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] UpdateCooldown 타이머만료! → {(IsPlayerClose() ? "Player근접 → StartAiming" : "Player원거리 → StartPostChargePatrol")}");
+#endif
                 // Player가 근처에 있으면 PostChargePatrol 스킵 (바로 재공격)
                 if (_hasPostChargeTarget && !IsPlayerClose())
                 {
@@ -444,9 +461,21 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         private void StartAiming()
         {
-            if (_playerTransform == null || _bossTransform == null) return;
+            if (_playerTransform == null || _bossTransform == null)
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] StartAiming 실패 - Transform null (player: {_playerTransform != null}, boss: {_bossTransform != null})");
+#endif
+                return;
+            }
 
-            if (!IsPlayerStillInRange()) return;
+            if (!IsPlayerStillInRange())
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] StartAiming 실패 - Player out of range (거리: {Vector3.Distance(_bossTransform.position, _playerTransform.position):F1}m, 한계: 15m)");
+#endif
+                return;
+            }
 
             // 돌진 타입 결정 (스태미나 기반)
             SwordfishChargeType selectedType = SelectChargeType();
@@ -504,10 +533,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         private void StartCharge()
         {
-            if (_playerTransform == null || _bossTransform == null) return;
+            if (_playerTransform == null || _bossTransform == null)
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] StartCharge 실패 - Transform null");
+#endif
+                return;
+            }
 
             if (!IsPlayerStillInRange())
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] StartCharge 실패 - Player out of range");
+#endif
                 _currentState = State.Idle;
                 return;
             }
@@ -543,6 +581,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // Player 예측 위치 계산 (돌진 방향 결정)
             Vector3 playerPos = _playerTransform.position;
+            Vector3 bossPos = _bossTransform.position;
             Vector3 playerVelocity = Vector3.zero;
 
             if (_playerMovementAdapter != null)
@@ -551,10 +590,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
             }
 
-            float timeToReach = Vector3.Distance(_bossTransform.position, playerPos) / Mathf.Max(speed, 0.1f);
+            float timeToReach = Vector3.Distance(bossPos, playerPos) / Mathf.Max(speed, 0.1f);
             Vector3 predictedPos = playerPos + (playerVelocity * timeToReach * predictionFactor);
-            _chargeDirection = (predictedPos - _bossTransform.position).normalized;
+            _chargeDirection = (predictedPos - bossPos).normalized;
             _chargeDirection.y = 0f;
+
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishTrace] StartCharge 방향계산 - 보스위치:{bossPos} Player위치:{playerPos} Player속도:{playerVelocity} 예측위치:{predictedPos} 방향:{_chargeDirection}");
+            Debug.Log($"[SwordfishTrace] StartCharge 이동명령 - OnSpeedOverride({speed}F) → maxSpeed={speed}F, OnChargeStarted 호출");
+#endif
 
             // 속도 오버라이드
             OnSpeedOverride?.Invoke(speed);
@@ -610,6 +654,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         private void EndCharge()
         {
+            Vector3 endPos = _bossTransform != null ? _bossTransform.position : Vector3.zero;
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishTrace] EndCharge - 위치:{endPos} wallHit:{_hasHitWall} 이동거리:{_chargeDistanceTraveled:F1}m");
+#endif
+
             // [시각] 돌진 종료 (Trail 제거 + 충돌 이펙트)
             OnChargeEnded?.Invoke(_currentChargeType, _hasHitWall);
 
@@ -620,25 +669,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 OnStunStarted?.Invoke(stunDuration);
                 OnSpeedOverride?.Invoke(0f);
                 OnMovementStop?.Invoke();
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] EndCharge → 스턴 (speed=0, stop)");
+#endif
             }
             else
             {
                 _stateTimer = GetChargeCooldown();
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] EndCharge → 쿨타임 ({_stateTimer:F1}초) speed 유지: chargeSpeed");
+#endif
             }
 
             _currentState = State.Cooldown;
 
             // 돌진 위치 기념
-            _lastChargeTarget = _bossTransform != null ? _bossTransform.position : Vector3.zero;
+            _lastChargeTarget = endPos;
             _hasPostChargeTarget = true;
 
             // 정지
             OnMovementStop?.Invoke();
-
-#if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] 돌진 종료 → {(_hasHitWall ? "스턴" : "쿨타임")} ({_stateTimer:F1}초)");
-#endif
-        }
 
         #endregion
 
@@ -765,11 +815,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (!_hasPostChargeTarget || _bossTransform == null)
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] StartPostChargePatrol 실패 - target:{_hasPostChargeTarget} boss:{_bossTransform != null}");
+#endif
                 _currentState = State.Idle;
                 return;
             }
 
             _currentState = State.PostChargePatrol;
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishTrace] StartPostChargePatrol - 현재위치:{_bossTransform.position} 목표위치:{_lastChargeTarget} 거리:{Vector3.Distance(_bossTransform.position, _lastChargeTarget):F1}m");
+#endif
             OnMoveTo?.Invoke(_lastChargeTarget);
         }
 
@@ -796,11 +852,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                     Vector3 target = currentPos + _chargeDirection * 5f;
                     target.y = currentPos.y;
                     Vector3 clamped = ClampToBounds(target, bounds);
-                    // Clamp된 위치와 원래 위치가 다르면 벽에 도달한 것 → 충돌 처리
                     if (clamped != target)
                     {
                         _hasHitWall = true;
                     }
+#if UNITY_EDITOR
+                    Debug.Log($"[SwordfishTrace] GetPatrolTarget Charging - 현재:{currentPos} 방향:{_chargeDirection} 목표:{clamped}");
+#endif
                     return clamped;
                 }
 
@@ -812,16 +870,29 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                             _lastChargeTarget.x,
                             currentPos.y,
                             _lastChargeTarget.z);
-                        return ClampToBounds(target, bounds);
+                        Vector3 clamped = ClampToBounds(target, bounds);
+#if UNITY_EDITOR
+                        Debug.Log($"[SwordfishTrace] GetPatrolTarget PostCharge - 현재:{currentPos} 목표:{clamped} lastChargeTarget:{_lastChargeTarget}");
+#endif
+                        return clamped;
                     }
+#if UNITY_EDITOR
+                    Debug.Log($"[SwordfishTrace] GetPatrolTarget PostCharge - no target → 현재위치 유지");
+#endif
                     return currentPos;
                 }
 
                 case State.Aiming:
                 case State.Cooldown:
+#if UNITY_EDITOR
+                    Debug.Log($"[SwordfishTrace] GetPatrolTarget {_currentState} - 현재위치 유지:{currentPos}");
+#endif
                     return currentPos;
 
                 default:
+#if UNITY_EDITOR
+                    Debug.Log($"[SwordfishTrace] GetPatrolTarget → null (상태:{_currentState})");
+#endif
                     return null;
             }
         }

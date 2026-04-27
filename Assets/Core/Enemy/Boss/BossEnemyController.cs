@@ -406,6 +406,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── 돌진 속도 제어 ───
             swordfish.OnSpeedOverride = (speed) =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnSpeedOverride({speed:F1}) 현재위치:{transform.position} IsMoving:{_movement.IsMoving}");
+#endif
                 _movement.Speed = speed;
                 if (_movement is HideAndInk.Core.Enemy.Movement.EnemyMovement em)
                 {
@@ -422,12 +425,18 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── 이동 정지 ───
             swordfish.OnMovementStop = () =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnMovementStop 위치:{transform.position} velocity:{_movement.Velocity}");
+#endif
                 _movement.Stop();
             };
 
             // ─── ChaseBehavior 정지/재개 (조준/돌진 중 Player 추적 방지) ───
             swordfish.OnChasePauseRequest = (pause) =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnChasePauseRequest({pause})");
+#endif
                 _chaseBehavior?.SetPaused(pause);
             };
 
@@ -438,6 +447,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── [시각] 조준 시작: 경고선 생성 ───
             swordfish.OnAimStarted = () =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnAimStarted 위치:{transform.position}");
+#endif
                 ShowAimIndicator();
             };
 
@@ -455,6 +467,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── [시각] 조준 종료: 경고선 제거 ───
             swordfish.OnAimEnded = () =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnAimEnded 위치:{transform.position}");
+#endif
                 ClearAimIndicator();
             };
 
@@ -467,6 +482,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 // 실제 이동은 Gimmick의 OnSpeedOverride + UpdateMovement의 Velocity 적용으로 처리
                 Vector3 chargeTarget = transform.position + direction * 20f;
                 chargeTarget.y = transform.position.y;
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnChargeStarted 타입:{chargeType} 현재위치:{transform.position} 방향:{direction} MoveTo목표:{chargeTarget}");
+#endif
                 _movement.MoveTo(chargeTarget);
 
                 // ChaseBehavior 정지 (돌진 중 Player 추적 방지)
@@ -486,6 +504,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── [시각] 돌진 종료: Trail 제거 + 충돌 이펙트 + ChaseBehavior 재개 ───
             swordfish.OnChargeEnded = (chargeType, hitWall) =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnChargeEnded 타입:{chargeType} wallHit:{hitWall} 위치:{transform.position} → ChaseBehavior 재개");
+#endif
                 ClearTrailEffect();
 
                 // ChaseBehavior 재개
@@ -506,6 +527,9 @@ namespace HideAndInk.Core.Enemy.Boss
             // ─── [시각] 스턴 시작 ───
             swordfish.OnStunStarted = (duration) =>
             {
+#if UNITY_EDITOR
+                Debug.Log($"[SwordfishTrace] OnStunStarted({duration:F1}초) 위치:{transform.position} → Stop, ChaseBehavior정지");
+#endif
                 _movement.Stop();
                 _chaseBehavior?.SetPaused(true);
 
@@ -904,7 +928,14 @@ namespace HideAndInk.Core.Enemy.Boss
                         // 일반 보스: ChaseBehavior의 거리 체크로 Player 놓침 판단 (의태 무시)
                         // 청새치: 전투 사이클 중(조준/돌진/쿨타임)에는 Chase 유지 (Player가 멀어져도 Search 전환하지 않음)
                         bool isSwordfishCycling = _activeGimmick is SwordfishGimmick swordfishCheck && swordfishCheck.IsInCombatCycle;
-                        if (!isSwordfishCycling && _chaseBehavior != null && _chaseBehavior.IsPlayerOutOfRange())
+                        bool isOutOfRange = _chaseBehavior != null && _chaseBehavior.IsPlayerOutOfRange();
+#if UNITY_EDITOR
+                        if (isOutOfRange)
+                        {
+                            Debug.Log($"[SwordfishTrace] CheckStateTransitions Chase→Search: combatCycle={isSwordfishCycling} outOfRange={isOutOfRange}");
+                        }
+#endif
+                        if (!isSwordfishCycling && isOutOfRange)
                         {
                             if (_playerTransform != null)
                             {
@@ -1087,11 +1118,19 @@ namespace HideAndInk.Core.Enemy.Boss
             }
 
             // 속도를 실제 Transform에 적용 (X-Z 평면, Y축 고정)
+            Vector3 velocity = _movement.Velocity;
             Vector3 newPosition = transform.position;
-            newPosition.x += _movement.Velocity.x * deltaTime;
-            newPosition.z += _movement.Velocity.z * deltaTime;
+            newPosition.x += velocity.x * deltaTime;
+            newPosition.z += velocity.z * deltaTime;
             // Y축은 고정
             transform.position = newPosition;
+
+#if UNITY_EDITOR
+            if (velocity.sqrMagnitude > 0.01f)
+            {
+                Debug.Log($"[SwordfishTrace] UpdateMovement 속도:{velocity} IsMoving:{_movement.IsMoving} 새위치:{newPosition} Speed:{_movement.Speed:F1}");
+            }
+#endif
 
             // 스프라이트 방향 업데이트
             UpdateSpriteDirection();
