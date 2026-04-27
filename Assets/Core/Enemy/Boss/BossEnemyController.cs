@@ -686,6 +686,8 @@ namespace HideAndInk.Core.Enemy.Boss
             _playerRigidbody.AddForce(dir * knockbackForce, ForceMode.Impulse);
         }
 
+        #endregion
+
         #region SandPit (가자미 구덩이)
 
         /// <summary>
