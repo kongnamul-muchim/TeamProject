@@ -73,7 +73,7 @@ Material:
     - _RayScale: 5
     - _RaySpeed: 0.1
     - _RayTilt: 0.3
-    - _alpha: 0.3
+    - _alpha: 0
     - _dis: 1
     - _refraction: 0.05
     m_Colors:
