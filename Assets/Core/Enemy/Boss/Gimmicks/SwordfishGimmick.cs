@@ -98,6 +98,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         // 연속 돌진
         private bool _isDoubleChargeFirst;
+        private bool _isDoubleChargeSecondStarted; // 2차 돌진이 이미 시작됐는지 (무한루프 방지)
         private bool _isWideCharge;
 
         // PostCharge
@@ -341,18 +342,32 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 // 1차 완료 → 잠시 대기 후 2차
                 _isDoubleChargeFirst = false;
+                _isDoubleChargeSecondStarted = false;
                 _stateTimer = doubleChargeInterval;
                 _chargeDistanceTraveled = 0f; // 2차 대비 초기화
                 OnMovementStop?.Invoke();
                 return;
             }
 
-            // 2차 돌진 대기 중 (interval 동안) → 2차 시작
-            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst && _stateTimer > 0f)
+            // 2차 돌진 대기 중 (interval 동안) → 2차 시작 (한 번만)
+            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst 
+                && !_isDoubleChargeSecondStarted && _stateTimer > 0f)
             {
                 if (_playerTransform != null)
                 {
+                    _isDoubleChargeSecondStarted = true;
                     StartDoubleChargeSecond();
+                }
+                return;
+            }
+
+            // 2차 돌진이 이미 시작됐으면 타이머가 끝날 때까지 대기
+            if (_currentChargeType == SwordfishChargeType.Double && _isDoubleChargeSecondStarted)
+            {
+                CheckChargeCollision();
+                if (_stateTimer <= 0f || _hasHitWall)
+                {
+                    EndCharge();
                 }
                 return;
             }
@@ -423,9 +438,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 돌진 타입 결정 (스태미나 기반)
             SwordfishChargeType selectedType = SelectChargeType();
 
-            if (selectedType == SwordfishChargeType.Basic && _currentStamina < basicChargeCost)
+            // 선택된 타입의 스태미나가 부족하면 Basic으로 fallback
+            float requiredCost = GetChargeCost(selectedType);
+            if (_currentStamina < requiredCost)
             {
-                return;
+                // Basic도 부족하면 공격 불가
+                if (_currentStamina < basicChargeCost)
+                {
+                    return;
+                }
+                selectedType = SwordfishChargeType.Basic;
             }
 
             _currentChargeType = selectedType;
@@ -461,7 +483,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return SwordfishChargeType.Double;
             }
 
-            // 기본 돌진
+            // 기본 돌진 (스태미나 부족해도 가능)
             return SwordfishChargeType.Basic;
         }
 
@@ -496,11 +518,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_currentChargeType == SwordfishChargeType.Double)
             {
                 _isDoubleChargeFirst = true;
+                _isDoubleChargeSecondStarted = false;
                 duration = chargeDuration * 0.6f;
             }
             else
             {
                 _isDoubleChargeFirst = false;
+                _isDoubleChargeSecondStarted = false;
             }
 
             _stateTimer = duration;
