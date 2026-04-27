@@ -109,6 +109,13 @@ namespace HideAndInk.Core.Enemy.Boss
                 var suspicionModule = new AmbushSuspicionModule(ambush);
                 suspicionSystem.SetSuspicionModule(suspicionModule);
 
+                // 의심도 100% 발각 → 강제 Chase 전환
+                suspicionSystem.OnDetected += () =>
+                {
+                    if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Patrol)
+                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                };
+
                 if (_isGroundBoundsScanned)
                     ambush.SetGroundBounds(_groundBounds);
             }
@@ -125,6 +132,13 @@ namespace HideAndInk.Core.Enemy.Boss
                     ambush.OnVisibilityToggle = (v) => visionSensor?.SetDistanceOnlyMode(v);
                     ambush.OnDashMoveTo = (t) => _movement.MoveTo(t);
                     ambush.OnSpawnPit = SpawnSandPitCluster;
+                    ambush.OnCombatStateChanged = (inCombat) =>
+                    {
+                        if (inCombat)
+                            suspicionSystem?.BlockSuspicionIncrease();
+                        else
+                            suspicionSystem?.AllowSuspicionIncrease();
+                    };
                     break;
 
                 case RelentlessChaseGimmick relentless:
@@ -281,14 +295,8 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (suspicionSystem == null) return;
 
-            if (_activeGimmick is AmbushGimmick)
-            {
-                if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
-                    suspicionSystem.BlockSuspicionIncrease();
-                else
-                    suspicionSystem.AllowSuspicionIncrease();
-                return;
-            }
+            // Ambush는 OnCombatStateChanged 콜백이 직접 Block/Allow 관리
+            if (_activeGimmick is AmbushGimmick) return;
 
             if (canSeePlayer && !IsPlayerCamouflaging() && visionSensor != null && visionSensor.RaisesSuspicion)
             {

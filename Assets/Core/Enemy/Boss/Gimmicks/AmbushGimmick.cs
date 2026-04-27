@@ -71,6 +71,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public System.Action<bool> OnVisibilityToggle;
         public System.Action<Vector3> OnDashMoveTo;
         public System.Action<Vector3> OnSpawnPit;
+        public System.Action<bool> OnCombatStateChanged;
 
         #endregion
 
@@ -153,6 +154,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isDashPreDelay = true;
             _preDelayTimer = dashPreDelay;
             OnDashMoveTo?.Invoke(_bossTransform != null ? _bossTransform.position : Vector3.zero);
+            OnCombatStateChanged?.Invoke(true); // Chase 시작 → 의심도 상승 차단
         }
 
         public void OnChaseUpdate(float deltaTime)
@@ -184,6 +186,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isDashing = false;
             _isDashPreDelay = false;
             OnMovementResume?.Invoke();
+            OnCombatStateChanged?.Invoke(false); // Chase 종료 → 의심도 상승 허용
         }
 
         public void OnSearchEnter()
