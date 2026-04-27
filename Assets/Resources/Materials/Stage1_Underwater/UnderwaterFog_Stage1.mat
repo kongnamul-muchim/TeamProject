@@ -69,11 +69,16 @@ Material:
     - _OriginalRate: 0
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _alpha: 0.2
-    - _dis: 10
-    - _refraction: 0.03
+    - _RayIntensity: 1.5
+    - _RayScale: 5
+    - _RaySpeed: 0.1
+    - _RayTilt: 0.3
+    - _alpha: 0.3
+    - _dis: 1
+    - _refraction: 0.05
     m_Colors:
     - Color_551f3de45b3f45d188af0756b6c21b12: {r: 0.494117, g: 0.784313, b: 0.890196, a: 1}
+    - _RayColor: {r: 1, g: 1, b: 1, a: 0.65882355}
     - _color: {r: 0.1764706, g: 0.8980392, b: 0.78039217, a: 1}
     - _normalUV: {r: 1, g: 1, b: 0.2, a: 0.1}
   m_BuildTextureStacks: []

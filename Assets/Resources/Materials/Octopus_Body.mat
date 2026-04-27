@@ -82,7 +82,7 @@ Material:
     - _CausticsScale: 2
     - _ColorMask: 15
     - _EnableExternalAlpha: 0
-    - _MaskHeight: -0.21
+    - _MaskHeight: -0.08
     - _MaskSoftness: 0.5
     - _OriginalRate: 0.4
     - _OutlineAlpha: 0.4
