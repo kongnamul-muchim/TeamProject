@@ -14,6 +14,7 @@ namespace HideAndInk.Core.Logging
     {
         private string _logFolder;
         private Dictionary<string, StreamWriter> _writers = new Dictionary<string, StreamWriter>();
+        private bool _isDisposed;
 
         private string[] _logTypeTags = { "INFO", "WARN", "ERROR", "FATAL", "DEBUG" };
 
@@ -95,9 +96,17 @@ namespace HideAndInk.Core.Logging
 
         private void WriteLog(string tag, string logEntry)
         {
+            if (_isDisposed) return;
             if (_writers.ContainsKey(tag) && _writers[tag] != null)
             {
-                _writers[tag].WriteLine(logEntry);
+                try
+                {
+                    _writers[tag].WriteLine(logEntry);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // StreamWriter가 이미 닫힌 경우 무시
+                }
             }
         }
 
@@ -115,6 +124,9 @@ namespace HideAndInk.Core.Logging
         /// </summary>
         private void DisposeWriters()
         {
+            if (_isDisposed) return;
+            _isDisposed = true;
+
             foreach (var writer in _writers.Values)
             {
                 if (writer != null)
@@ -128,11 +140,6 @@ namespace HideAndInk.Core.Logging
         private void OnDestroy()
         {
             Application.logMessageReceived -= OnLogReceived;
-            DisposeWriters();
-        }
-
-        private void OnApplicationQuit()
-        {
             DisposeWriters();
         }
     }
