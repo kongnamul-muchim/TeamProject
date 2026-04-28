@@ -1,7 +1,6 @@
 using UnityEngine;
 using System;
 using HideAndInk.Core.Interfaces;
-using HideAndInk.Core.Enemy.Boss.Gimmicks;
 
 namespace HideAndInk.Core.Perception
 {
@@ -52,11 +51,6 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float floorYOffset = 0.05f;
         [Tooltip("바닥으로 인식할 레이어")]
         [SerializeField] private LayerMask groundLayer = -1;
-
-#if UNITY_EDITOR
-        [Header("에디터 Gizmos (AmbushGimmick 연동)")]
-        [SerializeField] public AmbushGimmick linkedGimmick;
-#endif
 
         // 상태
         private float _currentValue;
@@ -164,16 +158,6 @@ namespace HideAndInk.Core.Perception
             if (_isCamouflaging) return; // 의태 중이면 거리 감지 무시 (시야각 밖 안전)
             AddSuspicion(rate, deltaTime);
         }
-
-#if UNITY_EDITOR
-        private void OnValidate()
-        {
-            if (linkedGimmick != null)
-            {
-                _suspicionRadius = linkedGimmick.SuspicionRadius;
-            }
-        }
-#endif
 
         // 이벤트
         public event Action<SuspicionLevel> OnLevelChanged;
@@ -568,13 +552,6 @@ namespace HideAndInk.Core.Perception
         private void OnDrawGizmosSelected()
         {
             Vector2 radius = _suspicionRadius;
-
-#if UNITY_EDITOR
-            if (linkedGimmick != null)
-            {
-                radius = linkedGimmick.SuspicionRadius;
-            }
-#endif
 
             // 타원형 영역 - 주황색
             Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);

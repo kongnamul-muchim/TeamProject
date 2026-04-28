@@ -1,6 +1,6 @@
 # 프로젝트 설계도
 
-> 마지막 업데이트: 2026-04-16
+> 마지막 업데이트: 2026-04-28
 
 ---
 
@@ -64,6 +64,13 @@ Logs/{년-월-일}/ERROR.md
 | Debug.LogError | ERROR |
 | Debug.LogException | ERROR |
 | Assert | DEBUG |
+
+---
+
+## 🚫 금지 사항
+
+- **unity-cli**는 이 프로젝트에서 **사용 금지**
+- Unity Editor를 CLI로 제어하는 모든 명령은 허용되지 않음
 
 ---
 

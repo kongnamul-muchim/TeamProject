@@ -147,18 +147,19 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
             {
-                suspicionSystem.SetSuspicionRadius(ambush.SuspicionRadius);
-                suspicionSystem.linkedGimmick = ambush; // Editor OnValidate용
-                var suspicionModule = new AmbushSuspicionModule(ambush);
-                suspicionSystem.SetSuspicionModule(suspicionModule);
+                // 거리 기반 감지 모듈 제거 — 근접 Chase(12m)로만 발각
+                // 의심도는 Pit 밟을 때만 상승 (+30)
+                suspicionSystem.SetSuspicionModule(null);
 
-                // 의심도 100% 발각 → 강제 Chase 전환 (Patrol/Search 모두 대응)
+                // 바닥 원형 시각화를 근접 Chase 범위로 설정
+                suspicionSystem.SetSuspicionRadius(Vector2.one * ambush.ProximityChaseDistance);
+
+                // 의심도 100% 발각 → 강제 Chase 전환 (Pit 누적으로만 발동)
                 suspicionSystem.OnDetected += () =>
                 {
                     if (_stateMachine != null)
                     {
                         var cur = _stateMachine.CurrentState;
-                        // 이미 Chase 중이면 skip
                         if (cur != EnemyAIState.Chase)
                             _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                     }
