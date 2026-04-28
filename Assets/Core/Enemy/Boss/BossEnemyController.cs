@@ -160,6 +160,10 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (_activeGimmick is RelentlessChaseGimmick relentless && suspicionSystem != null)
             {
+                // 곰치는 ChaseBehavior 이동을 사용하지 않음 (돌진 중에만 움직임)
+                // 평소에는 ChaseBehavior 정지 → Player 밀지 않음
+                _chaseBehavior?.SetPaused(true);
+
                 // 의심도 100% → 바로 돌진 시퀀스 (상태 전환 없음, Chase-only)
                 suspicionSystem.OnDetected += () =>
                 {
@@ -970,13 +974,14 @@ namespace HideAndInk.Core.Enemy.Boss
 
         private void OnMorayChargesComplete()
         {
-            // 모든 돌진 완료 → 의심도 리셋 → 일반 Chase 재개
+            // 모든 돌진 완료 → 의심도 리셋 → 다음 발각 대기
             if (_activeGimmick is RelentlessChaseGimmick relentless)
             {
                 suspicionSystem?.ForceSetSuspicion(relentless.PostChaseSuspicion);
                 suspicionSystem?.ResetDetected(); // 재발각 가능
                 _isMorayCharging = false;         // 의심도 증가 재개
-                _chaseBehavior?.SetPaused(false); // ChaseBehavior 재개
+                // ChaseBehavior는 영구 정지 (돌진 중에만 움직임)
+                // → Player 밀지 않음
                 // 상태 전환 불필요: 이미 Chase 중
             }
         }
