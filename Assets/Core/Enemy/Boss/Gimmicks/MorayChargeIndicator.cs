@@ -122,6 +122,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             go.transform.SetParent(null);
             go.layer = gameObject.layer;
 
+            // ★ 오브젝트 위치 = charge 중심 (transform이 원점에서 멀어도 culling 안 되도록)
+            Vector3 center = (start + end) * 0.5f;
+            go.transform.position = center;
+
             MeshFilter mf = go.GetComponent<MeshFilter>();
             MeshRenderer mr = go.GetComponent<MeshRenderer>();
 
@@ -132,7 +136,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 mf.mesh = mesh;
             }
 
-            UpdateMeshGeometry(mesh, start, end);
+            // Local 좌표로 mesh 작성 (world - center)
+            UpdateMeshGeometryLocal(mesh, start - center, end - center);
 
             if (mr.material != null) mr.material.color = activeColor;
 
@@ -150,18 +155,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             return _paths.Count - 1;
         }
 
-        private void UpdateMeshGeometry(Mesh mesh, Vector3 start, Vector3 end)
+        private void UpdateMeshGeometryLocal(Mesh mesh, Vector3 localStart, Vector3 localEnd)
         {
-            Vector3 dir = (end - start).normalized;
+            Vector3 dir = (localEnd - localStart).normalized;
             Vector3 perp = Vector3.Cross(dir, Vector3.up).normalized;
             float halfW = indicatorWidth * 0.5f;
             float h = heightOffset;
 
             Vector3[] vertices = new Vector3[4];
-            vertices[0] = start + perp * halfW + Vector3.up * h;
-            vertices[1] = start - perp * halfW + Vector3.up * h;
-            vertices[2] = end - perp * halfW + Vector3.up * h;
-            vertices[3] = end + perp * halfW + Vector3.up * h;
+            vertices[0] = localStart + perp * halfW + Vector3.up * h;
+            vertices[1] = localStart - perp * halfW + Vector3.up * h;
+            vertices[2] = localEnd - perp * halfW + Vector3.up * h;
+            vertices[3] = localEnd + perp * halfW + Vector3.up * h;
             mesh.vertices = vertices;
 
             mesh.triangles = new int[6] { 0, 1, 2, 0, 2, 3 };
@@ -202,6 +207,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             path.start = start;
             path.end = end;
 
+            // 오브젝트 위치 = charge 중심
+            Vector3 center = (start + end) * 0.5f;
+            if (path.gameObject != null)
+                path.gameObject.transform.position = center;
+
             Mesh mesh = path.filter.mesh;
             if (mesh == null)
             {
@@ -209,7 +219,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 path.filter.mesh = mesh;
             }
 
-            UpdateMeshGeometry(mesh, start, end);
+            UpdateMeshGeometryLocal(mesh, start - center, end - center);
             _paths[index] = path;
         }
 
