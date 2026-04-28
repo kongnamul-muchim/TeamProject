@@ -160,6 +160,7 @@ namespace HideAndInk.Core.Perception
         private void OnModuleSuspicionIncrease(float rate, float deltaTime)
         {
             if (_isIncreaseBlocked) return; // 차단 중이면 상승 무시
+            if (_isCamouflaging) return; // 의태 중이면 거리 감지 무시 (시야각 밖 안전)
             AddSuspicion(rate, deltaTime);
         }
 
