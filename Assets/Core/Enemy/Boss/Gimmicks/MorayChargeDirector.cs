@@ -54,6 +54,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private GroundBounds _groundBounds;
         private bool _hasGroundBounds;
         private Vector3 _playerVelocity;
+        private HideAndInk.Player.PlayerMovementAdapter _cachedMovement;
 
         private int _currentChargeIndex;
         private int _totalCharges;
@@ -67,29 +68,31 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private Vector3[] _chargeEnds;
         private int _lastDirection; // 0=좌→우, 1=우→좌
 
+        // Charge별 충돌 플래그 (각 charge에서 한 번만 hit)
+        private bool[] _chargeHitFlags;
+
         // ──────────────────────────────────────────────
         // MonoBehaviour
         // ──────────────────────────────────────────────
 
         private void Awake()
         {
-            // Player 찾기
+            // Player 찾기 + MovementAdapter 캐싱
             GameObject playerObj = GameObject.FindWithTag("Player");
             if (playerObj != null)
+            {
                 _playerTransform = playerObj.transform;
+                _cachedMovement = playerObj.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
+            }
         }
 
         private void Update()
         {
-            // Player 속도 캐싱 (매 프레임 갱신)
-            if (_playerTransform != null)
+            // Player 속도 캐싱 (매 프레임 갱신, 캐시된 참조 사용)
+            if (_cachedMovement != null)
             {
-                var movement = _playerTransform.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
-                if (movement != null)
-                {
-                    Vector2 vel2D = movement.CurrentVelocity;
-                    _playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
-                }
+                Vector2 vel2D = _cachedMovement.CurrentVelocity;
+                _playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
             }
 
             // 상태 업데이트
@@ -143,6 +146,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 경로 선계산
             _chargeStarts = new Vector3[chargeCount];
             _chargeEnds = new Vector3[chargeCount];
+            _chargeHitFlags = new bool[chargeCount];
 
             for (int i = 0; i < chargeCount; i++)
             {
@@ -178,6 +182,24 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isTransitioning = false;
             if (indicator != null)
                 indicator.ClearAll();
+        }
+
+        /// <summary>
+        /// 강제 중단 (Player 이탈/사망 등 예외 상황)
+        /// 상태 리셋 + 이벤트 발행 → Patrol 복귀 트리거
+        /// </summary>
+        public void ForceInterrupt()
+        {
+            _isPreparing = false;
+            _isCharging = false;
+            _isTransitioning = false;
+            _stateTimer = 0f;
+
+            if (indicator != null)
+                indicator.ClearAll();
+
+            OnMovementStop?.Invoke();
+            OnChargesComplete?.Invoke();
         }
 
         /// <summary>GroundBounds 재설정</summary>
@@ -271,7 +293,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private void ExecuteCharge(int index)
         {
-            _hasHitThisCharge = false;   // ← 각 돌진 시작 시 플래그 리셋
             _currentChargeIndex = index;
             _isCharging = true;
 
@@ -368,7 +389,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (_bossTransform == null || _playerTransform == null) return;
             if (_currentChargeIndex >= _totalCharges) return;
-            if (_hasHitThisCharge) return;
+            if (_chargeHitFlags == null || _currentChargeIndex >= _chargeHitFlags.Length) return;
+            if (_chargeHitFlags[_currentChargeIndex]) return;
 
             Vector3 start = _chargeStarts[_currentChargeIndex];
             Vector3 end = _chargeEnds[_currentChargeIndex];
@@ -384,12 +406,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             Collider[] hits = Physics.OverlapBox(center, halfExtents, Quaternion.LookRotation(dir), playerLayer);
             if (hits.Length > 0)
             {
-                _hasHitThisCharge = true;
+                _chargeHitFlags[_currentChargeIndex] = true;
                 OnPlayerHit?.Invoke();
             }
         }
 
-        private bool _hasHitThisCharge;
         public event Action OnPlayerHit;
     }
 }

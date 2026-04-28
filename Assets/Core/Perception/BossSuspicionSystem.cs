@@ -66,6 +66,7 @@ namespace HideAndInk.Core.Perception
         private bool _wasDetected;
         private float _lastDetectedTime;
         private float _suspicionDecayMultiplier = 1f; // 의심도 하락 배율 (RelentlessChase용)
+        private bool _autoDecayEnabled = true; // 자체 하락 활성화 (false면 기믹 전담)
         private bool _isIncreaseBlocked = false; // 의심도 상승 차단 플래그 (Ambush Chase용)
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
@@ -206,8 +207,8 @@ namespace HideAndInk.Core.Perception
                 OnDetected?.Invoke();
             }
 
-            // 의심도 하락 처리
-            if (_currentValue > 0f)
+            // 의심도 하락 처리 (autoDecayEnabled=false면 기믹이 전담)
+            if (_autoDecayEnabled && _currentValue > 0f)
             {
                 // 의태 중이면 빠른 하락
                 float decreaseSpeed = _isCamouflaging ? camouflageDecreaseSpeed : normalDecreaseSpeed;
@@ -354,6 +355,15 @@ namespace HideAndInk.Core.Perception
         public void SetSuspicionDecayMultiplier(float multiplier)
         {
             _suspicionDecayMultiplier = Mathf.Max(0.1f, multiplier);
+        }
+
+        /// <summary>
+        /// 의심도 자체 하락 활성/비활성화 (RelentlessChaseGimmick에서 호출)
+        /// false: 기믹이 OnIncreaseSuspicion으로 의심도 전담 제어
+        /// </summary>
+        public void SetAutoDecayEnabled(bool enabled)
+        {
+            _autoDecayEnabled = enabled;
         }
 
         /// <summary>

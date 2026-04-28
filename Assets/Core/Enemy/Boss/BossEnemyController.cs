@@ -483,8 +483,13 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     else if (isRelentlessGimmick)
                     {
-                        // Moray: 기믹(OnChargeSequenceEnd)이 직접 Patrol 전환 제어
-                        // 여기서는 아무것도 안 함
+                        // Moray: Player 이탈 시 강제 중단
+                        if (_playerTransform != null && chargeDirector != null)
+                        {
+                            float dist = Vector3.Distance(transform.position, _playerTransform.position);
+                            if (dist > 40f) // 화면 밖으로 완전히 이탈
+                                chargeDirector.ForceInterrupt();
+                        }
                     }
                     else
                     {
@@ -540,13 +545,15 @@ namespace HideAndInk.Core.Enemy.Boss
                         bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
                         if (isRelentless)
                         {
-                            // Moray: 시야 상승 없음, 감소율 1x (기믹이 OnIncreaseSuspicion으로 관리)
+                            // Moray: 시야 상승 없음, 자체 하락 정지 (기믹이 OnIncreaseSuspicion으로 전담)
                             suspicionSystem.SetVisionIncreaseSpeed(0f);
                             suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                            suspicionSystem.SetAutoDecayEnabled(false);
                         }
                         else
                         {
                             suspicionSystem.SetVisionIncreaseSpeed(10f);
+                            suspicionSystem.SetAutoDecayEnabled(true);
                             float decayMul = _activeGimmick is AmbushGimmick ? 0.2f : 1f;
                             suspicionSystem.SetSuspicionDecayMultiplier(decayMul);
                             // Patrol 복귀 시 발각 상태 리셋 (재발각 가능)
@@ -562,13 +569,15 @@ namespace HideAndInk.Core.Enemy.Boss
                         bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
                         if (isRelentless)
                         {
-                            // Moray Chase: 시야 상승 없음, 하락 최소화 (기믹이 모든 의심도 제어)
+                            // Moray Chase: 시야 상승 없음, 자체 하락 정지 (기믹이 모든 의심도 제어)
                             suspicionSystem.SetVisionIncreaseSpeed(0f);
                             suspicionSystem.SetSuspicionDecayMultiplier(0.1f);
+                            suspicionSystem.SetAutoDecayEnabled(false);
                         }
                         else
                         {
                             suspicionSystem.SetVisionIncreaseSpeed(30f);
+                            suspicionSystem.SetAutoDecayEnabled(true);
                             suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
                         }
                     }

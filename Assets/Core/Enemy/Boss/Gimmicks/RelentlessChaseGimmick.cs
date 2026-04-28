@@ -16,7 +16,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public GimmickType Type => GimmickType.RelentlessChase;
 
         [Header("의심도")]
-        [SerializeField] private float suspicionIncreaseRate = 20f;
+        [SerializeField] private float suspicionIncreaseRate = 15f;
         [SerializeField] private float postChaseSuspicion = 30f;
 
         [Header("돌진")]
