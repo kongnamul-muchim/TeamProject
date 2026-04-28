@@ -170,6 +170,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 {
                     if (_isGroundBoundsScanned)
                         chargeDirector.Initialize(transform, _groundBounds);
+                    chargeDirector.OnPrepareTeleport += OnMorayPrepareTeleport;
                     chargeDirector.OnChargeExecute += OnMorayChargeExecute;
                     chargeDirector.OnChargesComplete += OnMorayChargesComplete;
                     chargeDirector.OnPlayerHit += OnMorayPlayerHit;
@@ -880,6 +881,13 @@ namespace HideAndInk.Core.Enemy.Boss
 
         #region Moray Charge Director Handlers
 
+        private void OnMorayPrepareTeleport(Vector3 position)
+        {
+            // Prepare 시작 시 화면 밖 진입점으로 순간이동
+            if (_movement is EnemyMovement em)
+                em.TeleportTo(position);
+        }
+
         private void OnMorayChargeExecute(Vector3 start, Vector3 end)
         {
             // ChaseBehavior 정지 (방해 방지)
@@ -897,6 +905,16 @@ namespace HideAndInk.Core.Enemy.Boss
             // 모든 돌진 완료 → 의심도 30 고정 → Patrol
             if (_activeGimmick is RelentlessChaseGimmick relentless)
             {
+                // 돌진 종료: GroundBounds 중앙으로 복귀 (화면 밖에 있는 상태 해소)
+                if (_isGroundBoundsScanned)
+                {
+                    float centerX = (_groundBounds.MinX + _groundBounds.MaxX) * 0.5f;
+                    float centerZ = (_groundBounds.MinZ + _groundBounds.MaxZ) * 0.5f;
+                    Vector3 returnPos = new Vector3(centerX, transform.position.y, centerZ);
+                    if (_movement is EnemyMovement em)
+                        em.TeleportTo(returnPos);
+                }
+
                 float fixedSuspicion = relentless.PostChaseSuspicion;
                 suspicionSystem?.ForceSetSuspicion(fixedSuspicion);
                 _chaseBehavior?.SetPaused(false);
@@ -1046,6 +1064,7 @@ namespace HideAndInk.Core.Enemy.Boss
             // 곰치 디렉터 이벤트 정리
             if (chargeDirector != null)
             {
+                chargeDirector.OnPrepareTeleport -= OnMorayPrepareTeleport;
                 chargeDirector.OnChargeExecute -= OnMorayChargeExecute;
                 chargeDirector.OnChargesComplete -= OnMorayChargesComplete;
                 chargeDirector.OnPlayerHit -= OnMorayPlayerHit;

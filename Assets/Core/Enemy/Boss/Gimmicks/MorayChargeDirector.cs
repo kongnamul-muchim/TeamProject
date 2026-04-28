@@ -42,6 +42,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public event Action<float> OnSpeedOverride;
         /// <summary>이동 정지</summary>
         public event Action OnMovementStop;
+        /// <summary>Prepare 시작 시 화면 밴 진입점으로 순간이동</summary>
+        public event Action<Vector3> OnPrepareTeleport;
 
         // ──────────────────────────────────────────────
         // 내부 상태
@@ -146,6 +148,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 CalculateChargePath(i);
             }
+
+            // Prepare 시작 → 화면 밖 진입점으로 순간이동
+            if (_chargeStarts.Length > 0)
+            {
+                Vector3 preparePos = _chargeStarts[0];
+                if (_bossTransform != null)
+                    preparePos.y = _bossTransform.position.y;
+                OnPrepareTeleport?.Invoke(preparePos);
+            }
+
+            // Indicator에 설정값 적용 (중복 방지)
+            ApplyIndicatorSettings();
+        }
+
+        private void ApplyIndicatorSettings()
+        {
+            if (indicator == null) return;
+            indicator.Width = indicatorWidth;
+            indicator.ActiveColor = activeColor;
+            indicator.ImminentColor = imminentColor;
         }
 
         /// <summary>리셋 (Chase 종료 시)</summary>
