@@ -10,7 +10,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// 돌진 완료 후 2초 정지 → Patrol 복귀
     /// </summary>
     [CreateAssetMenu(menuName = "Enemy Gimmicks/Dash Charge Gimmick", fileName = "DashChargeGimmick")]
-    public sealed class DashChargeGimmick : ScriptableObject, IEnemyGimmick
+    public sealed class DashChargeGimmick : ScriptableObject, IEnemyGimmick,
+        IGimmickPlayerAware, IGimmickViewDirection, IGimmickCombatCycle, IGimmickTransitionOverride
     {
         public GimmickType Type => GimmickType.DashCharge;
 
@@ -153,6 +154,23 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public bool IsCharging => _isCharging;
         public bool IsCooldown => _cooldownTimer > 0f && !_isCharging;
+
+        #region Interface Implementations
+
+        void IGimmickPlayerAware.SetPlayerTransform(Transform playerTransform) { }
+        void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion) { }
+        void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging) { }
+        void IGimmickPlayerAware.SetPlayerVisible(bool isVisible) { }
+
+        bool IGimmickViewDirection.OverridesViewDirection => false;
+        Vector3 IGimmickViewDirection.GetViewDirectionVector() => Vector3.right;
+        bool IGimmickViewDirection.ShowChargeIndicator => false;
+
+        bool IGimmickCombatCycle.IsInCombatCycle => _isCharging;
+
+        bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion) => false;
+
+        #endregion
 
         #region Movement Override (IEnemyGimmick 확장)
 

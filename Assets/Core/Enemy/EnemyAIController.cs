@@ -17,8 +17,8 @@ namespace HideAndInk.Core.Enemy
         [Header("이동 물리 설정 (공통)")]
         [Tooltip("기본 이동 속도")]
         [SerializeField] protected float moveSpeed = 3f;
-        [Tooltip("가속도 (값이 클수록 빠르게 최고속도 도달)")]
-        [SerializeField] protected float acceleration = 8f;
+        [Tooltip("가속도 (값이 클수록 빠르게 최고속도 도달, MoveTowards 기준)")]
+        [SerializeField] protected float acceleration = 20f;
         [Tooltip("마찰력 (0~1, 1에 가까울수록 미끄러짐)")]
         [SerializeField] protected float friction = 0.9f;
         [Tooltip("최대 이동 속도 제한")]
@@ -27,6 +27,10 @@ namespace HideAndInk.Core.Enemy
         [Header("시야 설정")]
         [SerializeField] protected Transform enemyForward; // Enemy_Forward 자식 Transform
         [SerializeField] protected float viewRotationSpeed = 5f;
+
+        [Header("방향 설정")]
+        [Tooltip("스프라이트 에셋이 Y=0(미반전) 상태에서 왼쪽을 보고 있는지 여부. true=왼쪽, false=오른쪽")]
+        [System.NonSerialized] protected bool isDefaultFacingLeft;
 
         [Header("Ground 제한 설정")]
         [SerializeField] protected LayerMask groundLayer; // Ground 레이어
@@ -49,9 +53,9 @@ namespace HideAndInk.Core.Enemy
         protected bool _isActive = true;
 
         // 방향 전환 쿨타임
-        private float _directionChangeCooldown = 0.3f; // 방향 전환 후 고정 시간 (초)
-        private float _directionChangeTimer = 0f;
-        private MoveDirection _lastAppliedDirection = MoveDirection.Left;
+        protected float _directionChangeCooldown = 0.1f; // 방향 전환 후 고정 시간 (초, 0.3→0.1로 감소: 반응성 향상)
+        protected float _directionChangeTimer = 0f;
+        protected MoveDirection _lastAppliedDirection = MoveDirection.Left;
 
         #region IEnemy 구현
 
@@ -246,10 +250,18 @@ namespace HideAndInk.Core.Enemy
                 _directionChangeTimer = _directionChangeCooldown;
             }
 
-            bool shouldFaceLeft = dir == MoveDirection.Left;
+            bool movingRight = dir == MoveDirection.Right;
 
-            // Enemy 본체 스프라이트 회전: 오른쪽=0, 왼쪽=180
-            float spriteY = shouldFaceLeft ? 180f : 0f;
+            // isDefaultFacingLeft=true: 스프라이트 에셋이 Y=0에서 왼쪽을 향함
+            //   오른쪽으로 이동 → Y=180(반전)으로 표시
+            //   왼쪽으로 이동  → Y=0(기본)으로 표시
+            // isDefaultFacingLeft=false: 스프라이트 에셋이 Y=0에서 오른쪽을 향함
+            //   오른쪽으로 이동 → Y=0(기본)으로 표시
+            //   왼쪽으로 이동  → Y=180(반전)으로 표시
+            float spriteY = isDefaultFacingLeft
+                ? (movingRight ? 180f : 0f)
+                : (movingRight ? 0f : 180f);
+
             transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
 
             // enemyForward는 자식이므로 Enemy 본체 회전 시 자동으로 따라감

@@ -158,12 +158,18 @@ namespace HideAndInk.Core.Perception
             }
         }
 
-        public void SetSuspicion(float value)
+        private void SetSuspicion(float value)
         {
+            float prev = _currentValue;
             _currentValue = Mathf.Clamp(value, 0f, 100f);
             CheckLevelChange();
             CheckDetected();
             CheckClear();
+
+#if UNITY_EDITOR
+            if (Mathf.Abs(_currentValue - prev) > 1f)
+                Debug.LogWarning($"[SuspicionManager] SetSuspicion: {prev:F1} → {_currentValue:F1} (점프 발생)");
+#endif
         }
 
         public void SetIncreaseSpeed(float speed) => increaseSpeed = Mathf.Max(0f, speed);

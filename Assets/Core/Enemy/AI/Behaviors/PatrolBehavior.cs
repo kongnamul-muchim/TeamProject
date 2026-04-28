@@ -53,6 +53,15 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         }
 
         /// <summary>
+        /// 현재 Patrol 목표 무효화 → 다음 OnUpdate에서 PickNewTarget 실행
+        /// (Ground edge 도달 시 Controller에서 호출)
+        /// </summary>
+        public void InvalidateTarget()
+        {
+            _currentTarget = _enemy.Position;
+        }
+
+        /// <summary>
         /// Ground 경계 설정 (Controller에서 호출)
         /// </summary>
         public void SetGroundBounds(GroundBounds bounds)

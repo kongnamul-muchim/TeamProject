@@ -8,11 +8,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// </summary>
     public enum GimmickType
     {
-        Ambush,             // Ch.1 가자미: 매복 → 기습
-        RelentlessChase,    // Ch.2 곰치: 집요한 추격
-        ElectricZone,       // Ch.3 전기뱀장어: 감전 구역
-        DashCharge,         // Ch.4 상어: 초고속 돌진
-        Swordfish           // Ch.5 청새치: 조준 → 예측 돌진 (Boss 전환)
+        Ambush,             // Zone 1 가자미: 매복 → 기습
+        RelentlessChase,    // Zone 2 곰치: 집요한 추격
+        Swordfish,          // Zone 3 청새치: 조준 → 돌진
+        DashCharge          // Zone 4 백상아리: 초고속 돌진
     }
 
     /// <summary>
