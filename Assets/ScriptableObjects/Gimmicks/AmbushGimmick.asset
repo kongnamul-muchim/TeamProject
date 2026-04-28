@@ -11,19 +11,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cafbed86010b5984e8e6fea8dce6d2af, type: 3}
   m_Name: AmbushGimmick
-  m_EditorClassIdentifier: HideAndInk.GamePlayEmbedded::HideAndInk.Core.Enemy.Boss.Gimmicks.AmbushGimmick
-  patrolTrackSpeed: 2
-  teleportBehindDistance: 8
-  checkPlayerVisionForTeleport: 1
-  lockZAxis: 0
-  ambushDuration: 3
-  ambushSprite: {fileID: -1333484347, guid: 60d32cdb8e7202e429fc799d154c6da6, type: 3}
-  targetSpriteRenderer: {fileID: 0}
-  suspicionRadius: {x: 3, y: 2}
-  suspicionRate: 50
-  suspicionCurveExponent: 1.5
-  suspicionDropThreshold: 30
-  dashSpeed: 30
-  dashDuration: 2
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.AmbushGimmick
+  ambushDistance: 6
+  ambushMinDistance: 3
+  suspicionRadius: {x: 10, y: 10}
+  suspicionRate: 15
+  suspicionCurveExponent: 2
+  suspicionDropThreshold: 20
+  dashSpeed: 8
+  dashDuration: 1.5
   dashPreDelay: 0.3
-  dashCooldown: 1

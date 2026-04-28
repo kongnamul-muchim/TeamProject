@@ -156,10 +156,8 @@ namespace HideAndInk.Core.Enemy.Movement
             // 목표 속도 계산
             Vector3 targetVelocity = direction * _speed;
 
-            // 가속도로 현재 속도→목표 속도 보간 (부드럽게)
-            float accelFactor = _acceleration * deltaTime;
-            accelFactor = Mathf.Clamp01(accelFactor);
-            _velocity = Vector3.Lerp(_velocity, targetVelocity, accelFactor);
+            // 가속도 기반 선형 속도 변화 (MoveTowards로 일정한 가속)
+            _velocity = Vector3.MoveTowards(_velocity, targetVelocity, _acceleration * deltaTime);
 
             // 최대 속도 제한
             if (_velocity.magnitude > _maxSpeed)

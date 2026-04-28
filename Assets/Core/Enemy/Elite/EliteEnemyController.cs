@@ -43,8 +43,6 @@ namespace HideAndInk.Core.Enemy.Elite
         [SerializeField] private float detectionRangeHeight = 0.05f;
 
         [Header("스프라이트 방향")]
-        [Tooltip("기본 에셋이 왼쪽을 보고 있는지 여부 (true: 왼쪽 기본, false: 오른쪽 기본)")]
-        [SerializeField] private bool isDefaultFacingLeft = true;
         [SerializeField] private SpriteRenderer eliteSpriteRenderer;
 
         // 상태
@@ -78,6 +76,7 @@ namespace HideAndInk.Core.Enemy.Elite
 
         protected override void Start()
         {
+            isDefaultFacingLeft = true; // 정예: 기본 왼쪽
             base.Start();
             
             // 스프라이트 렌더러 자동 할당 (없을 경우)

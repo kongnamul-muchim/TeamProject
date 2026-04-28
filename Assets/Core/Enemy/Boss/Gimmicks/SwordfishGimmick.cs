@@ -4,180 +4,103 @@ using HideAndInk.Core.Enemy.Interfaces;
 namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 {
     /// <summary>
-    /// Ch.5 청새치 보스 기믹 (ScriptableObject)
-    /// Aim→Charge 2단계 돌진 + 예측 이동 + 스턴 처리
-    /// 스태미나 기반 3종 패턴: 기본 돌진 / 연속 돌진 / 광역 돌격
+    /// 청새치(Swordfish) Boss 기믹 (ScriptableObject)
     /// 
-    /// 시각적 피드백:
-    /// - Aim: 붉은 경고선이 Player 방향으로 표시
-    /// - Charge: 돌진 타입별 Trail 효과 (기본=적색, 연속=주황, 광역=자주)
-    /// - Collision: 충돌 이펙트 + 스턴
+    /// 설계 기준: Swordfish_Design_v3.md
+    /// 핵심 사이클: Idle → Aiming → Charging → Stunned → Idle
+    /// 
+    /// - 의심도 기반 난이도 스케일링 (예측/조준시간/돌진속도)
+    /// - GroundBounds 기반 이탈 방지 + Wall Layer 충돌 감지
+    /// - Player 놓치면 의심도 Safe 시 Patrol 직행, 아니면 Search
     /// </summary>
     [CreateAssetMenu(menuName = "Enemy Gimmicks/Swordfish Gimmick", fileName = "SwordfishGimmick")]
-    public sealed class SwordfishGimmick : ScriptableObject, IEnemyGimmick
+    public sealed class SwordfishGimmick : ScriptableObject, IEnemyGimmick,
+        IGimmickPlayerAware, IGimmickViewDirection, IGimmickCombatCycle, IGimmickTransitionOverride
     {
         public GimmickType Type => GimmickType.Swordfish;
 
-        /// <summary>
-        /// 돌진 타입 (BossEnemyController에서 시각 처리 구분용)
-        /// </summary>
-        public enum SwordfishChargeType
-        {
-            Basic,   // 기본 돌진
-            Double,  // 연속 돌진 (2회)
-            Wide     // 광역 돌격 (넓은 범위)
-        }
-
         #region Inspector Parameters
 
-        [Header("돌진 설정")]
-        [Tooltip("돌진 속도")]
-        [SerializeField] private float chargeSpeed = 12f;
-        [Tooltip("조준(경고) 지속 시간 (초). 이 시간 동안 Player가 회피 가능")]
-        [SerializeField] private float aimDuration = 0.5f;
-        [Tooltip("돌진 지속 시간 (초)")]
-        [SerializeField] private float chargeDuration = 1f;
-        [Tooltip("충돌/벽 스턴 시간 (초)")]
-        [SerializeField] private float stunDuration = 0.5f;
-        [Tooltip("돌진 시 Player 위치 예측 계수 (0=현재위치, 1=완전예측)")]
-        [Range(0f, 1f)]
-        [SerializeField] private float predictionFactor = 0.7f;
+        [Header("돌진 속도 (의심도 보간)")]
+        [SerializeField, Tooltip("의심도 0%일 때 돌진 속도")]
+        private float minChargeSpeed = 10f;
+        [SerializeField, Tooltip("의심도 100%일 때 돌진 속도")]
+        private float maxChargeSpeed = 15f;
 
-        [Header("연속 돌진")]
-        [Tooltip("연속 돌진 활성화")]
-        [SerializeField] private bool enableDoubleCharge = true;
-        [Tooltip("1차와 2차 돌진 사이 간격 (초)")]
-        [SerializeField] private float doubleChargeInterval = 0.3f;
+        [Header("조준 시간 (의심도 보간)")]
+        [SerializeField, Tooltip("의심도 0%일 때 조준 시간 (길게)")]
+        private float minAimDuration = 0.2f;
+        [SerializeField, Tooltip("의심도 100%일 때 조준 시간 (짧게)")]
+        private float maxAimDuration = 0.8f;
 
-        [Header("스태미나")]
-        [Tooltip("최대 스태미나")]
-        [SerializeField] private float maxStamina = 100f;
-        [Tooltip("초당 스태미나 회복량")]
-        [SerializeField] private float staminaRegen = 10f;
-        [Tooltip("기본 돌진 스태미나 소모")]
-        [SerializeField] private float basicChargeCost = 20f;
-        [Tooltip("연속 돌진 스태미나 소모 (총합)")]
-        [SerializeField] private float doubleChargeCost = 50f;
-        [Tooltip("광역 돌격 스태미나 소모")]
-        [SerializeField] private float wideChargeCost = 80f;
+        [Header("돌진 / 스턴 시간")]
+        [SerializeField, Tooltip("돌진 지속 시간 (초)")]
+        private float chargeDuration = 1f;
+        [SerializeField, Tooltip("충돌 시 스턴 시간 (초)")]
+        private float stunDuration = 0.5f;
 
-        [Header("광역 돌격")]
-        [Tooltip("광역 돌격 활성화")]
-        [SerializeField] private bool enableWideCharge = true;
-        [Tooltip("광역 돌격 판정 반경 배율 (기본 대비)")]
-        [SerializeField] private float wideChargeRadiusMultiplier = 1.8f;
-        [Tooltip("광역 돌격 후 긴 쿨타임 (초)")]
-        [SerializeField] private float wideChargeCooldown = 5f;
+        [Header("예측 이동 (의심도 보간)")]
+        [SerializeField, Tooltip("의심도 0%일 때 예측 계수")]
+        private float minPredictionFactor = 0.3f;
+        [SerializeField, Tooltip("의심도 100%일 때 예측 계수")]
+        private float maxPredictionFactor = 0.9f;
 
-        [Header("충돌 판정")]
-        [Tooltip("돌진 충돌 판정 너비")]
-        [SerializeField] private float chargeWidth = 1.5f;
-        [Tooltip("기본 돌진 쿨타임 (초)")]
-        [SerializeField] private float chargeCooldown = 2f;
+        [Header("돌진 목표 거리")]
+        [SerializeField, Tooltip("돌진 목표까지 거리 (GroundBounds로 자동 제한)")]
+        private float chargeTargetDistance = 20f;
 
-        [Header("시각 효과 길이")]
-        [Tooltip("조준 경고선 길이 (m)")]
-        [SerializeField] private float aimIndicatorLength = 15f;
+        [Header("돌진 발동 범위")]
+        [SerializeField, Tooltip("Player가 이 범위 안에 있을 때만 Aim/Charge 시작")]
+        private float chargeRange = 12f;
+
+        [Header("충돌 감지")]
+        [SerializeField, Tooltip("Wall 충돌 판정 반경")]
+        private float wallCheckRadius = 0.8f;
+        [SerializeField, Tooltip("Wall 레이어 이름")]
+        private string wallLayerName = "Wall";
+        [SerializeField, Tooltip("Wall 충돌 후 밀려날 거리")]
+        private float wallPushbackDistance = 1.5f;
+        [SerializeField, Tooltip("Wall 충돌 후 Aim 재진입 금지 시간")]
+        private float wallCooldownDuration = 1.5f;
 
         #endregion
 
         #region State
 
-        private enum State { Idle, Aiming, Charging, Cooldown, PostChargePatrol }
+        private enum Phase { Idle, Aiming, Charging, Stunned }
 
         private Transform _bossTransform;
-        private State _currentState = State.Idle;
-        private SwordfishChargeType _currentChargeType = SwordfishChargeType.Basic;
-        private float _stateTimer;
-        private float _currentStamina;
-
-        // 돌진 관련
-        private Vector3 _chargeDirection;
-        private float _chargeDistanceTraveled;
-        private bool _hasHitWall;
-
-        // 연속 돌진
-        private bool _isDoubleChargeFirst;
-        private bool _isWideCharge;
-
-        // PostCharge
-        private Vector3 _lastChargeTarget;
-        private bool _hasPostChargeTarget;
-
-        // Player Transform 캐싱
         private Transform _playerTransform;
+        private Phase _currentPhase = Phase.Idle;
+        private float _phaseTimer;
+        private Vector3 _chargeDirection;
+        private bool _hasHitWall;
+        private float _wallCooldownTimer;
+
+        // 의심도 (0~1, IGimmickPlayerAware.SetSuspicionLevel에서 설정)
+        private float _normalizedSuspicion;
+
+        // 의태 상태 (Player 숨음 = 위치 업데이트 차단)
+        private bool _isPlayerCamouflaged;
+
+        // Player 시야 가시성 (true=현재 시야에 보임)
+        private bool _isPlayerVisible;
+
+        // GroundBounds (GetPatrolTarget에서 캐싱)
+        private GroundBounds _cachedBounds;
+        private bool _hasCachedBounds;
+
+        // Wall 레이어 캐싱
+        private int _wallLayerIndex = -1;
 
         #endregion
 
-        #region Visual Callbacks
+        #region Callbacks
 
-        /// <summary>
-        /// [시각] 조준 시작 — BossEnemyController에서 경고선 생성
-        /// </summary>
-        public System.Action OnAimStarted;
-
-        /// <summary>
-        /// [시각] 조준 중 매 프레임 Player 방향 업데이트 (normalized)
-        /// </summary>
-        public System.Action<Vector3> OnAimUpdated;
-
-        /// <summary>
-        /// [시각] 조준 종료 — 경고선 제거
-        /// </summary>
-        public System.Action OnAimEnded;
-
-        /// <summary>
-        /// [시각] 돌진 시작 (타입 + 방향) — Trail/이펙트 생성
-        /// </summary>
-        public System.Action<SwordfishChargeType, Vector3> OnChargeStarted;
-
-        /// <summary>
-        /// [시각] 돌진 종료 (타입 + 충돌 여부) — Trail 제거 + 충돌 이펙트
-        /// </summary>
-        public System.Action<SwordfishChargeType, bool> OnChargeEnded;
-
-        /// <summary>
-        /// [시각] 스턴 시작 — 스턴 이펙트/애니메이션
-        /// </summary>
-        public System.Action<float> OnStunStarted;
-
-        #endregion
-
-        #region Control Callbacks
-
-        /// <summary>
-        /// 돌진 속도 제어
-        /// </summary>
         public System.Action<float> OnSpeedOverride;
-
-        /// <summary>
-        /// 이동 목표 설정 (MoveTo 호출)
-        /// </summary>
         public System.Action<Vector3> OnMoveTo;
-
-        /// <summary>
-        /// 이동 정지
-        /// </summary>
         public System.Action OnMovementStop;
-
-        #endregion
-
-        #region Properties
-
-        /// <summary>
-        /// 현재 돌진 또는 조준 중인지 여부 (데미지 판정용)
-        /// </summary>
-        public bool IsCharging => _currentState == State.Charging || _currentState == State.Aiming;
-
-        /// <summary>
-        /// 현재 스턴 상태인지 여부
-        /// </summary>
-        public bool IsStunned => _currentState == State.Cooldown && _hasHitWall;
-
-        /// <summary>
-        /// 현재 선택된 돌진 타입 (BossEnemyController 시각 처리용)
-        /// </summary>
-        public SwordfishChargeType CurrentChargeType => _currentChargeType;
+        public System.Action<bool> OnChasePauseRequest;
 
         #endregion
 
@@ -186,537 +109,443 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnActivate(Transform bossTransform)
         {
             _bossTransform = bossTransform;
-            _currentStamina = maxStamina;
-            _currentState = State.Idle;
-            CachePlayerTransform();
+            _currentPhase = Phase.Idle;
+            _normalizedSuspicion = 0f;
+            _isPlayerCamouflaged = false;
+            _isPlayerVisible = false;
+            _hasCachedBounds = false;
+            _wallLayerIndex = LayerMask.NameToLayer(wallLayerName);
+            _wallCooldownTimer = 0f;
         }
 
         public void OnDeactivate()
         {
-            // 시각적 요소 정리
-            OnAimEnded?.Invoke();
-            OnChargeEnded?.Invoke(_currentChargeType, false);
-            _currentState = State.Idle;
+            _currentPhase = Phase.Idle;
+            OnMovementStop?.Invoke();
+            OnChasePauseRequest?.Invoke(false);
         }
 
-        #endregion
-
-        #region Patrol
-
-        public void OnPatrolEnter()
-        {
-            if (_currentState == State.PostChargePatrol)
-            {
-                _currentState = State.Idle;
-                _hasPostChargeTarget = false;
-            }
-        }
-
-        public void OnPatrolUpdate(float deltaTime)
-        {
-            RegenStamina(deltaTime);
-        }
-
+        public void OnPatrolEnter() { }
+        public void OnPatrolUpdate(float deltaTime) { }
         public void OnPatrolExit() { }
-
-        #endregion
-
-        #region Chase
 
         public void OnChaseEnter()
         {
-            // Chase 진입 시 즉시 조준 시작
-            StartAiming();
+            // 즉시 Aim하지 않고 Idle로 시작 → Controller가 상태 전이(Search/Patrol)할 기회를 줌
+            _currentPhase = Phase.Idle;
+            _hasHitWall = false;
         }
 
         public void OnChaseUpdate(float deltaTime)
         {
-            RegenStamina(deltaTime);
+            // Wall 충돌 쿨다운 감소 (모든 Phase에서 감소)
+            if (_wallCooldownTimer > 0f)
+                _wallCooldownTimer -= deltaTime;
 
-            switch (_currentState)
+            switch (_currentPhase)
             {
-                case State.Idle:
-                    // Chase 중 Idle이면 조준 시작 (스태미나 회복 후 재공격)
-                    StartAiming();
-                    break;
+                case Phase.Idle:
+                    // Wall 충돌 직후 쿨다운 중이면 Aim 금지
+                    if (_wallCooldownTimer > 0f)
+                        return;
 
-                case State.Aiming:
+                    // Player가 시야에 보이고 + 돌진 발동 범위 내에 있을 때만 Aim 시작
+                    if (_isPlayerVisible && IsPlayerInChargeRange())
+                        StartAiming();
+                    break;
+                case Phase.Aiming:
                     UpdateAiming(deltaTime);
                     break;
-
-                case State.Charging:
+                case Phase.Charging:
                     UpdateCharging(deltaTime);
                     break;
-
-                case State.Cooldown:
-                    UpdateCooldown(deltaTime);
-                    break;
-
-                case State.PostChargePatrol:
-                    UpdatePostChargePatrol(deltaTime);
+                case Phase.Stunned:
+                    UpdateStunned(deltaTime);
                     break;
             }
         }
 
         public void OnChaseExit()
         {
-            // Chase 종료 시 돌진/조준 중단 + 시각 정리
-            if (_currentState == State.Aiming)
-            {
-                OnAimEnded?.Invoke();
-            }
-            else if (_currentState == State.Charging)
-            {
-                OnChargeEnded?.Invoke(_currentChargeType, false);
-            }
-
-            _currentState = State.Idle;
+            _currentPhase = Phase.Idle;
             OnMovementStop?.Invoke();
-            OnSpeedOverride?.Invoke(0f);
+            OnChasePauseRequest?.Invoke(false);
         }
-
-        #endregion
-
-        #region Search
 
         public void OnSearchEnter()
         {
-            OnAimEnded?.Invoke();
-            _currentState = State.Idle;
-            _hasPostChargeTarget = false;
+            _currentPhase = Phase.Idle;
         }
 
-        public void OnSearchUpdate(float deltaTime)
-        {
-            RegenStamina(deltaTime);
-        }
-
+        public void OnSearchUpdate(float deltaTime) { }
         public void OnSearchExit() { }
 
-        #endregion
+        public bool HasMovementOverride => _currentPhase != Phase.Idle;
 
-        #region Core State Updates
-
-        private void UpdateAiming(float deltaTime)
-        {
-            _stateTimer -= deltaTime;
-
-            // 매 프레임 Player 방향 업데이트 → 경고선 갱신
-            if (_playerTransform != null && _bossTransform != null)
-            {
-                Vector3 dirToPlayer = (_playerTransform.position - _bossTransform.position).normalized;
-                dirToPlayer.y = 0f;
-                OnAimUpdated?.Invoke(dirToPlayer);
-            }
-
-            if (_stateTimer <= 0f)
-            {
-                // 조준 완료 → 경고선 제거 후 돌진
-                OnAimEnded?.Invoke();
-                StartCharge();
-            }
-        }
-
-        private void UpdateCharging(float deltaTime)
-        {
-            _stateTimer -= deltaTime;
-
-            // 이동 거리 누적 (실제 이동은 BossEnemyController가 처리)
-            _chargeDistanceTraveled += chargeSpeed * deltaTime;
-
-            // 연속 돌진 1차 완료 체크
-            if (_currentChargeType == SwordfishChargeType.Double && _isDoubleChargeFirst && _stateTimer <= 0f)
-            {
-                // 1차 완료 → 잠시 대기 후 2차
-                _isDoubleChargeFirst = false;
-                _stateTimer = doubleChargeInterval;
-                OnMovementStop?.Invoke();
-                return;
-            }
-
-            // 2차 돌진 대기 중 → 2차 시작
-            if (_currentChargeType == SwordfishChargeType.Double && !_isDoubleChargeFirst && _stateTimer > 0f && _chargeDistanceTraveled < 0.5f)
-            {
-                if (_playerTransform != null)
-                {
-                    StartDoubleChargeSecond();
-                }
-                return;
-            }
-
-            // 돌진 방향으로 충돌 체크 (벽/장애물)
-            CheckChargeCollision();
-
-            if (_stateTimer <= 0f || _hasHitWall)
-            {
-                EndCharge();
-            }
-        }
-
-        private void UpdateCooldown(float deltaTime)
-        {
-            _stateTimer -= deltaTime;
-
-            if (_stateTimer <= 0f)
-            {
-                if (_hasPostChargeTarget)
-                {
-                    StartPostChargePatrol();
-                }
-                else
-                {
-                    _currentState = State.Idle;
-                    OnSpeedOverride?.Invoke(0f);
-                }
-            }
-        }
-
-        private void UpdatePostChargePatrol(float deltaTime)
-        {
-            if (_bossTransform == null || !_hasPostChargeTarget)
-            {
-                _currentState = State.Idle;
-                return;
-            }
-
-            Vector3 currentPos = _bossTransform.position;
-            float distanceToTarget = Vector3.Distance(
-                new Vector3(currentPos.x, 0, currentPos.z),
-                new Vector3(_lastChargeTarget.x, 0, _lastChargeTarget.z));
-
-            if (distanceToTarget < 1f)
-            {
-                _currentState = State.Idle;
-                _hasPostChargeTarget = false;
-                OnSpeedOverride?.Invoke(0f);
-            }
-        }
-
-        #endregion
-
-        #region Core Actions
-
-        /// <summary>
-        /// 조준 시작 — Player 방향으로 aimDuration초간 경고선 표시 후 돌진
-        /// </summary>
-        private void StartAiming()
-        {
-            if (_playerTransform == null || _bossTransform == null) return;
-
-            if (!IsPlayerStillInRange()) return;
-
-            // 돌진 타입 결정 (스태미나 기반)
-            SwordfishChargeType selectedType = SelectChargeType();
-
-            if (selectedType == SwordfishChargeType.Basic && _currentStamina < basicChargeCost)
-            {
-                return;
-            }
-
-            _currentChargeType = selectedType;
-            _currentState = State.Aiming;
-            _stateTimer = aimDuration;
-
-            // 정지 (조준 중에는 움직이지 않음)
-            OnMovementStop?.Invoke();
-            OnSpeedOverride?.Invoke(0f);
-
-            // [시각] 조준 경고선 표시
-            OnAimStarted?.Invoke();
-
-#if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] 조준 시작! 타입: {_currentChargeType}, 스태미나: {_currentStamina:F0}/{maxStamina}");
-#endif
-        }
-
-        /// <summary>
-        /// 스태미나 상황에 따라 돌진 타입 결정
-        /// </summary>
-        private SwordfishChargeType SelectChargeType()
-        {
-            // 광역 돌격 (스태미나 충분할 때만)
-            if (enableWideCharge && _currentStamina >= wideChargeCost && _currentStamina >= maxStamina * 0.8f)
-            {
-                return SwordfishChargeType.Wide;
-            }
-
-            // 연속 돌진 (스태미나 충분)
-            if (enableDoubleCharge && _currentStamina >= doubleChargeCost)
-            {
-                return SwordfishChargeType.Double;
-            }
-
-            // 기본 돌진
-            return SwordfishChargeType.Basic;
-        }
-
-        /// <summary>
-        /// 돌진 시작 — 예측 위치로 고속 이동 + 시각 효과
-        /// </summary>
-        private void StartCharge()
-        {
-            if (_playerTransform == null || _bossTransform == null) return;
-
-            if (!IsPlayerStillInRange())
-            {
-                _currentState = State.Idle;
-                return;
-            }
-
-            // 스태미나 차감
-            float cost = GetChargeCost(_currentChargeType);
-            _currentStamina = Mathf.Max(0f, _currentStamina - cost);
-
-            _currentState = State.Charging;
-            _chargeDistanceTraveled = 0f;
-            _hasHitWall = false;
-
-            float duration = chargeDuration;
-            float speed = chargeSpeed;
-
-            // 광역 돌격 설정
-            _isWideCharge = _currentChargeType == SwordfishChargeType.Wide;
-
-            // 연속 돌진: 1차는 duration 단축
-            if (_currentChargeType == SwordfishChargeType.Double)
-            {
-                _isDoubleChargeFirst = true;
-                duration = chargeDuration * 0.6f;
-            }
-            else
-            {
-                _isDoubleChargeFirst = false;
-            }
-
-            _stateTimer = duration;
-
-            // Player 예측 위치 계산 (돌진 방향 결정)
-            Vector3 playerPos = _playerTransform.position;
-            float timeToReach = Vector3.Distance(_bossTransform.position, playerPos) / Mathf.Max(speed, 0.1f);
-            _chargeDirection = (playerPos - _bossTransform.position).normalized;
-            _chargeDirection.y = 0f;
-
-            // 속도 오버라이드
-            OnSpeedOverride?.Invoke(speed);
-
-            // [시각] 돌진 타입별 Trail/이펙트 시작
-            OnChargeStarted?.Invoke(_currentChargeType, _chargeDirection);
-
-#if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] {_currentChargeType} 돌진! 방향: {_chargeDirection}, 남은스태미나: {_currentStamina:F0}");
-#endif
-        }
-
-        /// <summary>
-        /// 연속 돌진 2차 시작 — Player 재예측
-        /// </summary>
-        private void StartDoubleChargeSecond()
-        {
-            if (_playerTransform == null || _bossTransform == null) return;
-
-            float additionalCost = doubleChargeCost * 0.5f;
-            _currentStamina = Mathf.Max(0f, _currentStamina - additionalCost);
-
-            Vector3 playerPos = _playerTransform.position;
-            _chargeDirection = (playerPos - _bossTransform.position).normalized;
-            _chargeDirection.y = 0f;
-            _stateTimer = chargeDuration * 0.5f;
-            _chargeDistanceTraveled = 0f;
-            _hasHitWall = false;
-
-            OnSpeedOverride?.Invoke(chargeSpeed * 1.1f); // 2차는 약간 빠르게
-
-            // [시각] 2차 돌진 Trail/이펙트
-            OnChargeStarted?.Invoke(SwordfishChargeType.Double, _chargeDirection);
-
-#if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] 연속 돌진 2차! 방향: {_chargeDirection}, 남은스태미나: {_currentStamina:F0}");
-#endif
-        }
-
-        /// <summary>
-        /// 돌진 종료 — 정지 + 쿨타임/스턴 + 시각 정리
-        /// </summary>
-        private void EndCharge()
-        {
-            // [시각] 돌진 종료 (Trail 제거 + 충돌 이펙트)
-            OnChargeEnded?.Invoke(_currentChargeType, _hasHitWall);
-
-            if (_hasHitWall)
-            {
-                // 스턴 상태
-                _stateTimer = stunDuration;
-                OnStunStarted?.Invoke(stunDuration);
-                OnSpeedOverride?.Invoke(0f);
-                OnMovementStop?.Invoke();
-            }
-            else
-            {
-                _stateTimer = GetChargeCooldown();
-            }
-
-            _currentState = State.Cooldown;
-
-            // 돌진 위치 기념
-            _lastChargeTarget = _bossTransform != null ? _bossTransform.position : Vector3.zero;
-            _hasPostChargeTarget = true;
-
-            // 정지
-            OnMovementStop?.Invoke();
-
-#if UNITY_EDITOR
-            Debug.Log($"[SwordfishGimmick] 돌진 종료 → {(_hasHitWall ? "스턴" : "쿨타임")} ({_stateTimer:F1}초)");
-#endif
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private void RegenStamina(float deltaTime)
-        {
-            _currentStamina = Mathf.Min(maxStamina, _currentStamina + staminaRegen * deltaTime);
-        }
-
-        private float GetChargeCost(SwordfishChargeType type)
-        {
-            return type switch
-            {
-                SwordfishChargeType.Basic => basicChargeCost,
-                SwordfishChargeType.Double => doubleChargeCost,
-                SwordfishChargeType.Wide => wideChargeCost,
-                _ => basicChargeCost
-            };
-        }
-
-        private float GetChargeCooldown()
-        {
-            return _currentChargeType switch
-            {
-                SwordfishChargeType.Wide => wideChargeCooldown,
-                _ => chargeCooldown
-            };
-        }
-
-        /// <summary>
-        /// 돌진 중 충돌 체크 (벽/장애물)
-        /// </summary>
-        private void CheckChargeCollision()
-        {
-            if (_bossTransform == null) return;
-
-            float checkRadius = _isWideCharge ? chargeWidth * wideChargeRadiusMultiplier : chargeWidth;
-            Vector3 checkOrigin = _bossTransform.position + _chargeDirection * 0.5f;
-
-            Collider[] hits = Physics.OverlapSphere(checkOrigin, checkRadius * 0.5f);
-
-            foreach (var hit in hits)
-            {
-                if (hit.CompareTag("Player")) continue;
-                if (hit.transform == _bossTransform) continue;
-                if (hit.transform.IsChildOf(_bossTransform)) continue;
-
-                int layer = hit.gameObject.layer;
-                if (layer == LayerMask.NameToLayer("Obstacle") || layer == LayerMask.NameToLayer("Ground"))
-                {
-                    _hasHitWall = true;
-#if UNITY_EDITOR
-                    Debug.Log($"[SwordfishGimmick] 돌진 충돌! 대상: {hit.name}, 레이어: {LayerMask.LayerToName(layer)}");
-#endif
-                    return;
-                }
-            }
-        }
-
-        private bool IsPlayerStillInRange()
-        {
-            if (_playerTransform == null || _bossTransform == null) return false;
-            float distance = Vector3.Distance(_bossTransform.position, _playerTransform.position);
-            return distance <= 15f;
-        }
-
-        private void CachePlayerTransform()
-        {
-            GameObject playerObj = GameObject.FindWithTag("Player");
-            if (playerObj != null)
-            {
-                _playerTransform = playerObj.transform;
-            }
-        }
-
-        #endregion
-
-        #region PostChargePatrol
-
-        /// <summary>
-        /// 돌진 후 기념된 위치로 이동 (재정비)
-        /// </summary>
-        private void StartPostChargePatrol()
-        {
-            if (!_hasPostChargeTarget || _bossTransform == null)
-            {
-                _currentState = State.Idle;
-                return;
-            }
-
-            _currentState = State.PostChargePatrol;
-            OnMoveTo?.Invoke(_lastChargeTarget);
-        }
-
-        #endregion
-
-        #region IEnemyGimmick Movement Override
-
-        /// <summary>
-        /// SwordfishGimmick은 돌진/조준 중 이동 제어권을 가짐
-        /// </summary>
-        public bool HasMovementOverride => _currentState == State.Aiming ||
-                                           _currentState == State.Charging ||
-                                           _currentState == State.PostChargePatrol;
-
-        /// <summary>
-        /// Patrol 상태 이동 목표: 돌진 방향 유지 또는 PostChargePatrol 위치로 이동
-        /// </summary>
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
-            switch (_currentState)
+            // GroundBounds 캐싱 (UpdateCharging에서 사용)
+            if (!_hasCachedBounds && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
             {
-                case State.Charging:
+                _cachedBounds = bounds;
+                _hasCachedBounds = true;
+            }
+
+            switch (_currentPhase)
+            {
+                case Phase.Charging:
                 {
                     Vector3 target = currentPos + _chargeDirection * 5f;
                     target.y = currentPos.y;
                     return ClampToBounds(target, bounds);
                 }
 
-                case State.PostChargePatrol:
-                {
-                    if (_hasPostChargeTarget)
-                    {
-                        Vector3 target = new Vector3(
-                            _lastChargeTarget.x,
-                            currentPos.y,
-                            currentPos.z);
-                        return ClampToBounds(target, bounds);
-                    }
-                    return currentPos;
-                }
-
-                case State.Aiming:
-                case State.Cooldown:
-                    return currentPos;
+                case Phase.Aiming:
+                case Phase.Stunned:
+                    return currentPos; // 정지
 
                 default:
-                    return null;
+                    return null; // Idle: PatrolBehavior 기본 순찰 사용
             }
         }
 
-        /// <summary>
-        /// Search 상태 이동 목표: 기본 SearchBehavior 로직 사용
-        /// </summary>
         public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
         {
-            return null;
+            return null; // Search는 일반 수색 로직 사용
         }
+
+        #endregion
+
+        #region IGimmickPlayerAware
+
+        void IGimmickPlayerAware.SetPlayerTransform(Transform playerTransform)
+        {
+            if (_isPlayerCamouflaged) return; // 의태 중엔 위치 무시
+            _playerTransform = playerTransform;
+        }
+
+        void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion)
+        {
+            _normalizedSuspicion = normalizedSuspicion;
+        }
+
+        void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging)
+        {
+            _isPlayerCamouflaged = isCamouflaging;
+            if (isCamouflaging)
+            {
+                _playerTransform = null; // 위치 정보 초기화 → 완전히 잊음
+                if (_currentPhase == Phase.Idle)
+                {
+                    // Idle 중 의태 → Controller가 Patrol로 전이할 수 있도록 아무것도 안 함
+                }
+            }
+        }
+
+        void IGimmickPlayerAware.SetPlayerVisible(bool isVisible)
+        {
+            _isPlayerVisible = isVisible;
+        }
+
+        #endregion
+
+        #region IGimmickViewDirection
+
+        bool IGimmickViewDirection.OverridesViewDirection =>
+            _currentPhase == Phase.Aiming || _currentPhase == Phase.Charging;
+
+        Vector3 IGimmickViewDirection.GetViewDirectionVector()
+        {
+            switch (_currentPhase)
+            {
+                case Phase.Aiming:
+                    // Aim 중: 돌진 방향 미리 계산해서 그 방향을 바라봄
+                    if (_chargeDirection.sqrMagnitude > 0.01f)
+                        return _chargeDirection;
+                    // fallback: Player 방향
+                    if (_playerTransform != null && _bossTransform != null)
+                    {
+                        Vector3 dir = _playerTransform.position - _bossTransform.position;
+                        dir.y = 0f;
+                        return dir.normalized;
+                    }
+                    return Vector3.right;
+
+                case Phase.Charging:
+                    return _chargeDirection;
+
+                default:
+                    return Vector3.right;
+            }
+        }
+
+        bool IGimmickViewDirection.ShowChargeIndicator => _currentPhase == Phase.Aiming;
+
+        #endregion
+
+        #region IGimmickCombatCycle
+
+        bool IGimmickCombatCycle.IsInCombatCycle =>
+            _currentPhase == Phase.Aiming || _currentPhase == Phase.Charging || _currentPhase == Phase.Stunned;
+
+        bool IGimmickCombatCycle.IsCharging => _currentPhase == Phase.Charging;
+
+        #endregion
+
+        #region IGimmickTransitionOverride
+
+        /// <summary>
+        /// 의심도가 20% 미만이면 Search 건너뛰고 Patrol 직행
+        /// </summary>
+        bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion)
+        {
+            return normalizedSuspicion < 0.2f;
+        }
+
+        #endregion
+
+        #region Phase Transitions
+
+        private void StartAiming()
+        {
+            if (_bossTransform == null) return;
+
+            _currentPhase = Phase.Aiming;
+            _phaseTimer = GetScaledAimDuration();
+            _hasHitWall = false;
+
+            OnMovementStop?.Invoke();
+            OnSpeedOverride?.Invoke(0f);
+            OnChasePauseRequest?.Invoke(true);
+        }
+
+        private void StartCharge()
+        {
+            if (_bossTransform == null) return;
+
+            _currentPhase = Phase.Charging;
+            _phaseTimer = chargeDuration;
+            _hasHitWall = false;
+
+            float speed = GetScaledChargeSpeed();
+            Vector3 chargeDir = CalculateChargeDirection();
+
+            _chargeDirection = chargeDir;
+
+            OnSpeedOverride?.Invoke(speed);
+            OnMoveTo?.Invoke(_bossTransform.position + chargeDir * chargeTargetDistance);
+        }
+
+        private void EndCharge()
+        {
+            OnMovementStop?.Invoke();
+            OnSpeedOverride?.Invoke(0f);
+
+            if (_hasHitWall)
+            {
+                // Wall 충돌 / Bounds 이탈 → Stun + 밀어내기 + 쿨다운
+                _currentPhase = Phase.Stunned;
+                _phaseTimer = stunDuration;
+
+                if (_bossTransform != null)
+                {
+                    Vector3 pushbackPos = _bossTransform.position + (-_chargeDirection) * wallPushbackDistance;
+                    pushbackPos.y = _bossTransform.position.y;
+                    if (_hasCachedBounds)
+                        pushbackPos = ClampToBounds(pushbackPos, _cachedBounds);
+                    _bossTransform.position = pushbackPos;
+
+                    _wallCooldownTimer = wallCooldownDuration;
+                }
+            }
+            else
+            {
+                // 타이머 만료 (노히트) → Stun 없이 Idle 복귀
+                _currentPhase = Phase.Idle;
+                OnChasePauseRequest?.Invoke(false);
+                // Speed 복원은 RestoreSpeedAfterGimmick에서 처리
+            }
+        }
+
+        #endregion
+
+        #region Phase Updates
+
+        private void UpdateAiming(float deltaTime)
+        {
+            _phaseTimer -= deltaTime;
+
+            // Aim 중 매 프레임 돌진 방향 미리 계산 (Sprite 방향 전환 + 예측 갱신)
+            _chargeDirection = CalculateChargeDirection();
+
+            if (_phaseTimer <= 0f)
+            {
+                StartCharge();
+            }
+        }
+
+        private void UpdateCharging(float deltaTime)
+        {
+            _phaseTimer -= deltaTime;
+
+            // 돌진 중 충돌 체크: GroundBounds 이탈 + Wall Layer 충돌
+            if (!_hasHitWall && _bossTransform != null)
+            {
+                Vector3 currentPos = _bossTransform.position;
+                Vector3 nextPos = currentPos + _chargeDirection * GetScaledChargeSpeed() * deltaTime;
+
+                // GroundBounds 이탈 체크 (현재 위치 + 다음 위치)
+                if (!IsPositionWithinBounds(nextPos) || !IsPositionWithinBounds(currentPos))
+                {
+                    _hasHitWall = true;
+                }
+
+                // Wall Layer 충돌 체크 (현재 위치 + 다음 위치)
+                if (!_hasHitWall && _wallLayerIndex >= 0)
+                {
+                    _hasHitWall = CheckWallCollision(currentPos) || CheckWallCollision(nextPos);
+                }
+            }
+
+            if (_phaseTimer <= 0f || _hasHitWall)
+            {
+                EndCharge();
+            }
+        }
+
+        private void UpdateStunned(float deltaTime)
+        {
+            _phaseTimer -= deltaTime;
+            if (_phaseTimer <= 0f)
+            {
+                _currentPhase = Phase.Idle;
+                OnChasePauseRequest?.Invoke(false);
+                // Speed 복원은 RestoreSpeedAfterGimmick에서 처리
+            }
+        }
+
+        #endregion
+
+        #region Charge Logic
+
+        /// <summary>
+        /// Player 예측 위치 기반 돌진 방향 계산
+        /// </summary>
+        private Vector3 CalculateChargeDirection()
+        {
+            Vector3 chargeDir;
+
+            if (_playerTransform != null && _bossTransform != null)
+            {
+                Vector3 bossPos = _bossTransform.position;
+                Vector3 playerPos = _playerTransform.position;
+                Vector3 playerVelocity = Vector3.zero;
+
+                // PlayerMovementAdapter에서 속도 정보 획득
+                var movementAdapter = _playerTransform.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
+                if (movementAdapter != null)
+                {
+                    Vector2 vel2D = movementAdapter.CurrentVelocity;
+                    playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
+                }
+
+                float speed = GetScaledChargeSpeed();
+                float timeToReach = Vector3.Distance(bossPos, playerPos) / Mathf.Max(speed, 0.1f);
+                float prediction = GetScaledPredictionFactor();
+                Vector3 predictedPos = playerPos + (playerVelocity * timeToReach * prediction);
+
+                chargeDir = (predictedPos - bossPos).normalized;
+                chargeDir.y = 0f; // Y축만 고정 (점프 높이 무시)
+            }
+            else
+            {
+                // Player 정보 없으면 보스 정면 방향 fallback
+                chargeDir = _bossTransform != null ? _bossTransform.right : Vector3.right;
+            }
+
+            if (chargeDir.sqrMagnitude < 0.01f)
+                chargeDir = Vector3.right;
+
+            return chargeDir.normalized;
+        }
+
+        /// <summary>
+        /// GroundBounds 기반 위치 유효성 검사
+        /// </summary>
+        private bool IsPositionWithinBounds(Vector3 pos)
+        {
+            if (_bossTransform == null) return true;
+            if (!_hasCachedBounds) return true; // bounds 정보 없으면 일단 허용
+
+            // X축 bounds 체크
+            if (pos.x < _cachedBounds.MinX || pos.x > _cachedBounds.MaxX)
+                return false;
+
+            // Z축 bounds 체크
+            if (pos.z < _cachedBounds.MinZ || pos.z > _cachedBounds.MaxZ)
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Wall Layer 충돌 체크 (Physics.OverlapSphere)
+        /// </summary>
+        private bool CheckWallCollision(Vector3 checkPos)
+        {
+            if (_wallLayerIndex < 0) return false;
+
+            int layerMask = 1 << _wallLayerIndex;
+            Collider[] hits = Physics.OverlapSphere(checkPos, wallCheckRadius, layerMask);
+
+            foreach (var hit in hits)
+            {
+                if (hit.transform == _bossTransform) continue;
+                if (hit.transform.IsChildOf(_bossTransform)) continue;
+                return true; // Wall 충돌 감지
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Difficulty Scaling (의심도 기반)
+
+        private float GetScaledChargeSpeed()
+        {
+            return Mathf.Lerp(minChargeSpeed, maxChargeSpeed, _normalizedSuspicion);
+        }
+
+        /// <summary>
+        /// 의심도 높을수록 조준 시간 짧아짐 (회피 어려움)
+        /// </summary>
+        private float GetScaledAimDuration()
+        {
+            // 의심도 0% = maxAimDuration(0.8s), 의심도 100% = minAimDuration(0.2s)
+            return Mathf.Lerp(maxAimDuration, minAimDuration, _normalizedSuspicion);
+        }
+
+        private float GetScaledPredictionFactor()
+        {
+            return Mathf.Lerp(minPredictionFactor, maxPredictionFactor, _normalizedSuspicion);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Player가 돌진 발동 범위 내에 있는지 확인
+        /// 의태 중이거나 너무 멀면 false
+        /// </summary>
+        private bool IsPlayerInChargeRange()
+        {
+            if (_bossTransform == null || _playerTransform == null) return false;
+            if (_isPlayerCamouflaged) return false; // 의태 중엔 돌진 안 함
+            float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
+            return dist <= chargeRange;
+        }
+
+        #region Helpers
 
         private Vector3 ClampToBounds(Vector3 pos, GroundBounds bounds)
         {
