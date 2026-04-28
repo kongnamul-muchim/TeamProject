@@ -297,6 +297,16 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 발각 상태 리셋 (Patrol 복귀 시 재발각 가능하도록)
+        /// 의심도 값은 유지됨
+        /// </summary>
+        public void ResetDetected()
+        {
+            _wasDetected = false;
+            _lastDetectedTime = 0f;
+        }
+
+        /// <summary>
         /// 의심도 리셋 (챕터 전환 등)
         /// </summary>
         public void ResetSuspicion()

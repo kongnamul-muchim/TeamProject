@@ -443,6 +443,9 @@ namespace HideAndInk.Core.Enemy.Boss
                         // Ambush는 거리 기반 느린 증가 → decay를 낮춰야 의심도가 쌓임
                         float decayMul = _activeGimmick is AmbushGimmick ? 0.2f : 1f;
                         suspicionSystem.SetSuspicionDecayMultiplier(decayMul);
+                        // Patrol 복귀 시 발각 상태 리셋 (재발각 가능)
+                        if (_activeGimmick is AmbushGimmick)
+                            suspicionSystem.ResetDetected();
                     }
                     break;
                 case EnemyAIState.Chase:
