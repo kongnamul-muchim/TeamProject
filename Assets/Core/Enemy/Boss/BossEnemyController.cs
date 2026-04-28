@@ -79,6 +79,9 @@ namespace HideAndInk.Core.Enemy.Boss
         private Vector3 _lastFacingDir;
         private bool _hasFacingDir;
 
+        // Moray charge 방향 (Prepare/Charge 중 시야각 동기화용)
+        private Vector3 _morayFacingDirection = Vector3.right;
+
         [Header("스프라이트 방향")]
         [SerializeField, Tooltip("Sprite 기본 방향이 왼쪽이면 true, 오른쪽이면 false")]
         private bool defaultFacingLeft = true;
@@ -231,7 +234,12 @@ namespace HideAndInk.Core.Enemy.Boss
 
                 case RelentlessChaseGimmick relentless:
                     // Director 콜백 연결
-                    relentless.OnDirectorBeginPrepare = (count) => chargeDirector?.BeginPrepare(count);
+                    relentless.OnDirectorBeginPrepare = (count) =>
+                    {
+                        // Prepare 시작부터 ChaseBehavior 정지 (경쟁 방지)
+                        _chaseBehavior?.SetPaused(true);
+                        chargeDirector?.BeginPrepare(count);
+                    };
                     relentless.OnDirectorReset = () => chargeDirector?.ResetCharges();
                     relentless.OnIncreaseSuspicion = (rate, dt) =>
                     {
@@ -672,17 +680,35 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 HideChargeIndicator();
 
-                if (_movement == null || !_movement.IsMoving) return;
-                if (_directionChangeTimer > 0f) return; // 쿨타임 중
+                if (_movement == null) return;
+
+                bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
+
+                if (!_movement.IsMoving)
+                {
+                    // Moray: Prepare/Charge 전환 중이면 저장된 돌진 방향 사용
+                    if (isMorayChase && _morayFacingDirection != Vector3.zero)
+                    {
+                        ApplyFacingDirection(_morayFacingDirection);
+                        return;
+                    }
+                    return;
+                }
+
+                if (!isMorayChase)
+                {
+                    // 일반 Chase: 쿨타임 적용
+                    if (_directionChangeTimer > 0f) return;
+                }
 
                 float vx = _movement.Velocity.x;
                 if (Mathf.Abs(vx) < 0.01f) return;
 
                 facingDir = vx > 0f ? Vector3.right : Vector3.left;
 
-                // 방향 변경 쿨타임 (base class와 동일한 flicker 방지)
+                // 방향 변경 쿨타임 (Moray는 항상 통과)
                 MoveDirection newDir = vx > 0f ? MoveDirection.Right : MoveDirection.Left;
-                if (newDir != _lastAppliedDirection)
+                if (newDir != _lastAppliedDirection || isMorayChase)
                 {
                     _lastAppliedDirection = newDir;
                     _directionChangeTimer = _directionChangeCooldown;
@@ -895,12 +921,21 @@ namespace HideAndInk.Core.Enemy.Boss
             // Prepare 시작 시 화면 밖 진입점으로 순간이동
             if (_movement is EnemyMovement em)
                 em.TeleportTo(position);
+
+            // 첫 번째 Charge 방향으로 시야각 설정
+            if (chargeDirector != null)
+                _morayFacingDirection = chargeDirector.GetPrepareDirection();
         }
 
         private void OnMorayChargeExecute(Vector3 start, Vector3 end)
         {
             // ChaseBehavior 정지 (방해 방지)
             _chaseBehavior?.SetPaused(true);
+            // 돌진 방향 저장 (시야각 동기화용)
+            Vector3 dir = (end - start);
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f)
+                _morayFacingDirection = dir.normalized;
             // 순간이동 + 돌진
             if (_movement is EnemyMovement em)
             {

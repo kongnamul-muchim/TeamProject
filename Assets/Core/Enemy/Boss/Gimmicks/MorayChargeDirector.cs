@@ -175,6 +175,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             indicator.ImminentColor = imminentColor;
         }
 
+        /// <summary>Prepare 단계의 첫 Charge 방향 (시야각 동기화용)</summary>
+        public Vector3 GetPrepareDirection()
+        {
+            if (_chargeStarts == null || _chargeStarts.Length == 0 || _chargeEnds == null || _chargeEnds.Length == 0)
+                return Vector3.right;
+            Vector3 dir = _chargeEnds[0] - _chargeStarts[0];
+            dir.y = 0f;
+            return dir.normalized;
+        }
+
         /// <summary>리셋 (Chase 종료 시)</summary>
         public void ResetCharges()
         {
