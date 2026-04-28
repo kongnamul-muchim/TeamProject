@@ -348,14 +348,8 @@ namespace HideAndInk.Core.Enemy.Boss
                 case EnemyAIState.Patrol:
                     if (isAmbushGimmick)
                     {
-                        // Ambush: 의심도 모듈 + OnDetected가 Chase 담당.
-                        // 단, Player가 극도로 가까우면(ambushMinDistance=3m) 즉시 Chase
-                        if (_playerTransform != null)
-                        {
-                            float dist = Vector3.Distance(transform.position, _playerTransform.position);
-                            if (dist < 3f)
-                                _stateMachine.TryTransitionTo(EnemyAIState.Chase);
-                        }
+                        // Ambush: 오직 의심도 시스템(OnDetected)으로만 Chase 진입.
+                        // 근접 자동 Chase 없음 → 의심도가 자연스럽게 쌓여야 발각
                     }
                     else if (canSeePlayer || IsPlayerCloseEnough())
                     {
@@ -423,7 +417,9 @@ namespace HideAndInk.Core.Enemy.Boss
                     if (suspicionSystem != null)
                     {
                         suspicionSystem.SetVisionIncreaseSpeed(10f); // Patrol 중 기본 상승
-                        suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                        // Ambush는 거리 기반 느린 증가 → decay를 낮춰야 의심도가 쌓임
+                        float decayMul = _activeGimmick is AmbushGimmick ? 0.2f : 1f;
+                        suspicionSystem.SetSuspicionDecayMultiplier(decayMul);
                     }
                     break;
                 case EnemyAIState.Chase:
