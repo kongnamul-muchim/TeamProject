@@ -58,6 +58,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private int _currentChargeIndex;
         private int _totalCharges;
+        private float _floorY; // 인디케이터 Y (바닥 높이, Boss 초기 위치에서 캡처)
 
         // 선계산된 돌진 경로
         private Vector3[] _chargeStarts;
@@ -111,6 +112,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _currentChargeIndex = 0;
             _totalCharges = 0;
             _lastDirection = -1;
+            // 바닥 Y 캡처 (Boss 초기 위치 = 바닥)
+            _floorY = bossTransform != null ? bossTransform.position.y : 0f;
 
             if (_sequenceCoroutine != null)
             {
@@ -151,12 +154,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 CalculateChargePath(i);
             }
 
-            // Prepare 시작 → 화면 밖 진입점으로 순간이동
+            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (바닥 Y 고정)
             if (_chargeStarts.Length > 0)
             {
                 Vector3 preparePos = _chargeStarts[0];
-                if (_bossTransform != null)
-                    preparePos.y = _bossTransform.position.y;
+                preparePos.y = _floorY;
                 OnPrepareTeleport?.Invoke(preparePos);
             }
 
@@ -267,8 +269,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            start.y = _bossTransform != null ? _bossTransform.position.y : start.y;
-            end.y = start.y;
+            start.y = _floorY; // Boss 현재 Y 무시, 바닥 Y 고정
+            end.y = _floorY;
 
             OnChargeExecute?.Invoke(start, end);
             OnSpeedOverride?.Invoke(chargeSpeed);
@@ -319,7 +321,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return;
             }
 
-            float groundY = _bossTransform != null ? _bossTransform.position.y : 0f;
+            float groundY = _floorY; // Boss 현재 Y가 아닌 바닥 Y 사용 (네모 부양 방지)
 
             // 방향 교차
             int startDir = (_lastDirection == 0) ? 1 : 0;

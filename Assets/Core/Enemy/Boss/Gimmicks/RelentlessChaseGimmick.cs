@@ -6,8 +6,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// <summary>
     /// Zone 3 곰치 (Moray Eel) — 오케스트레이터
     /// 
-    /// 역할: 의심도 관리 + Chase 사이클 카운팅
-    /// 실제 돌진 로직은 MorayChargeDirector가 처리
+    /// Chase-only 보스. Patrol 없음, 항상 Player 추격.
+    /// 의심도 자동 상승 → 100% → 돌진 시퀀스 → 리셋 루프.
+    /// 실제 돌진 로직은 MorayChargeDirector가 처리.
     /// </summary>
     [CreateAssetMenu(menuName = "Enemy Gimmicks/Relentless Chase Gimmick", fileName = "RelentlessChaseGimmick")]
     public sealed class RelentlessChaseGimmick : ScriptableObject, IEnemyGimmick,
@@ -16,96 +17,80 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public GimmickType Type => GimmickType.RelentlessChase;
 
         [Header("의심도")]
-        [SerializeField] private float suspicionIncreaseRate = 15f;
-        [SerializeField] private float postChaseSuspicion = 30f;
+        [SerializeField] private float suspicionAutoRate = 8f;      // 초당 자동 증가
+        [SerializeField] private float suspicionMoveBonus = 12f;    // Player 이동 시 추가 증가
+        [SerializeField] private float moveThreshold = 1f;          // 이동 감지 임계 속도
+        [SerializeField] private float postChaseSuspicion = 0f;     // 돌진 후 리셋값
 
         [Header("돌진")]
         [SerializeField] private int maxChargesPerCycle = 5;
         public int MaxChargesPerCycle => maxChargesPerCycle;
 
-        private Transform _bossTransform;
-        private Transform _playerTransform;
-        private GroundBounds _groundBounds;
-        private bool _hasGroundBounds;
-        private float _normalizedSuspicion;
-
-        private int _chaseEntryCount;
-        private bool _isInChase;
-        private bool _hasTriggeredInitialChase;
-
         // ─── 콜백 (Controller 연결) ───
-        public System.Action<int> OnDirectorBeginPrepare; // chargeCount
-        public System.Action OnDirectorReset;
+        /// <summary>의심도 증가 요청: rate * dt 만큼 AddSuspicion</summary>
         public System.Action<float, float> OnIncreaseSuspicion;
-        public System.Action OnForceInitialChase;
-        public System.Action<float> OnPostChaseSuspicion; // postChaseSuspicion 값 전달
+
+        // ─── 인터페이스 구현용 ───
+        private Transform _playerTransform;
+        private bool _isInChase;
+        private bool _hasGroundBounds;
+        private GroundBounds _groundBounds;
 
         public float PostChaseSuspicion => postChaseSuspicion;
+        public float SuspicionAutoRate => suspicionAutoRate;
+        public float SuspicionMoveBonus => suspicionMoveBonus;
+        public float MoveThreshold => moveThreshold;
 
         public void OnActivate(Transform bossTransform)
         {
-            _bossTransform = bossTransform;
-            _chaseEntryCount = 0;
             _isInChase = false;
-            _hasTriggeredInitialChase = false;
             _hasGroundBounds = false;
-            _normalizedSuspicion = 0f;
         }
 
         public void OnDeactivate()
         {
             _isInChase = false;
-            OnDirectorReset?.Invoke();
         }
 
-        public void OnPatrolEnter()
-        {
-            _isInChase = false;
-            if (!_hasTriggeredInitialChase)
-            {
-                _hasTriggeredInitialChase = true;
-                OnForceInitialChase?.Invoke();
-            }
-        }
-
-        public void OnPatrolUpdate(float deltaTime)
-        {
-            // 구역 내 Player → 의심도 연속 상승 (시야각 + zone 이중 경로)
-            if (_playerTransform == null || !_hasGroundBounds) return;
-            if (IsPlayerInZone())
-                OnIncreaseSuspicion?.Invoke(suspicionIncreaseRate, deltaTime);
-        }
-
+        // Patrol 없음 (Chase-only)
+        public void OnPatrolEnter() { }
+        public void OnPatrolUpdate(float deltaTime) { }
         public void OnPatrolExit() { }
 
         public void OnChaseEnter()
         {
-            _chaseEntryCount++;
             _isInChase = true;
-
-            // Director에게 돌진 준비 요청
-            // 실제 chargeCount는 Controller의 OnDirectorBeginPrepare 콜백이 재정의
-            int chargeCount = Mathf.Min(_chaseEntryCount, maxChargesPerCycle);
-            OnDirectorBeginPrepare?.Invoke(chargeCount);
         }
 
         public void OnChaseUpdate(float deltaTime)
         {
-            // Chase 중 director가 모든 로직 처리
-            // 여기서는 아무것도 안 함
+            // Chase 중 의심도 증가: 자동 + zone + 이동
+            if (_playerTransform == null || !_hasGroundBounds) return;
+
+            // 항상 자동 증가
+            OnIncreaseSuspicion?.Invoke(suspicionAutoRate, deltaTime);
+
+            // Zone 내면 추가 증가
+            if (IsPlayerInZone())
+                OnIncreaseSuspicion?.Invoke(suspicionAutoRate * 0.5f, deltaTime);
+
+            // Player 이동 시 추가 증가
+            var movement = _playerTransform.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
+            if (movement != null && movement.CurrentVelocity.sqrMagnitude >= moveThreshold * moveThreshold)
+                OnIncreaseSuspicion?.Invoke(suspicionMoveBonus, deltaTime);
         }
 
         public void OnChaseExit()
         {
             _isInChase = false;
-            OnDirectorReset?.Invoke();
         }
 
         public void OnSearchEnter() { }
         public void OnSearchUpdate(float deltaTime) { }
         public void OnSearchExit() { }
 
-        public bool HasMovementOverride => _isInChase;
+        // 항상 Player 추격
+        public bool HasMovementOverride => true;
 
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
@@ -114,7 +99,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _groundBounds = bounds;
                 _hasGroundBounds = true;
             }
-            // Moray: Patrol 중 Player 추격 (시야각에 넣어 의심도 상승 유도)
             if (_playerTransform != null)
                 return _playerTransform.position;
             return null;
@@ -141,7 +125,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         // ─── 인터페이스 구현 ───
         void IGimmickPlayerAware.SetPlayerTransform(Transform playerTransform) { _playerTransform = playerTransform; }
-        void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion) { _normalizedSuspicion = normalizedSuspicion; }
+        void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion) { }
         void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging) { }
         void IGimmickPlayerAware.SetPlayerVisible(bool isVisible) { }
 

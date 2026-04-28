@@ -15,7 +15,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private float indicatorWidth = 2.5f;
         [SerializeField] private Color activeColor = new Color(1f, 0.2f, 0.2f, 0.6f);
         [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 0.9f);
-        [SerializeField] private float heightOffset = 0.2f; // 바닥보다 약간 위
+        [SerializeField] private float heightOffset = 0f; // 바닥 높이 (Director가 _floorY로 조정)
         [SerializeField] private int poolSize = 5; // 최대 동시 네모 수
 
         // Director가 값을 적용할 수 있도록 public setter (중복 설정 방지)
