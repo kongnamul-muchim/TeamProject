@@ -104,18 +104,18 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             isDefaultFacingLeft = defaultFacingLeft;
             base.Start();
-            CacheCamouflageAdapter(); // 의태 감지를 위해 반드시 필요
+            _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
+            CacheCamouflageAdapter();
             CacheBossPlayerComponents();
             SetupRigidbody();
             InitializeGimmick();
             InitializeBehaviors();
-            InitializeStateMachine();
-            InitializeChargeIndicator(); // Indicator는 Start에서 미리 생성
+            InitializeStateMachine(); // ← 이제 _animator가 null 아님, SetBool 정상 동작
+            InitializeChargeIndicator();
 
             // 렌더러/콜라이더 캐시
             _bossRenderers = GetComponentsInChildren<Renderer>();
             _bossColliders = GetComponentsInChildren<Collider>();
-            _animator = GetComponent<Animator>();
         }
 
         protected override void ScanGroundBounds()
