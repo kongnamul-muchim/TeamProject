@@ -155,11 +155,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 CalculateChargePath(i);
             }
 
-            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (바닥 Y 고정)
+            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (boss Y 유지)
             if (_chargeStarts.Length > 0)
             {
                 Vector3 preparePos = _chargeStarts[0];
-                preparePos.y = indicatorFloorY;
+                if (_bossTransform != null)
+                    preparePos.y = _bossTransform.position.y;
                 OnPrepareTeleport?.Invoke(preparePos);
             }
 
@@ -270,8 +271,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            start.y = indicatorFloorY; // Boss 현재 Y 무시, 바닥 Y 고정
-            end.y = indicatorFloorY;
+            // ★ boss는 자기 Y 유지, 네모만 indicatorFloorY 사용
+            start.y = _bossTransform != null ? _bossTransform.position.y : start.y;
+            end.y = start.y;
 
             OnChargeExecute?.Invoke(start, end);
             OnSpeedOverride?.Invoke(chargeSpeed);
