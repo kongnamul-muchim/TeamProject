@@ -73,9 +73,11 @@ nul
 # Temp/scratch files (개발자 로컬 테스트)
 scratch/
 *.log
+unity_compile_log.txt
 
 # Random media artifacts
 Assets/Art/*.mp4
+Assets/Art/*.mp4.meta
 
 # Test/crap prefab (로컬 테스트 전용)
 Assets/Prefabs/Crap.prefab
