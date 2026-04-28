@@ -69,12 +69,12 @@ Material:
     - _OriginalRate: 0
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _RayIntensity: 1.5
-    - _RayScale: 5
+    - _RayIntensity: 1.01
+    - _RayScale: 3
     - _RaySpeed: 0.1
     - _RayTilt: 0.3
     - _alpha: 0.15
-    - _dis: 1
+    - _dis: 0
     - _refraction: 0.05
     m_Colors:
     - Color_551f3de45b3f45d188af0756b6c21b12: {r: 0.494117, g: 0.784313, b: 0.890196, a: 1}
