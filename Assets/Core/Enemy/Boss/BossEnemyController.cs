@@ -534,7 +534,6 @@ namespace HideAndInk.Core.Enemy.Boss
                                 chargeDirector.ForceInterrupt();
                         }
                     }
-                    }
                     else
                     {
                         bool inCombatCycle = _combatCycle != null && _combatCycle.IsInCombatCycle;
