@@ -334,8 +334,21 @@ namespace HideAndInk.Core.Enemy.Boss
             switch (currentState)
             {
                 case EnemyAIState.Patrol:
-                    if (canSeePlayer || IsPlayerCloseEnough())
+                    if (isAmbushGimmick)
+                    {
+                        // Ambush: 의심도 모듈 + OnDetected가 Chase 담당.
+                        // 단, Player가 극도로 가까우면(ambushMinDistance=3m) 즉시 Chase
+                        if (_playerTransform != null)
+                        {
+                            float dist = Vector3.Distance(transform.position, _playerTransform.position);
+                            if (dist < 3f)
+                                _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                        }
+                    }
+                    else if (canSeePlayer || IsPlayerCloseEnough())
+                    {
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
                     break;
 
                 case EnemyAIState.Chase:
