@@ -138,6 +138,11 @@ namespace HideAndInk.Core.Enemy.Boss
                     ambush.OnDashMoveTo = (t) => _movement.MoveTo(t);
                     ambush.OnSpawnPit = SpawnSandPitCluster;
                     ambush.OnSetChasePaused = (p) => _chaseBehavior?.SetPaused(p);
+                    ambush.OnDashTrigger = () =>
+                    {
+                        var anim = GetComponent<Animator>();
+                        if (anim != null) anim.SetTrigger("OnDash");
+                    };
                     ambush.OnCombatStateChanged = (inCombat) =>
                     {
                         if (inCombat)

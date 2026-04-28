@@ -73,6 +73,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public System.Action<Vector3> OnSpawnPit;
         public System.Action<bool> OnCombatStateChanged;
         public System.Action<bool> OnSetChasePaused;
+        public System.Action OnDashTrigger;
 
         #endregion
 
@@ -228,6 +229,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _dashTimer = dashDuration;
 
             OnSpeedOverride?.Invoke(dashSpeed);
+            OnDashTrigger?.Invoke(); // 애니메이터 OnDash 트리거 → Ch1_boss_Chase
             UpdateDashDirection();
         }
 
