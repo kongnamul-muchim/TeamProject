@@ -553,8 +553,8 @@ namespace HideAndInk.Core.Enemy.Boss
                         bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
                         if (isRelentless)
                         {
-                            // Moray: 시야 상승 없음, 자체 하락 정지 (기믹이 OnIncreaseSuspicion으로 전담)
-                            suspicionSystem.SetVisionIncreaseSpeed(0f);
+                            // Moray Patrol: Player 추격 + 시야각 기반 의심도 상승
+                            suspicionSystem.SetVisionIncreaseSpeed(10f);
                             suspicionSystem.SetSuspicionDecayMultiplier(1f);
                             suspicionSystem.SetAutoDecayEnabled(false);
                         }

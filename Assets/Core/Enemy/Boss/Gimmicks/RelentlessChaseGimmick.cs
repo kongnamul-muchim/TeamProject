@@ -69,10 +69,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnPatrolUpdate(float deltaTime)
         {
-            // 구역 내 Player → 의심도 상승
-            if (_playerTransform == null || !_hasGroundBounds) return;
-            if (IsPlayerInZone())
-                OnIncreaseSuspicion?.Invoke(suspicionIncreaseRate, deltaTime);
+            // Patrol 의심도는 시야각(BossSuspicionSystem.ReportVisionDetection)으로만 상승
+            // GetPatrolTarget이 Player 위치를 반환하므로 Boss가 Player를 추격함
         }
 
         public void OnPatrolExit() { }
@@ -112,7 +110,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _groundBounds = bounds;
                 _hasGroundBounds = true;
             }
-            return null; // 기본 PatrolBehavior 순찰 사용
+            // Moray: Patrol 중 Player 추격 (시야각에 넣어 의심도 상승 유도)
+            if (_playerTransform != null)
+                return _playerTransform.position;
+            return null;
         }
 
         public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
