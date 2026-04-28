@@ -69,8 +69,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void OnPatrolUpdate(float deltaTime)
         {
-            // Patrol 의심도는 시야각(BossSuspicionSystem.ReportVisionDetection)으로만 상승
-            // GetPatrolTarget이 Player 위치를 반환하므로 Boss가 Player를 추격함
+            // 구역 내 Player → 의심도 연속 상승 (시야각 + zone 이중 경로)
+            if (_playerTransform == null || !_hasGroundBounds) return;
+            if (IsPlayerInZone())
+                OnIncreaseSuspicion?.Invoke(suspicionIncreaseRate, deltaTime);
         }
 
         public void OnPatrolExit() { }

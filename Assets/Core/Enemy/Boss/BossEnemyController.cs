@@ -305,11 +305,25 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_hasFacingDir)
             {
                 bool flip = isDefaultFacingLeft ? _lastFacingDir.x > 0f : _lastFacingDir.x < 0f;
+
                 Vector3 scale = transform.localScale;
                 scale.x = Mathf.Abs(scale.x) * (flip ? -1f : 1f);
                 transform.localScale = scale;
+
                 if (bossSprite != null)
                     bossSprite.flipX = flip;
+
+                // localEulerAngles.y 재적용 (Animator가 Y회전을 덮어쓸 수 있으므로)
+                float spriteY = isDefaultFacingLeft
+                    ? (flip ? 180f : 0f)
+                    : (flip ? 0f : 180f);
+                transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
+
+                // 시야각 방향 동기화 (ApplyFacingDirection이 호출되지 않은 경우에도 적용)
+                if (visionSensor != null)
+                {
+                    visionSensor.SetCustomViewDirection(new Vector3(_lastFacingDir.x, 0f, 0f).normalized);
+                }
             }
         }
 
@@ -557,6 +571,7 @@ namespace HideAndInk.Core.Enemy.Boss
                             suspicionSystem.SetVisionIncreaseSpeed(10f);
                             suspicionSystem.SetSuspicionDecayMultiplier(1f);
                             suspicionSystem.SetAutoDecayEnabled(false);
+                            suspicionSystem.ResetDetected(); // 재발각 가능하도록 초기화
                         }
                         else
                         {
@@ -769,10 +784,17 @@ namespace HideAndInk.Core.Enemy.Boss
 #endif
             }
 
-            // Vision cone 방향 동기화 (transform.right 대신 custom 방향 사용)
+            // localEulerAngles.y 동기화 (ConeVisionSensor의 viewDirectionRef.forward 방향 보정)
+            float spriteY = isDefaultFacingLeft
+                ? (flip ? 180f : 0f)
+                : (flip ? 0f : 180f);
+            transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
+
+            // Vision cone 방향 동기화 — flip 기준으로 강제 설정 (dir.x가 0이어도 안전)
             if (visionSensor != null)
             {
-                visionSensor.SetCustomViewDirection(new Vector3(dir.x, 0f, 0f).normalized);
+                float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
+                visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
             }
         }
 
@@ -970,16 +992,8 @@ namespace HideAndInk.Core.Enemy.Boss
             // 모든 돌진 완료 → 의심도 30 고정 → Patrol
             if (_activeGimmick is RelentlessChaseGimmick relentless)
             {
-                // 돌진 종료: GroundBounds 중앙으로 복귀 (화면 밖에 있는 상태 해소)
-                if (_isGroundBoundsScanned)
-                {
-                    float centerX = (_groundBounds.MinX + _groundBounds.MaxX) * 0.5f;
-                    float centerZ = (_groundBounds.MinZ + _groundBounds.MaxZ) * 0.5f;
-                    Vector3 returnPos = new Vector3(centerX, transform.position.y, centerZ);
-                    if (_movement is EnemyMovement em)
-                        em.TeleportTo(returnPos);
-                }
-
+                // 돌진 종료: 현재 위치(화면 밖 끝)에서 Patrol 시작
+                // 중앙으로 순간이동하지 않고 PatrolBehavior가 Player 추격을 시작함
                 float fixedSuspicion = relentless.PostChaseSuspicion;
                 suspicionSystem?.ForceSetSuspicion(fixedSuspicion);
                 _chaseBehavior?.SetPaused(false);
