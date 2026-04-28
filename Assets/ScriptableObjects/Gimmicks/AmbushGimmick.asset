@@ -18,9 +18,9 @@ MonoBehaviour:
   suspicionRate: 15
   suspicionCurveExponent: 2
   suspicionDropThreshold: 20
-  dashSpeed: 8
-  dashDuration: 1.5
-  dashPreDelay: 0.3
+  dashSpeed: 12
+  dashDuration: 1.2
+  dashPreDelay: 0.15
   pitSpawnInterval: 3
   pitClusterRadius: 3
   pitClusterCount: {x: 2, y: 4}

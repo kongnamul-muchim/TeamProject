@@ -318,15 +318,15 @@ namespace HideAndInk.Core.Enemy.Boss
 
         private void UpdateVisionConeVisibility()
         {
+            // Ambush도 Patrol에서 시각적 피드백: 항상 vision cone + 바닥 표시
+            bool isAmbush = _activeGimmick is AmbushGimmick;
             if (visionConeRenderer != null)
-                visionConeRenderer.SetChasing(_stateMachine != null && _stateMachine.IsChase);
+                visionConeRenderer.SetChasing(isAmbush || (_stateMachine != null && _stateMachine.IsChase));
 
             if (suspicionSystem != null)
             {
                 suspicionSystem.SetFloorVisibilityMode(
-                    _activeGimmick is AmbushGimmick
-                        ? SuspicionFloorVisibilityMode.Hidden
-                        : SuspicionFloorVisibilityMode.ChaseOnly);
+                    isAmbush ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.ChaseOnly);
             }
         }
 

@@ -110,8 +110,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnPatrolEnter()
         {
             _isDashing = false;
-            // 시야 숨김 (거리 전용 감지)
-            OnVisibilityToggle?.Invoke(true);
+            // 시야 유지: AmbushSuspicionModule이 360도 거리 기반 감지,
+            // Vision Cone은 방향성 시각 피드백용 (보너스 의심도)
+            OnVisibilityToggle?.Invoke(false);
         }
 
         public void OnPatrolUpdate(float deltaTime)
@@ -172,6 +173,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_isDashing)
             {
                 _dashTimer -= deltaTime;
+                // Dash 중에도 Player 쪽으로 방향 갱신 (추적 돌진)
+                UpdateDashDirection();
                 if (_dashTimer <= 0f)
                 {
                     EndDash();
@@ -221,13 +224,23 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isDashing = true;
             _dashTimer = dashDuration;
 
-            // Player 방향으로 돌진
-            _dashDirection = (_playerTransform.position - _bossTransform.position).normalized;
-            _dashDirection.y = 0f;
-            if (_dashDirection.sqrMagnitude < 0.01f)
-                _dashDirection = Vector3.right;
-
             OnSpeedOverride?.Invoke(dashSpeed);
+            UpdateDashDirection();
+        }
+
+        /// <summary>
+        /// Dash 방향을 Player 쪽으로 갱신 (추적 돌진, 매 프레임 호출됨)
+        /// </summary>
+        private void UpdateDashDirection()
+        {
+            if (_bossTransform == null || _playerTransform == null) return;
+
+            Vector3 dir = (_playerTransform.position - _bossTransform.position).normalized;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.01f)
+                dir = Vector3.right;
+
+            _dashDirection = dir;
             OnDashMoveTo?.Invoke(_bossTransform.position + _dashDirection * dashSpeed * dashDuration);
         }
 
