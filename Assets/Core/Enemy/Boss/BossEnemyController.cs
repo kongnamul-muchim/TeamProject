@@ -8,6 +8,9 @@ using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace HideAndInk.Core.Enemy.Boss
 {
@@ -451,15 +454,8 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (suspicionSystem == null) return;
 
-            if (_activeGimmick is AmbushGimmick)
-            {
-                // Ambush: 모듈(거리 기반)이 주 계산, 시야각은 추가 보너스
-                if (canSeePlayer && !IsPlayerCamouflaging())
-                {
-                    suspicionSystem.ReportVisionDetection(0.5f);
-                }
-                return;
-            }
+            // Ambush: 시야각은 순수 시각 표시용 — 의심도에 영향 없음
+            if (_activeGimmick is AmbushGimmick) return;
 
             if (canSeePlayer && !IsPlayerCamouflaging() && visionSensor != null && visionSensor.RaisesSuspicion)
             {
@@ -506,9 +502,13 @@ namespace HideAndInk.Core.Enemy.Boss
                     {
                         // Moray: 의심도 시스템(OnDetected)으로만 Chase 진입
                     }
-                    else if (canSeePlayer || (isAmbushGimmick
-                        ? (_ambushProximityCooldown <= 0f && IsPlayerCloseEnough())
-                        : IsPlayerCloseEnough()))
+                    else if (isAmbushGimmick)
+                    {
+                        // Ambush: 시야각 무시, 오직 근접 거리로만 Chase 진입
+                        if (_ambushProximityCooldown <= 0f && IsPlayerCloseEnough())
+                            _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
+                    else if (canSeePlayer || IsPlayerCloseEnough())
                     {
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                     }
@@ -525,13 +525,15 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     else if (isRelentlessGimmick)
                     {
-                        // Moray: Player 이탈 시 강제 중단
-                        if (_playerTransform != null && chargeDirector != null)
+                        // Moray: 돌진 중이 아닐 때만 Player 이탈 체크
+                        // (돌진 중엔 Boss가 멀리 이동하므로 ForceInterrupt 방지)
+                        if (_playerTransform != null && chargeDirector != null && !_isMorayCharging)
                         {
                             float dist = Vector3.Distance(transform.position, _playerTransform.position);
-                            if (dist > 40f) // 화면 밖으로 완전히 이탈
+                            if (dist > 40f)
                                 chargeDirector.ForceInterrupt();
                         }
+                    }
                     }
                     else
                     {
@@ -566,7 +568,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     break;
 
                 case EnemyAIState.Search:
-                    if (canSeePlayer)
+                    if (canSeePlayer && !isAmbushGimmick) // Ambush: 시야각 무시
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                     else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
                         _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
@@ -1189,5 +1191,24 @@ namespace HideAndInk.Core.Enemy.Boss
                 chargeDirector.OnMovementStop -= OnMorayMovementStop;
             }
         }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            // AmbushGimmick 근접 Chase 범위 표시 (주황 원)
+            // AmbushGimmick 에셋의 ProximityChaseDistance를 직접 읽어서 실시간 반영
+            AmbushGimmick ambush = gimmickAsset as AmbushGimmick;
+            if (ambush != null)
+            {
+                float range = ambush.ProximityChaseDistance;
+                // 평면 원 (2D) — 3D 구체보다 시각적 왜곡 없음
+                Handles.color = new Color(1f, 0.5f, 0f, 0.4f);
+                Handles.DrawWireDisc(transform.position, Vector3.up, range);
+
+                Gizmos.color = Color.red;
+                Gizmos.DrawSphere(transform.position, 0.15f);
+            }
+        }
+#endif
     }
 }

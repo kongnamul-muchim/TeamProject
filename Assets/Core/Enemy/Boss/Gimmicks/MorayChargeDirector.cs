@@ -78,8 +78,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         // MonoBehaviour
         // ──────────────────────────────────────────────
 
+        private Camera _mainCamera;
+
         private void Awake()
         {
+            // Camera 캐싱 (Camera.main이 null일 경우 Find fallback)
+            _mainCamera = Camera.main ?? FindObjectOfType<Camera>();
+
             // Player 찾기 + MovementAdapter 캐싱
             GameObject playerObj = GameObject.FindWithTag("Player");
             if (playerObj != null)
@@ -320,13 +325,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float groundY = indicatorFloorY;
 
             // Camera 화면 기준 X 범위 (Player 위치 무관, 항상 보임)
-            Camera cam = Camera.main;
             float left, right;
-            if (cam != null && cam.orthographic)
+            if (_mainCamera != null && _mainCamera.orthographic)
             {
-                float camH = 2f * cam.orthographicSize;
-                float camW = camH * cam.aspect;
-                Vector3 camPos = cam.transform.position;
+                float camH = 2f * _mainCamera.orthographicSize;
+                float camW = camH * _mainCamera.aspect;
+                Vector3 camPos = _mainCamera.transform.position;
                 left = camPos.x - camW * 0.5f - screenEdgeOffset;
                 right = camPos.x + camW * 0.5f + screenEdgeOffset;
             }
