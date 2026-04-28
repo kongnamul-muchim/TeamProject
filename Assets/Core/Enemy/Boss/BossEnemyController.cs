@@ -137,6 +137,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     ambush.OnVisibilityToggle = (v) => visionSensor?.SetDistanceOnlyMode(v);
                     ambush.OnDashMoveTo = (t) => _movement.MoveTo(t);
                     ambush.OnSpawnPit = SpawnSandPitCluster;
+                    ambush.OnSetChasePaused = (p) => _chaseBehavior?.SetPaused(p);
                     ambush.OnCombatStateChanged = (inCombat) =>
                     {
                         if (inCombat)
