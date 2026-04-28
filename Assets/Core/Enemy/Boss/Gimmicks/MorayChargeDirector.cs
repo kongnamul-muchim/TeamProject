@@ -58,10 +58,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private int _currentChargeIndex;
         private int _totalCharges;
-        private float _stateTimer;
-        private bool _isPreparing;
-        private bool _isCharging;
-        private bool _isTransitioning;
 
         // 선계산된 돌진 경로
         private Vector3[] _chargeStarts;
@@ -70,6 +66,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         // Charge별 충돌 플래그 (각 charge에서 한 번만 hit)
         private bool[] _chargeHitFlags;
+
+        // 시퀀스 코루틴 (상태머신 대체)
+        private Coroutine _sequenceCoroutine;
 
         // ──────────────────────────────────────────────
         // MonoBehaviour
@@ -94,14 +93,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 Vector2 vel2D = _cachedMovement.CurrentVelocity;
                 _playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
             }
-
-            // 상태 업데이트
-            if (_isPreparing)
-                UpdatePreparing();
-            else if (_isCharging)
-                UpdateCharging();
-            else if (_isTransitioning)
-                UpdateTransition();
+            // ★ 상태 업데이트 제거: Prepare/Charge/Transition은 코루틴이 직접 관리
         }
 
         // ──────────────────────────────────────────────
@@ -118,10 +110,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _hasGroundBounds = true;
             _currentChargeIndex = 0;
             _totalCharges = 0;
-            _isPreparing = false;
-            _isCharging = false;
-            _isTransitioning = false;
             _lastDirection = -1;
+
+            if (_sequenceCoroutine != null)
+            {
+                StopCoroutine(_sequenceCoroutine);
+                _sequenceCoroutine = null;
+            }
 
             if (indicator != null)
                 indicator.ClearAll();
@@ -134,10 +129,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _totalCharges = chargeCount;
             _currentChargeIndex = 0;
-            _isPreparing = true;
-            _isCharging = false;
-            _isTransitioning = false;
-            _stateTimer = 0f;
+
+            // 이전 시퀀스 정리
+            if (_sequenceCoroutine != null)
+            {
+                StopCoroutine(_sequenceCoroutine);
+                _sequenceCoroutine = null;
+            }
 
             // 이전 인디케이터 정리
             if (indicator != null)
@@ -164,6 +162,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             // Indicator에 설정값 적용 (중복 방지)
             ApplyIndicatorSettings();
+
+            // 시퀀스 시작 (코루틴)
+            _sequenceCoroutine = StartCoroutine(ChargeSequenceCoroutine());
         }
 
         private void ApplyIndicatorSettings()
@@ -177,23 +178,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// <summary>리셋 (Chase 종료 시)</summary>
         public void ResetCharges()
         {
-            _isPreparing = false;
-            _isCharging = false;
-            _isTransitioning = false;
+            if (_sequenceCoroutine != null)
+            {
+                StopCoroutine(_sequenceCoroutine);
+                _sequenceCoroutine = null;
+            }
             if (indicator != null)
                 indicator.ClearAll();
         }
 
         /// <summary>
         /// 강제 중단 (Player 이탈/사망 등 예외 상황)
-        /// 상태 리셋 + 이벤트 발행 → Patrol 복귀 트리거
+        /// 코루틴 정지 + 이벤트 발행 → Patrol 복귀 트리거
         /// </summary>
         public void ForceInterrupt()
         {
-            _isPreparing = false;
-            _isCharging = false;
-            _isTransitioning = false;
-            _stateTimer = 0f;
+            if (_sequenceCoroutine != null)
+            {
+                StopCoroutine(_sequenceCoroutine);
+                _sequenceCoroutine = null;
+            }
 
             if (indicator != null)
                 indicator.ClearAll();
@@ -210,91 +214,41 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         // ──────────────────────────────────────────────
-        // 내부 상태 업데이트
+        // 시퀀스 코루틴 (Prepare → Charge[N] → Complete)
         // ──────────────────────────────────────────────
 
-        private void UpdatePreparing()
+        private System.Collections.IEnumerator ChargeSequenceCoroutine()
         {
-            _stateTimer += Time.deltaTime;
-            float interval = minSquareInterval;
-
-            // 순차적으로 네모 생성
-            int nextIdx = _currentChargeIndex;
-            while (nextIdx < _totalCharges && _stateTimer >= nextIdx * interval)
+            // === Prepare Phase: 네모 순차 생성 ===
+            for (int i = 0; i < _totalCharges; i++)
             {
                 if (indicator != null)
-                    indicator.SpawnIndicator(_chargeStarts[nextIdx], _chargeEnds[nextIdx]);
-                nextIdx++;
+                    indicator.SpawnIndicator(_chargeStarts[i], _chargeEnds[i]);
+                yield return new WaitForSeconds(minSquareInterval);
             }
-            _currentChargeIndex = nextIdx - 1;
 
-            // 모든 네모 생성 완료 → 첫 돌진 실행
-            if (_currentChargeIndex >= _totalCharges - 1)
+            // === Charge Phase: N회 돌진 ===
+            for (int i = 0; i < _totalCharges; i++)
             {
-                _currentChargeIndex = 0;
-                ExecuteCharge(0);
+                yield return StartCoroutine(ExecuteSingleChargeCoroutine(i));
+
+                // 돌진 사이 텀 (마지막이 아니면)
+                if (i < _totalCharges - 1)
+                    yield return new WaitForSeconds(chargeDelay);
             }
+
+            // === Complete ===
+            if (indicator != null)
+                indicator.ClearAll();
+            OnMovementStop?.Invoke();
+            OnChargesComplete?.Invoke();
+
+            _sequenceCoroutine = null;
         }
 
-        private void UpdateCharging()
-        {
-            _stateTimer -= Time.deltaTime;
-
-            // 충돌 체크 (Player가 돌진 경로 내에 있는지)
-            CheckChargeHit();
-
-            // 돌진 종료 체크
-            bool reachedTarget = false;
-            if (_bossTransform != null && _currentChargeIndex < _totalCharges)
-            {
-                float dist = Vector3.Distance(
-                    new Vector3(_bossTransform.position.x, 0f, _bossTransform.position.z),
-                    new Vector3(_chargeEnds[_currentChargeIndex].x, 0f, _chargeEnds[_currentChargeIndex].z));
-                reachedTarget = dist < 1f;
-            }
-
-            if (_stateTimer <= 0f || reachedTarget)
-            {
-                // 현재 돌진 완료
-                if (indicator != null)
-                    indicator.DespawnIndicator(_currentChargeIndex);
-
-                int nextIdx = _currentChargeIndex + 1;
-                if (nextIdx >= _totalCharges)
-                {
-                    // 모든 돌진 완료
-                    _isCharging = false;
-                    OnMovementStop?.Invoke();
-                    OnChargesComplete?.Invoke();
-                }
-                else
-                {
-                    // 다음 돌진 준비
-                    _isCharging = false;
-                    _isTransitioning = true;
-                    _stateTimer = chargeDelay;
-                }
-            }
-        }
-
-        private void UpdateTransition()
-        {
-            _stateTimer -= Time.deltaTime;
-            if (_stateTimer <= 0f)
-            {
-                _isTransitioning = false;
-                ExecuteCharge(_currentChargeIndex + 1);
-            }
-        }
-
-        // ──────────────────────────────────────────────
-        // 돌진 실행
-        // ──────────────────────────────────────────────
-
-        private void ExecuteCharge(int index)
+        private System.Collections.IEnumerator ExecuteSingleChargeCoroutine(int index)
         {
             _currentChargeIndex = index;
-            _isCharging = true;
 
             // 임박 색상
             if (indicator != null)
@@ -309,13 +263,37 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnChargeExecute?.Invoke(start, end);
             OnSpeedOverride?.Invoke(chargeSpeed);
 
-            // 돌진 지속 시간 동적 계산 (거리 기반)
+            // 돌진 지속 시간 계산
             float distance = Vector3.Distance(start, end);
-            _stateTimer = Mathf.Max(distance / chargeSpeed + 0.5f, 1.5f);
+            float duration = Mathf.Max(distance / chargeSpeed + 0.5f, 1.5f);
+            float elapsed = 0f;
 
 #if UNITY_EDITOR
-            Debug.Log($"[MorayChargeDirector] Charge #{index}: Start=({start.x:F1},{start.z:F1}) End=({end.x:F1},{end.z:F1}) Dist={distance:F1} Timer={_stateTimer:F1}s");
+            Debug.Log($"[MorayChargeDirector] Charge #{index}: Start=({start.x:F1},{start.z:F1}) End=({end.x:F1},{end.z:F1}) Dist={distance:F1} Duration={duration:F1}s");
 #endif
+
+            // 매 프레임 충돌 체크 + 종료 체크
+            while (elapsed < duration)
+            {
+                CheckChargeHit();
+
+                // 목표 도달 확인
+                if (_bossTransform != null)
+                {
+                    float dist = Vector3.Distance(
+                        new Vector3(_bossTransform.position.x, 0f, _bossTransform.position.z),
+                        new Vector3(end.x, 0f, end.z));
+                    if (dist < 1f)
+                        break;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            // 돌진 완료 처리
+            if (indicator != null)
+                indicator.DespawnIndicator(index);
         }
 
         // ──────────────────────────────────────────────
