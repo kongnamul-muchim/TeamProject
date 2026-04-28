@@ -323,33 +323,29 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private void CalculateChargePath(int index)
         {
             float groundY = indicatorFloorY;
+            float chargeZ = PredictChargeZ(index);
 
-            // Camera 화면 기준 X 범위 (Player 위치 무관, 항상 보임)
+            // Camera Viewport 기준 X 범위 (해당 chargeZ depth에서 계산)
+            // Orthographic / Perspective 모두 대응
             float left, right;
-            if (_mainCamera != null && _mainCamera.orthographic)
+            if (!TryGetViewBoundsAtZ(chargeZ, out left, out right))
             {
-                float camH = 2f * _mainCamera.orthographicSize;
-                float camW = camH * _mainCamera.aspect;
-                Vector3 camPos = _mainCamera.transform.position;
-                left = camPos.x - camW * 0.5f - screenEdgeOffset;
-                right = camPos.x + camW * 0.5f + screenEdgeOffset;
-            }
-            else if (_hasGroundBounds)
-            {
-                left = _groundBounds.MinX - screenEdgeOffset;
-                right = _groundBounds.MaxX + screenEdgeOffset;
-            }
-            else
-            {
-                left = -20f; right = 20f;
+                // Fallback: GroundBounds
+                if (_hasGroundBounds)
+                {
+                    left = _groundBounds.MinX - screenEdgeOffset;
+                    right = _groundBounds.MaxX + screenEdgeOffset;
+                }
+                else
+                {
+                    left = -20f; right = 20f;
+                }
             }
 
             // 방향 교차
             int startDir = (_lastDirection == 0) ? 1 : 0;
             int endDir = (_lastDirection == 0) ? 0 : 1;
             _lastDirection = startDir;
-
-            float chargeZ = PredictChargeZ(index);
 
             _chargeStarts[index] = new Vector3(startDir == 0 ? left : right, groundY, chargeZ);
             _chargeEnds[index] = new Vector3(endDir == 0 ? left : right, groundY, chargeZ);
@@ -368,6 +364,54 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float halfRange = (_groundBounds.MaxZ - _groundBounds.MinZ) * 0.3f;
             float t = (float)index / (_totalCharges - 1);
             return centerZ + (t - 0.5f) * 2f * halfRange;
+        }
+
+        // ──────────────────────────────────────────────
+        // Camera → Viewport-aligned bounds
+        // ──────────────────────────────────────────────
+
+        /// <summary>
+        /// 특정 World Z 위치에서의 Camera Viewport 좌/우 X 범위 반환
+        /// Orthographic / Perspective 모두 대응
+        /// 
+        /// 원리: chargeZ 위치의 한 점을 Viewport depth로 변환 → 같은 depth에서
+        /// Viewport 좌/우 edge의 World X 좌표 계산
+        /// → charge indicator가 항상 화면 안에 표시됨
+        /// </summary>
+        private bool TryGetViewBoundsAtZ(float worldZ, out float left, out float right)
+        {
+            left = 0; right = 0;
+            if (_mainCamera == null) return false;
+
+            float groundY = indicatorFloorY;
+
+            // 1) chargeZ 위치의 depth (camera forward축 거리) 계산
+            Vector3 refPoint = new Vector3(0, groundY, worldZ);
+            Vector3 viewportPos = _mainCamera.WorldToViewportPoint(refPoint);
+
+            // behind camera → fallback
+            if (viewportPos.z < 0f) return false;
+
+            float depth = viewportPos.z;
+            // viewport Y는 refPoint의 실제 Y를 사용 (ground level)
+            float viewY = Mathf.Clamp(viewportPos.y, 0.05f, 0.95f);
+
+            // 2) 같은 depth에서 Viewport 좌/우 edge → World X
+            Vector3 leftWorld = _mainCamera.ViewportToWorldPoint(new Vector3(0f, viewY, depth));
+            Vector3 rightWorld = _mainCamera.ViewportToWorldPoint(new Vector3(1f, viewY, depth));
+
+            left = Mathf.Min(leftWorld.x, rightWorld.x) - screenEdgeOffset;
+            right = Mathf.Max(leftWorld.x, rightWorld.x) + screenEdgeOffset;
+
+            // 최소 폭 보장 (화면이 너무 좁을 경우)
+            if (right - left < 5f)
+            {
+                float cx = (left + right) * 0.5f;
+                left = cx - 5f;
+                right = cx + 5f;
+            }
+
+            return true;
         }
 
         // ──────────────────────────────────────────────
