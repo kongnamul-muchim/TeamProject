@@ -21,7 +21,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         [Header("돌진")]
         [SerializeField] private int maxChargesPerCycle = 5;
-        [SerializeField] private int minCharges = 3;
+        public int MaxChargesPerCycle => maxChargesPerCycle;
 
         private Transform _bossTransform;
         private Transform _playerTransform;
@@ -84,9 +84,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isInChase = true;
 
             // Director에게 돌진 준비 요청
-            // _chaseEntryCount가 낮아도 최소 minCharges 보장 (첫 Chase에서 바로 3회)
-            int raw = Mathf.Max(_chaseEntryCount, minCharges);
-            int chargeCount = Mathf.Min(raw, maxChargesPerCycle);
+            // 실제 chargeCount는 Controller의 OnDirectorBeginPrepare 콜백이 재정의
+            int chargeCount = Mathf.Min(_chaseEntryCount, maxChargesPerCycle);
             OnDirectorBeginPrepare?.Invoke(chargeCount);
         }
 

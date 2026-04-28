@@ -74,6 +74,8 @@ namespace HideAndInk.Core.Enemy.Boss
 
         // 곰치 최초 강제 Chase 발동 완료 플래그
         private bool _hasInitialMorayChaseTriggered;
+        // 곰치 Chase 진입 횟수 (MonoBehaviour에서 직접 관리 — ScriptableObject 의존 제거)
+        private int _morayChaseEntryCount;
 
         // Animator flipX override 방지용 캐시
         private Vector3 _lastFacingDir;
@@ -234,11 +236,14 @@ namespace HideAndInk.Core.Enemy.Boss
 
                 case RelentlessChaseGimmick relentless:
                     // Director 콜백 연결
-                    relentless.OnDirectorBeginPrepare = (count) =>
+                    relentless.OnDirectorBeginPrepare = (_) =>
                     {
                         // Prepare 시작부터 ChaseBehavior 정지 (경쟁 방지)
                         _chaseBehavior?.SetPaused(true);
-                        chargeDirector?.BeginPrepare(count);
+                        // ScriptableObject(_chaseEntryCount)가 아닌 Controller가 직접 카운트
+                        _morayChaseEntryCount++;
+                        int chargeCount = Mathf.Min(_morayChaseEntryCount, relentless.MaxChargesPerCycle);
+                        chargeDirector?.BeginPrepare(chargeCount);
                     };
                     relentless.OnDirectorReset = () => chargeDirector?.ResetCharges();
                     relentless.OnIncreaseSuspicion = (rate, dt) =>
@@ -993,17 +998,7 @@ namespace HideAndInk.Core.Enemy.Boss
             // 모든 돌진 완료 → 의심도 30 고정 → Patrol
             if (_activeGimmick is RelentlessChaseGimmick relentless)
             {
-                // 화면 밖 끝에서 Patrol 시작 → Player가 안 보임
-                // GroundBounds 중앙으로 복귀 후 Patrol 전환 (가시성 확보)
-                if (_isGroundBoundsScanned)
-                {
-                    float centerX = (_groundBounds.MinX + _groundBounds.MaxX) * 0.5f;
-                    float centerZ = (_groundBounds.MinZ + _groundBounds.MaxZ) * 0.5f;
-                    Vector3 returnPos = new Vector3(centerX, transform.position.y, centerZ);
-                    if (_movement is EnemyMovement em)
-                        em.TeleportTo(returnPos);
-                }
-
+                // ★ 텔레포트 절대 금지: Patrol이 자연스럽게 걸어오도록 함
                 float fixedSuspicion = relentless.PostChaseSuspicion;
                 suspicionSystem?.ForceSetSuspicion(fixedSuspicion);
                 _chaseBehavior?.SetPaused(false);
