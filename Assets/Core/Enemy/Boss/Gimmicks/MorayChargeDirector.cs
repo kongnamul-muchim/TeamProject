@@ -388,7 +388,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float groundY = indicatorFloorY;
 
             // 1) chargeZ 위치의 depth (camera forward축 거리) 계산
-            Vector3 refPoint = new Vector3(0, groundY, worldZ);
+            // ★ refPoint X = camera X (고정 0이면 멀어질수록 viewport 밖)
+            Vector3 refPoint = new Vector3(_mainCamera.transform.position.x, groundY, worldZ);
             Vector3 viewportPos = _mainCamera.WorldToViewportPoint(refPoint);
 
             // behind camera → fallback

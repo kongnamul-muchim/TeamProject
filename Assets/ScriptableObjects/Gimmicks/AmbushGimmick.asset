@@ -14,9 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.AmbushGimmick
   ambushDistance: 6
   ambushMinDistance: 3
-  suspicionRadius: {x: 3, y: 3}
-  suspicionRate: 15
-  suspicionCurveExponent: 2
   suspicionDropThreshold: 20
   dashSpeed: 12
   dashDuration: 1.2
@@ -30,4 +27,4 @@ MonoBehaviour:
   positionAvoidRadius: 2
   pitSlowPercent: 0.5
   pitSlowDuration: 3
-  proximityChaseDistance: 12
+  proximityChaseDistance: 1.5

@@ -549,20 +549,7 @@ namespace HideAndInk.Core.Perception
         /// 의심도 상승 범위 Gizmos 표시 (단일 타원형)
         /// - 타원형 영역: 주황색 와이어프레임 (SuspicionRadius 기준)
         /// </summary>
-        private void OnDrawGizmosSelected()
-        {
-            Vector2 radius = _suspicionRadius;
-
-            // 타원형 영역 - 주황색
-            Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
-            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(radius.x, 0.05f, radius.y));
-            Gizmos.DrawWireSphere(Vector3.zero, 1f);
-
-            // 중심점 표시
-            Gizmos.color = Color.red;
-            Gizmos.matrix = Matrix4x4.identity;
-            Gizmos.DrawSphere(transform.position, 0.15f);
-        }
+        // Gizmos는 BossEnemyController.OnDrawGizmosSelected에서 관리
 
         private void OnDestroy()
         {

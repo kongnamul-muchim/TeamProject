@@ -111,7 +111,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.VisionConeRenderer
   visionSensor: {fileID: 7214660145644610636}
-  visibilityMode: 1
+  visibilityMode: 2
   coneColor: {r: 1, g: 0, b: 0, a: 0.15686275}
   segmentCount: 64
   groundLayer:
@@ -212,7 +212,6 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 256
-  linkedGimmick: {fileID: 11400000, guid: d27d7356cc82c2543bb10b295c989869, type: 2}
   floorVisibilityMode: 0
 --- !u!95 &475003200736606910
 Animator:
@@ -257,6 +256,7 @@ MonoBehaviour:
   chargeDelay: 0.2
   playerPredictionTime: 0.4
   screenEdgeOffset: 2
+  indicatorFloorY: 0
 --- !u!114 &5522215657372517195
 MonoBehaviour:
   m_ObjectHideFlags: 0

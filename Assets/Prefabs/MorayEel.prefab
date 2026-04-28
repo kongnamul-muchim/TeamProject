@@ -141,7 +141,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 10, y: 2.5, z: 0.5}
+  m_Size: {x: 10, y: 2.5, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &9173715876018636447
 Rigidbody:
@@ -210,7 +210,7 @@ MonoBehaviour:
   chargeIndicatorLength: 12
   chargeIndicatorWidth: 1.5
   bossSprite: {fileID: 682140847608222067}
-  sandPitPrefab: {fileID: 11400000, guid: 30ba88e5611bad74fa2f3aba77413bc2, type: 2}
+  sandPitPrefab: {fileID: 11400000, guid: 30ba88e5611bad74fa2f3aba77413bc2, type: 3}
   chargeDirector: {fileID: 3089951662521229775}
   knockbackForce: 12
   defaultFacingLeft: 1
@@ -263,7 +263,6 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  linkedGimmick: {fileID: 0}
   floorVisibilityMode: 1
 --- !u!114 &2800939911456967939
 MonoBehaviour:
@@ -278,7 +277,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.VisionConeRenderer
   visionSensor: {fileID: 1062457233703333738}
-  visibilityMode: 0
+  visibilityMode: 2
   coneColor: {r: 1, g: 0, b: 0, a: 0.4}
   segmentCount: 32
   groundLayer:
@@ -298,7 +297,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f36291b22c951f442b1c4d4bb1dc42b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.MorayChargeIndicator
-  indicatorWidth: 2.5
+  indicatorWidth: 1
   activeColor: {r: 1, g: 0.2, b: 0.2, a: 0.6}
   imminentColor: {r: 1, g: 0, b: 0, a: 0.9}
   heightOffset: 0.2
@@ -316,7 +315,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.MorayChargeDirector
   indicator: {fileID: 4267299901885531668}
-  indicatorWidth: 2.5
+  indicatorWidth: 1
   activeColor: {r: 1, g: 0.2, b: 0.2, a: 0.6}
   imminentColor: {r: 1, g: 0, b: 0, a: 0.9}
   chargeSpeed: 18
@@ -324,3 +323,4 @@ MonoBehaviour:
   chargeDelay: 0.2
   playerPredictionTime: 0.4
   screenEdgeOffset: 2
+  indicatorFloorY: 0
