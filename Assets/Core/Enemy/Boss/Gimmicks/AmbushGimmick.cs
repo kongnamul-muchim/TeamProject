@@ -176,6 +176,27 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 {
                     EndDash();
                 }
+                return;
+            }
+
+            // Post-dash: Player 지속 추적 (EndDash 후 OnChaseUpdate가 계속 불리므로)
+            if (_playerTransform != null && _bossTransform != null)
+            {
+                Vector3 target = _playerTransform.position;
+                target.y = _bossTransform.position.y;
+                OnDashMoveTo?.Invoke(target);
+            }
+        }
+                return;
+            }
+
+            if (_isDashing)
+            {
+                _dashTimer -= deltaTime;
+                if (_dashTimer <= 0f)
+                {
+                    EndDash();
+                }
                 // OnDashMoveTo는 StartDash에서 한 번 호출, 직선 유지
                 return;
             }

@@ -21,3 +21,7 @@ MonoBehaviour:
   dashSpeed: 8
   dashDuration: 1.5
   dashPreDelay: 0.3
+  pitSpawnInterval: 3
+  pitClusterRadius: 3
+  pitClusterCount: {x: 2, y: 4}
+  positionAvoidRadius: 2

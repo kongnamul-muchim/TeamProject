@@ -109,11 +109,16 @@ namespace HideAndInk.Core.Enemy.Boss
                 var suspicionModule = new AmbushSuspicionModule(ambush);
                 suspicionSystem.SetSuspicionModule(suspicionModule);
 
-                // 의심도 100% 발각 → 강제 Chase 전환
+                // 의심도 100% 발각 → 강제 Chase 전환 (Patrol/Search 모두 대응)
                 suspicionSystem.OnDetected += () =>
                 {
-                    if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Patrol)
-                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    if (_stateMachine != null)
+                    {
+                        var cur = _stateMachine.CurrentState;
+                        // 이미 Chase 중이면 skip
+                        if (cur != EnemyAIState.Chase)
+                            _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
                 };
 
                 if (_isGroundBoundsScanned)
@@ -295,8 +300,15 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (suspicionSystem == null) return;
 
-            // Ambush는 OnCombatStateChanged 콜백이 직접 Block/Allow 관리
-            if (_activeGimmick is AmbushGimmick) return;
+            if (_activeGimmick is AmbushGimmick)
+            {
+                // Ambush: 모듈(거리 기반)이 주 계산, 시야각은 추가 보너스
+                if (canSeePlayer && !IsPlayerCamouflaging())
+                {
+                    suspicionSystem.ReportVisionDetection(0.5f);
+                }
+                return;
+            }
 
             if (canSeePlayer && !IsPlayerCamouflaging() && visionSensor != null && visionSensor.RaisesSuspicion)
             {
