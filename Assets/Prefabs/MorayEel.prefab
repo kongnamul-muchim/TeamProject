@@ -209,9 +209,9 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   chargeIndicatorLength: 12
   chargeIndicatorWidth: 1.5
-  bossSprite: {fileID: 0}
-  sandPitPrefab: {fileID: 0}
-  chargeDirector: {fileID: 0}
+  bossSprite: {fileID: 682140847608222067}
+  sandPitPrefab: {fileID: 11400000, guid: 30ba88e5611bad74fa2f3aba77413bc2, type: 2}
+  chargeDirector: {fileID: 3089951662521229775}
   knockbackForce: 12
   defaultFacingLeft: 1
 --- !u!114 &1062457233703333738
