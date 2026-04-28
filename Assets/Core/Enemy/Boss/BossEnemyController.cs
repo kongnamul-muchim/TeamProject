@@ -319,10 +319,11 @@ namespace HideAndInk.Core.Enemy.Boss
                     : (flip ? 0f : 180f);
                 transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
 
-                // 시야각 방향 동기화 (ApplyFacingDirection이 호출되지 않은 경우에도 적용)
+                // 시야각 방향 동기화 — flip 기준으로 강제 설정 (ApplyFacingDirection 누락 방지)
                 if (visionSensor != null)
                 {
-                    visionSensor.SetCustomViewDirection(new Vector3(_lastFacingDir.x, 0f, 0f).normalized);
+                    float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
+                    visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
                 }
             }
         }
@@ -992,8 +993,17 @@ namespace HideAndInk.Core.Enemy.Boss
             // 모든 돌진 완료 → 의심도 30 고정 → Patrol
             if (_activeGimmick is RelentlessChaseGimmick relentless)
             {
-                // 돌진 종료: 현재 위치(화면 밖 끝)에서 Patrol 시작
-                // 중앙으로 순간이동하지 않고 PatrolBehavior가 Player 추격을 시작함
+                // 화면 밖 끝에서 Patrol 시작 → Player가 안 보임
+                // GroundBounds 중앙으로 복귀 후 Patrol 전환 (가시성 확보)
+                if (_isGroundBoundsScanned)
+                {
+                    float centerX = (_groundBounds.MinX + _groundBounds.MaxX) * 0.5f;
+                    float centerZ = (_groundBounds.MinZ + _groundBounds.MaxZ) * 0.5f;
+                    Vector3 returnPos = new Vector3(centerX, transform.position.y, centerZ);
+                    if (_movement is EnemyMovement em)
+                        em.TeleportTo(returnPos);
+                }
+
                 float fixedSuspicion = relentless.PostChaseSuspicion;
                 suspicionSystem?.ForceSetSuspicion(fixedSuspicion);
                 _chaseBehavior?.SetPaused(false);
