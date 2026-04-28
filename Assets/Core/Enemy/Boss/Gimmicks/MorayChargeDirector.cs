@@ -342,36 +342,22 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// Player 이동 예측 기반 Z 위치 계산
+        /// 돌진 Z 위치 — 항상 Ground Z 중앙 (Player Z 무시)
+        /// Player가 Ground 가장자리로 가도 네모가 화면 밖으로 나가지 않음
         /// </summary>
         private float PredictChargeZ(int index)
         {
             if (!_hasGroundBounds) return 0f;
-
             float minZ = _groundBounds.MinZ;
             float maxZ = _groundBounds.MaxZ;
-            float range = maxZ - minZ;
+            float centerZ = (minZ + maxZ) * 0.5f;
 
-            if (range < 0.5f) return (minZ + maxZ) * 0.5f;
+            if (_totalCharges <= 1) return centerZ;
 
-            // Player 현재 위치 + 예측
-            Vector3 predictedPos = _playerTransform != null
-                ? _playerTransform.position + _playerVelocity * playerPredictionTime
-                : Vector3.zero;
-
-            float predictedZ = predictedPos.z;
-
-            // 여러 돌진일 경우 Z 분산
-            if (_totalCharges > 1)
-            {
-                float t = (float)index / (_totalCharges - 1);
-                float spreadZ = minZ + range * t;
-                // 예측 위치와 분산 위치 혼합 (50:50)
-                predictedZ = Mathf.Lerp(predictedZ, spreadZ, 0.5f);
-            }
-
-            // GroundBounds 내로 클램프
-            return Mathf.Clamp(predictedZ, minZ, maxZ);
+            // 여러 돌진: Z축으로 퍼뜨리되 중심 범위 내에서만
+            float halfRange = (maxZ - minZ) * 0.3f; // 전체 범위의 30%
+            float t = (float)index / (_totalCharges - 1); // 0~1
+            return centerZ + (t - 0.5f) * 2f * halfRange; // centerZ ± halfRange
         }
 
         // ──────────────────────────────────────────────
