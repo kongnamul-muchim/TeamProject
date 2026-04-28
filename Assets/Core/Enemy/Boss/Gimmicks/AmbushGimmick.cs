@@ -445,8 +445,41 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
         void IGimmickPlayerAware.SetPlayerVisible(bool isVisible) { }
 
-        bool IGimmickViewDirection.OverridesViewDirection => false;
-        Vector3 IGimmickViewDirection.GetViewDirectionVector() => Vector3.right;
+        bool IGimmickViewDirection.OverridesViewDirection => true;
+
+        Vector3 IGimmickViewDirection.GetViewDirectionVector()
+        {
+            // 1순위: Dash 중 → 돌진 방향 유지
+            if (_isDashing && _dashDirection.sqrMagnitude > 0.01f)
+                return _dashDirection;
+
+            // 2순위: PreDelay → Player 방향 (다음 돌진 예고)
+            if (_isDashPreDelay)
+                return GetDirectionToPlayer();
+
+            // 3순위: Rest → Player 방향 (휴식 중에도 Player 주시)
+            if (_isResting)
+                return GetDirectionToPlayer();
+
+            // 4순위: Patrol → Player 방향
+            return GetDirectionToPlayer();
+        }
+
+        /// <summary>
+        /// Player 방향 벡터 반환 (실패 시 Vector3.right)
+        /// </summary>
+        private Vector3 GetDirectionToPlayer()
+        {
+            if (_playerTransform != null && _bossTransform != null)
+            {
+                Vector3 dir = _playerTransform.position - _bossTransform.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.01f)
+                    return dir.normalized;
+            }
+            return Vector3.right;
+        }
+
         bool IGimmickViewDirection.ShowChargeIndicator => false;
 
         bool IGimmickCombatCycle.IsInCombatCycle => _isDashPreDelay || _isDashing;

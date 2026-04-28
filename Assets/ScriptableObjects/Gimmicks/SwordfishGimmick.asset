@@ -12,7 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 569e09999bab53a4ea48eb38a3103def, type: 3}
   m_Name: SwordfishGimmick
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.SwordfishGimmick
-  chargeSpeed: 12
-  aimDuration: 0.5
+  minChargeSpeed: 10
+  maxChargeSpeed: 15
+  minAimDuration: 0.2
+  maxAimDuration: 0.8
   chargeDuration: 1
   stunDuration: 0.5
+  minPredictionFactor: 0.3
+  maxPredictionFactor: 0.9
+  chargeTargetDistance: 20
+  chargeRange: 12
+  wallCheckRadius: 0.8
+  wallLayerName: Wall
+  wallPushbackDistance: 0.2
+  wallCooldownDuration: 1.5
