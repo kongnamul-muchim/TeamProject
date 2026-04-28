@@ -647,7 +647,28 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateMovement(float deltaTime)
         {
-            base.UpdateMovement(deltaTime);
+            bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
+
+            if (isMorayChase)
+            {
+                // Moray Chase: Ground edge 체크 건너뜀 (돌진 시작 위치가 경계에 있음)
+                // _movement.Stop()이 호출되면 charge가 중단됨
+                if (_movement != null)
+                {
+                    _movement.Update(deltaTime);
+                    if (_movement.IsMoving)
+                    {
+                        Vector3 newPos = transform.position;
+                        newPos.x += _movement.Velocity.x * deltaTime;
+                        newPos.z += _movement.Velocity.z * deltaTime;
+                        transform.position = newPos;
+                    }
+                }
+            }
+            else
+            {
+                base.UpdateMovement(deltaTime);
+            }
 
             if (_isGroundBoundsScanned)
             {
