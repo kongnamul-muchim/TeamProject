@@ -111,6 +111,17 @@ namespace HideAndInk.Core.Enemy.Movement
         }
 
         /// <summary>
+        /// 지정 위치로 즉시 순간이동 (속도 리셋)
+        /// </summary>
+        public void TeleportTo(Vector3 position)
+        {
+            _enemy.Transform.position = position;
+            _velocity = Vector3.zero;
+            _targetPosition = null;
+            _isMoving = false;
+        }
+
+        /// <summary>
         /// 이동 즉시 중지
         /// </summary>
         public void Stop()

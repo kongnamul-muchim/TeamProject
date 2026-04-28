@@ -367,6 +367,15 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 의심도 강제 설정 (RelentlessChaseGimmick 강제 Chase 전환/종료 시)
+        /// </summary>
+        public void ForceSetSuspicion(float value)
+        {
+            _currentValue = Mathf.Clamp(value, 0f, 100f);
+            CheckLevelChange();
+        }
+
+        /// <summary>
         /// 의심도 상승 차단 (Ambush Chase 중 호출)
         /// Chase 중에는 의심도 하락만 허용
         /// </summary>
