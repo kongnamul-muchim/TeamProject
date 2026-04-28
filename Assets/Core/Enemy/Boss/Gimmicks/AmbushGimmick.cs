@@ -187,20 +187,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 OnDashMoveTo?.Invoke(target);
             }
         }
-                return;
-            }
-
-            if (_isDashing)
-            {
-                _dashTimer -= deltaTime;
-                if (_dashTimer <= 0f)
-                {
-                    EndDash();
-                }
-                // OnDashMoveTo는 StartDash에서 한 번 호출, 직선 유지
-                return;
-            }
-        }
 
         public void OnChaseExit()
         {
