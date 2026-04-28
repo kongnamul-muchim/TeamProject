@@ -29,6 +29,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         [Header("화면 여유")]
         [SerializeField] private float screenEdgeOffset = 2f;
+        [SerializeField, Range(0f, 0.4f), Tooltip("Viewport 좌/우에서 안쪽으로 margin (frustum culling 방지). 0.1 = 10%")]
+        private float viewportEdgeMargin = 0.1f;
 
         [Header("바닥 높이")]
         [SerializeField, Tooltip("인디케이터/돌진 Y 위치. Ground 표면 Y값을 직접 입력 (기본 0)")]
@@ -396,9 +398,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // viewport Y는 refPoint의 실제 Y를 사용 (ground level)
             float viewY = Mathf.Clamp(viewportPos.y, 0.05f, 0.95f);
 
-            // 2) 같은 depth에서 Viewport 좌/우 edge → World X
-            Vector3 leftWorld = _mainCamera.ViewportToWorldPoint(new Vector3(0f, viewY, depth));
-            Vector3 rightWorld = _mainCamera.ViewportToWorldPoint(new Vector3(1f, viewY, depth));
+            // 2) 같은 depth에서 Viewport 좌/우 (margin 적용 → frustum culling 방지)
+            float vxLeft = viewportEdgeMargin;
+            float vxRight = 1f - viewportEdgeMargin;
+            Vector3 leftWorld = _mainCamera.ViewportToWorldPoint(new Vector3(vxLeft, viewY, depth));
+            Vector3 rightWorld = _mainCamera.ViewportToWorldPoint(new Vector3(vxRight, viewY, depth));
 
             left = Mathf.Min(leftWorld.x, rightWorld.x) - screenEdgeOffset;
             right = Mathf.Max(leftWorld.x, rightWorld.x) + screenEdgeOffset;
