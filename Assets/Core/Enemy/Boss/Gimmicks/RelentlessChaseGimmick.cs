@@ -6,8 +6,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// <summary>
     /// Zone 3 곰치 (Moray Eel) — 오케스트레이터
     /// 
-    /// Chase-only 보스. Patrol 없음, 항상 Player 추격.
-    /// 의심도 자동 상승 → 100% → 돌진 시퀀스 → 리셋 루프.
+    /// Patrol: 맵 배회 + 의심도 자동 상승
+    /// Chase:  돌진 시퀀스
     /// 실제 돌진 로직은 MorayChargeDirector가 처리.
     /// </summary>
     [CreateAssetMenu(menuName = "Enemy Gimmicks/Relentless Chase Gimmick", fileName = "RelentlessChaseGimmick")]
@@ -27,7 +27,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public int MaxChargesPerCycle => maxChargesPerCycle;
 
         // ─── 콜백 (Controller 연결) ───
-        /// <summary>의심도 증가 요청: rate * dt 만큼 AddSuspicion</summary>
+        public System.Action<int> OnDirectorBeginPrepare; // chargeCount → Director.BeginPrepare
+        public System.Action OnDirectorReset;              // Chase 종료 → Director.ResetCharges
         public System.Action<float, float> OnIncreaseSuspicion;
 
         // ─── 인터페이스 구현용 ───
@@ -35,6 +36,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _isInChase;
         private bool _hasGroundBounds;
         private GroundBounds _groundBounds;
+
+        // Patrol 중 의심도가 100%가 되는 시점이 Chase 진입 시점
+        // Controller의 suspicionSystem.OnDetected가 Chase 전환 처리
 
         public float PostChaseSuspicion => postChaseSuspicion;
         public float SuspicionAutoRate => suspicionAutoRate;
@@ -52,19 +56,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isInChase = false;
         }
 
-        // Patrol 없음 (Chase-only)
-        public void OnPatrolEnter() { }
-        public void OnPatrolUpdate(float deltaTime) { }
-        public void OnPatrolExit() { }
-
-        public void OnChaseEnter()
+        // ─── Patrol: 배회 + 의심도 자동 상승 ───
+        public void OnPatrolEnter()
         {
-            _isInChase = true;
+            _isInChase = false;
         }
 
-        public void OnChaseUpdate(float deltaTime)
+        public void OnPatrolUpdate(float deltaTime)
         {
-            // Chase 중 의심도 증가: 자동 + zone + 이동
             if (_playerTransform == null || !_hasGroundBounds) return;
 
             // 항상 자동 증가
@@ -80,17 +79,37 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 OnIncreaseSuspicion?.Invoke(suspicionMoveBonus, deltaTime);
         }
 
+        public void OnPatrolExit() { }
+
+        // ─── Chase: 돌진 시퀀스 ───
+        public void OnChaseEnter()
+        {
+            _isInChase = true;
+
+            // Director에게 돌진 준비 요청
+            // 실제 chargeCount는 Controller의 OnDirectorBeginPrepare 콜백이 결정
+            int chargeCount = 0; // Controller가 재정의
+            OnDirectorBeginPrepare?.Invoke(chargeCount);
+        }
+
+        public void OnChaseUpdate(float deltaTime)
+        {
+            // Chase 중 director가 모든 로직 처리
+        }
+
         public void OnChaseExit()
         {
             _isInChase = false;
+            OnDirectorReset?.Invoke();
         }
 
         public void OnSearchEnter() { }
         public void OnSearchUpdate(float deltaTime) { }
         public void OnSearchExit() { }
 
-        // 항상 Player 추격
-        public bool HasMovementOverride => true;
+        // Patrol: HasMovementOverride=false → PatrolBehavior가 랜덤 배회
+        // Chase:  HasMovementOverride=true  → 기믹/디렉터가 이동 제어
+        public bool HasMovementOverride => _isInChase;
 
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
@@ -99,8 +118,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _groundBounds = bounds;
                 _hasGroundBounds = true;
             }
-            if (_playerTransform != null)
-                return _playerTransform.position;
+            // Patrol 중에는 Player 추격하지 않음 → null 반환 (랜덤 배회)
             return null;
         }
 
