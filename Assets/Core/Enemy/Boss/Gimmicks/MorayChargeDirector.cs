@@ -317,24 +317,34 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private void CalculateChargePath(int index)
         {
-            if (!_hasGroundBounds)
-            {
-                _chargeStarts[index] = new Vector3(-20f, 0f, 0f);
-                _chargeEnds[index] = new Vector3(20f, 0f, 0f);
-                return;
-            }
+            float groundY = indicatorFloorY;
 
-            float groundY = indicatorFloorY; // Boss 현재 Y가 아닌 바닥 Y 사용 (네모 부양 방지)
+            // Camera 화면 기준 X 범위 (Player 위치 무관, 항상 보임)
+            Camera cam = Camera.main;
+            float left, right;
+            if (cam != null && cam.orthographic)
+            {
+                float camH = 2f * cam.orthographicSize;
+                float camW = camH * cam.aspect;
+                Vector3 camPos = cam.transform.position;
+                left = camPos.x - camW * 0.5f - screenEdgeOffset;
+                right = camPos.x + camW * 0.5f + screenEdgeOffset;
+            }
+            else if (_hasGroundBounds)
+            {
+                left = _groundBounds.MinX - screenEdgeOffset;
+                right = _groundBounds.MaxX + screenEdgeOffset;
+            }
+            else
+            {
+                left = -20f; right = 20f;
+            }
 
             // 방향 교차
             int startDir = (_lastDirection == 0) ? 1 : 0;
             int endDir = (_lastDirection == 0) ? 0 : 1;
             _lastDirection = startDir;
 
-            float left = _groundBounds.MinX - screenEdgeOffset;
-            float right = _groundBounds.MaxX + screenEdgeOffset;
-
-            // Player 예측 위치 기반 Z 결정
             float chargeZ = PredictChargeZ(index);
 
             _chargeStarts[index] = new Vector3(startDir == 0 ? left : right, groundY, chargeZ);
@@ -342,36 +352,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// Player 이동 예측 기반 Z 위치 계산
+        /// 돌진 Z 위치 — Ground Z 중앙 기준 (Player Z 무시)
         /// </summary>
         private float PredictChargeZ(int index)
         {
             if (!_hasGroundBounds) return 0f;
+            float centerZ = (_groundBounds.MinZ + _groundBounds.MaxZ) * 0.5f;
+            if (_totalCharges <= 1) return centerZ;
 
-            float minZ = _groundBounds.MinZ;
-            float maxZ = _groundBounds.MaxZ;
-            float range = maxZ - minZ;
-
-            if (range < 0.5f) return (minZ + maxZ) * 0.5f;
-
-            // Player 현재 위치 + 예측
-            Vector3 predictedPos = _playerTransform != null
-                ? _playerTransform.position + _playerVelocity * playerPredictionTime
-                : Vector3.zero;
-
-            float predictedZ = predictedPos.z;
-
-            // 여러 돌진일 경우 Z 분산
-            if (_totalCharges > 1)
-            {
-                float t = (float)index / (_totalCharges - 1);
-                float spreadZ = minZ + range * t;
-                // 예측 위치와 분산 위치 혼합 (50:50)
-                predictedZ = Mathf.Lerp(predictedZ, spreadZ, 0.5f);
-            }
-
-            // GroundBounds 내로 클램프
-            return Mathf.Clamp(predictedZ, minZ, maxZ);
+            // 여러 돌진: Z축으로 퍼뜨리되 중심 범위 내에서만
+            float halfRange = (_groundBounds.MaxZ - _groundBounds.MinZ) * 0.3f;
+            float t = (float)index / (_totalCharges - 1);
+            return centerZ + (t - 0.5f) * 2f * halfRange;
         }
 
         // ──────────────────────────────────────────────
