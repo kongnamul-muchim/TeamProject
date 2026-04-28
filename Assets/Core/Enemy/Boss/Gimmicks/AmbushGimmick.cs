@@ -449,7 +449,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         Vector3 IGimmickViewDirection.GetViewDirectionVector() => Vector3.right;
         bool IGimmickViewDirection.ShowChargeIndicator => false;
 
-        bool IGimmickCombatCycle.IsInCombatCycle => _isDashPreDelay || _isDashing || _isResting;
+        bool IGimmickCombatCycle.IsInCombatCycle => _isDashPreDelay || _isDashing;
         bool IGimmickCombatCycle.IsCharging => _isDashing;
 
         bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion) => false;

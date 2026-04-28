@@ -13,7 +13,7 @@ namespace HideAndInk.Core.Enemy.Movement
     public sealed class EnemyMovement : IEnemyMovement
     {
         private readonly IEnemy _enemy;
-        private readonly float _acceleration;
+        private float _acceleration; // Dash 중 동적 변경 가능하도록 readonly 제거
         private readonly float _friction;
         private float _maxSpeed; // 돌진 시 동적 변경 가능하도록 readonly 제거
 
@@ -64,6 +64,14 @@ namespace HideAndInk.Core.Enemy.Movement
             {
                 _speed = _maxSpeed;
             }
+        }
+
+        /// <summary>
+        /// 가속도 설정 (Dash 중 빠른 가속 필요 시)
+        /// </summary>
+        public void SetAcceleration(float acceleration)
+        {
+            _acceleration = Mathf.Max(0.1f, acceleration);
         }
 
         /// <summary>

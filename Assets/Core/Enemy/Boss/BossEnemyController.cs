@@ -131,7 +131,19 @@ namespace HideAndInk.Core.Enemy.Boss
             switch (_activeGimmick)
             {
                 case AmbushGimmick ambush:
-                    ambush.OnSpeedOverride = (s) => { _movement.Speed = s; if (_movement is EnemyMovement em) em.SetMaxSpeed(Mathf.Max(s, 1f)); };
+                    ambush.OnSpeedOverride = (s) =>
+                    {
+                        _movement.Speed = s;
+                        if (_movement is EnemyMovement em)
+                        {
+                            em.SetMaxSpeed(Mathf.Max(s, 1f));
+                            // Dash 시 가속도도 함께 높여 순간적인 속도 도달 보장
+                            if (s > 5f)
+                                em.SetAcceleration(s * 2f); // dashSpeed=12 → accel=24
+                            else
+                                em.SetAcceleration(8f);     // 기본값 복원
+                        }
+                    };
                     ambush.OnMovementStop = () => _movement.Stop();
                     ambush.OnMovementResume = () => { _movement.Speed = chaseSpeed; if (_movement is EnemyMovement em) em.SetMaxSpeed(chaseSpeed); };
                     ambush.OnVisibilityToggle = (v) => visionSensor?.SetDistanceOnlyMode(v);
@@ -328,7 +340,7 @@ namespace HideAndInk.Core.Enemy.Boss
             // Chase 중에는 바닥 숨김 (전투 중엔 범위 표시 불필요)
             bool isAmbush = _activeGimmick is AmbushGimmick;
             if (visionConeRenderer != null)
-                visionConeRenderer.SetChasing(isAmbush || (_stateMachine != null && _stateMachine.IsChase));
+                visionConeRenderer.SetChasing(_stateMachine != null && _stateMachine.IsChase);
 
             if (suspicionSystem != null)
             {
