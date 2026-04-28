@@ -72,7 +72,7 @@ TextureImporter:
     maxTextureSize: 4096
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 2
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -422,7 +422,7 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 1024
-        y: 1792
+        y: 1797
         width: 1024
         height: 256
       alignment: 0
@@ -646,7 +646,7 @@ TextureImporter:
         width: 525
         height: 512
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -668,7 +668,7 @@ TextureImporter:
         width: 499
         height: 512
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -677,6 +677,336 @@ TextureImporter:
       bones: []
       spriteID: 42d6cedab10b0f14e8962839375acabb
       internalID: 1001830362
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Panel_PausePopup
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 3350
+        width: 533
+        height: 746
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1a6aaf3b3b54f143a7dae0e87d06130
+      internalID: 2061759366
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_TopPanel
+      rect:
+        serializedVersion: 2
+        x: 543
+        y: 3830
+        width: 647
+        height: 266
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 817a84c9b125d4846988891b1d3c88ee
+      internalID: -1008209972
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Btn_Pause
+      rect:
+        serializedVersion: 2
+        x: 1190
+        y: 3840
+        width: 252
+        height: 256
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0031ec5a3d8839747819578b285a6326
+      internalID: -732030350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_ico_Ink
+      rect:
+        serializedVersion: 2
+        x: 1443
+        y: 3968
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7dd5c4509059c7040a4eab06efc2bb5a
+      internalID: 134431084
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_ico_Heart
+      rect:
+        serializedVersion: 2
+        x: 1571
+        y: 3968
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e5bb714f3117d02428965d2d70d658fa
+      internalID: -1041801168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Btn_BGMOn
+      rect:
+        serializedVersion: 2
+        x: 1706
+        y: 3968
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d99eff142dffa3245ad7841521a9a268
+      internalID: 1513320720
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Btn_BGMOff
+      rect:
+        serializedVersion: 2
+        x: 1838
+        y: 3968
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 25c736c87d9b0f040abb324d1c8fd563
+      internalID: -1083363356
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Btn_FXOn
+      rect:
+        serializedVersion: 2
+        x: 1453
+        y: 3830
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: db28dfbf3db9e474fa53d3c70c1e4e56
+      internalID: -256924087
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Btn_FXOff
+      rect:
+        serializedVersion: 2
+        x: 1581
+        y: 3830
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b4aa6e88e709bae4fa4de4c8ec2a6f3b
+      internalID: -110114076
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_SliderHandle
+      rect:
+        serializedVersion: 2
+        x: 1984
+        y: 4032
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1dd36e42d10acde4990ad06ce52e538e
+      internalID: -725192677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_SliderBg
+      rect:
+        serializedVersion: 2
+        x: 1984
+        y: 3967
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 28, y: 28, z: 28, w: 28}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 366f12d5731f897448a7bc3bda12056c
+      internalID: -1347713463
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Slider_Fill
+      rect:
+        serializedVersion: 2
+        x: 1727
+        y: 3884
+        width: 313
+        height: 22
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8b4913eb7aa0cda47915265b72d2e5c6
+      internalID: -232849997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_InkBar
+      rect:
+        serializedVersion: 2
+        x: 1543
+        y: 3722
+        width: 505
+        height: 101
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f60d2735c10988f40ad7c64b23a20d89
+      internalID: 1710716685
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_InkGauge
+      rect:
+        serializedVersion: 2
+        x: 1543
+        y: 3621
+        width: 505
+        height: 101
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 86828a6f625641142811a19ccb853952
+      internalID: -1175481672
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_InkGauge_Mask
+      rect:
+        serializedVersion: 2
+        x: 1543
+        y: 3520
+        width: 505
+        height: 101
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: eaafad1d546bebb488fe90f6ccbaac1a
+      internalID: 2074321983
       vertices: []
       indices: 
       edges: []
@@ -698,6 +1028,7 @@ TextureImporter:
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":512.0,"y":256.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
       1: 243635957
+      Atlas_InGame_Main_2: -1683647413
       Spr_Ch1_BossChase_0: 208206991
       Spr_Ch1_BossChase_1: -536945610
       Spr_Ch1_BossChase_2: 905969502
@@ -725,6 +1056,21 @@ TextureImporter:
       Spr_Sidekick_Idle_Front: -371718041
       Spr_Sidekick_Idle_Left: 465974173
       Spr_Sidekick_Idle_Right: 903948702
+      UI_Btn_BGMOff: -1083363356
+      UI_Btn_BGMOn: 1513320720
+      UI_Btn_FXOff: -110114076
+      UI_Btn_FXOn: -256924087
+      UI_Btn_Pause: -732030350
+      UI_InkBar: -1329591593
+      UI_InkGauge: -1175481672
+      UI_InkGauge_Mask: 2074321983
+      UI_Panel_PausePopup: 2061759366
+      UI_SliderBg: -1347713463
+      UI_SliderHandle: -725192677
+      UI_Slider_Fill: -232849997
+      UI_TopPanel: -1008209972
+      UI_ico_Heart: -1041801168
+      UI_ico_Ink: 134431084
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
