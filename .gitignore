@@ -69,3 +69,14 @@ crashlytics-build.properties
 
 # Windows artifact
 nul
+
+# Temp/scratch files (개발자 로컬 테스트)
+scratch/
+*.log
+
+# Random media artifacts
+Assets/Art/*.mp4
+
+# Test/crap prefab (로컬 테스트 전용)
+Assets/Prefabs/Crap.prefab
+Assets/Prefabs/Crap.prefab.meta
