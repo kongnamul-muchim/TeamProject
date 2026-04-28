@@ -22,6 +22,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private float moveThreshold = 1f;          // 이동 감지 임계 속도
         [SerializeField] private float postChaseSuspicion = 0f;     // 돌진 후 리셋값
 
+        [Header("Patrol 서성임")]
+        [SerializeField, Tooltip("Player 주변 서성임 반경")]
+        private float patrolStalkRadius = 8f;
+
         [Header("돌진")]
         [SerializeField] private int maxChargesPerCycle = 5;
         public int MaxChargesPerCycle => maxChargesPerCycle;
@@ -36,6 +40,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _isInChase;
         private bool _hasGroundBounds;
         private GroundBounds _groundBounds;
+
+        // Patrol stalk target
+        private Vector3 _stalkTarget;
+        private float _lastStalkPickTime;
 
         // Patrol 중 의심도가 100%가 되는 시점이 Chase 진입 시점
         // Controller의 suspicionSystem.OnDetected가 Chase 전환 처리
@@ -107,9 +115,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void OnSearchUpdate(float deltaTime) { }
         public void OnSearchExit() { }
 
-        // Patrol: HasMovementOverride=false → PatrolBehavior가 랜덤 배회
-        // Chase:  HasMovementOverride=true  → 기믹/디렉터가 이동 제어
-        public bool HasMovementOverride => _isInChase;
+        // 항상 true: GetPatrolTarget으로 PatrolBehavior 제어
+        public bool HasMovementOverride => true;
 
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
@@ -118,8 +125,22 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _groundBounds = bounds;
                 _hasGroundBounds = true;
             }
-            // Patrol 중에는 Player 추격하지 않음 → null 반환 (랜덤 배회)
-            return null;
+            if (_playerTransform == null) return null;
+
+            // Player 근처 랜덤 위치로 서성임 (일정 시간마다 새 목표)
+            if (Time.time - _lastStalkPickTime > Random.Range(2f, 5f))
+            {
+                Vector2 offset = Random.insideUnitCircle * patrolStalkRadius;
+                _stalkTarget = _playerTransform.position + new Vector3(offset.x, 0f, offset.y);
+                _stalkTarget.y = currentPos.y;
+                if (_hasGroundBounds)
+                {
+                    _stalkTarget.x = Mathf.Clamp(_stalkTarget.x, _groundBounds.MinX, _groundBounds.MaxX);
+                    _stalkTarget.z = Mathf.Clamp(_stalkTarget.z, _groundBounds.MinZ, _groundBounds.MaxZ);
+                }
+                _lastStalkPickTime = Time.time;
+            }
+            return _stalkTarget;
         }
 
         public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
