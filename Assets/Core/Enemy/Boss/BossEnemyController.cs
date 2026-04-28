@@ -77,6 +77,10 @@ namespace HideAndInk.Core.Enemy.Boss
         private int _morayChaseEntryCount;
         // 돌진 시퀀스 활성화 플래그 (의심도 자동 증가 차단)
         private bool _isMorayCharging;
+        // 곰치 렌더러/콜라이더 캐시 (숨김/표시 전환)
+        private Renderer[] _bossRenderers;
+        private Collider[] _bossColliders;
+        private bool _isBossVisible;
 
         // Animator flipX override 방지용 캐시
         private Vector3 _lastFacingDir;
@@ -100,6 +104,13 @@ namespace HideAndInk.Core.Enemy.Boss
             InitializeBehaviors();
             InitializeStateMachine();
             InitializeChargeIndicator(); // Indicator는 Start에서 미리 생성
+
+            // 렌더러/콜라이더 캐시
+            _bossRenderers = GetComponentsInChildren<Renderer>();
+            _bossColliders = GetComponentsInChildren<Collider>();
+            // Moray: 시작부터 숨김 (돌진 실행 시에만 보임)
+            if (_activeGimmick is RelentlessChaseGimmick)
+                SetBossVisibility(false);
         }
 
         protected override void ScanGroundBounds()
@@ -496,8 +507,8 @@ namespace HideAndInk.Core.Enemy.Boss
                     {
                         // Ambush: PreDelay/Dash/Rest 중에는 강제로 Patrol 복귀하지 않음
                         bool inCombatCycle = _combatCycle != null && _combatCycle.IsInCombatCycle;
-                        // 의심도가 Safe(30) 아래로 떨어지면 Patrol 복귀
-                        if (!inCombatCycle && suspicionValue < 30f)
+                        // 의심도 Safe + Player가 근접 범위 밖으로 나갔을 때만 Patrol 복귀
+                        if (!inCombatCycle && suspicionValue < 30f && !IsPlayerCloseEnough())
                             _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
                     }
                     else if (isRelentlessGimmick)
@@ -964,6 +975,8 @@ namespace HideAndInk.Core.Enemy.Boss
             dir.y = 0f;
             if (dir.sqrMagnitude > 0.001f)
                 _morayFacingDirection = dir.normalized;
+            // 돌진 시작 → 보스 등장
+            SetBossVisibility(true);
             // 순간이동 + 돌진
             if (_movement is EnemyMovement em)
             {
@@ -980,10 +993,21 @@ namespace HideAndInk.Core.Enemy.Boss
                 suspicionSystem?.ForceSetSuspicion(relentless.PostChaseSuspicion);
                 suspicionSystem?.ResetDetected(); // 재발각 가능
                 _isMorayCharging = false;         // 의심도 증가 재개
-                // ChaseBehavior는 영구 정지 (돌진 중에만 움직임)
-                // → Player 밀지 않음
+                SetBossVisibility(false);          // 보스 숨김
+                // ChaseBehavior는 영구 정지 (돌진 중에만 움직임) → Player 밀지 않음
                 // 상태 전환 불필요: 이미 Chase 중
             }
+        }
+
+        /// <summary>곰치 렌더러/콜라이더 전환 (돌진 중에만 보임)</summary>
+        private void SetBossVisibility(bool visible)
+        {
+            if (_isBossVisible == visible) return;
+            _isBossVisible = visible;
+            foreach (var r in _bossRenderers)
+                if (r != null) r.enabled = visible;
+            foreach (var c in _bossColliders)
+                if (c != null) c.enabled = visible;
         }
 
         private void OnMorayPlayerHit()

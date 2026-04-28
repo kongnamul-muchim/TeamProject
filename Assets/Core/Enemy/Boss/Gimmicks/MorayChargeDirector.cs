@@ -30,6 +30,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [Header("화면 여유")]
         [SerializeField] private float screenEdgeOffset = 2f;
 
+        [Header("바닥 높이")]
+        [SerializeField, Tooltip("인디케이터/돌진 Y 위치. Ground 표면 Y값을 직접 입력 (기본 0)")]
+        private float indicatorFloorY = 0f;
+
         // ──────────────────────────────────────────────
         // 이벤트 (BossEnemyController가 구독)
         // ──────────────────────────────────────────────
@@ -58,7 +62,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private int _currentChargeIndex;
         private int _totalCharges;
-        private float _floorY; // 인디케이터 Y (바닥 높이, Boss 초기 위치에서 캡처)
 
         // 선계산된 돌진 경로
         private Vector3[] _chargeStarts;
@@ -112,8 +115,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _currentChargeIndex = 0;
             _totalCharges = 0;
             _lastDirection = -1;
-            // 바닥 Y 캡처 (Boss 초기 위치 = 바닥)
-            _floorY = bossTransform != null ? bossTransform.position.y : 0f;
 
             if (_sequenceCoroutine != null)
             {
@@ -158,7 +159,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_chargeStarts.Length > 0)
             {
                 Vector3 preparePos = _chargeStarts[0];
-                preparePos.y = _floorY;
+                preparePos.y = indicatorFloorY;
                 OnPrepareTeleport?.Invoke(preparePos);
             }
 
@@ -269,8 +270,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            start.y = _floorY; // Boss 현재 Y 무시, 바닥 Y 고정
-            end.y = _floorY;
+            start.y = indicatorFloorY; // Boss 현재 Y 무시, 바닥 Y 고정
+            end.y = indicatorFloorY;
 
             OnChargeExecute?.Invoke(start, end);
             OnSpeedOverride?.Invoke(chargeSpeed);
@@ -321,7 +322,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return;
             }
 
-            float groundY = _floorY; // Boss 현재 Y가 아닌 바닥 Y 사용 (네모 부양 방지)
+            float groundY = indicatorFloorY; // Boss 현재 Y가 아닌 바닥 Y 사용 (네모 부양 방지)
 
             // 방향 교차
             int startDir = (_lastDirection == 0) ? 1 : 0;
