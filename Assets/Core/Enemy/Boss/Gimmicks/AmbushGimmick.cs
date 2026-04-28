@@ -25,9 +25,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private float suspicionDropThreshold = 20f;
 
         [Header("돌진 설정")]
-        [SerializeField] private float dashSpeed = 8f;
-        [SerializeField] private float dashDuration = 1.5f;
-        [SerializeField] private float dashPreDelay = 0.3f;
+        [SerializeField] private float dashSpeed = 12f;
+        [SerializeField] private float dashDuration = 1.2f;
+        [SerializeField] private float dashPreDelay = 0.15f;
+        [SerializeField] private float restDuration = 2f;
 
         [Header("구덩이(Pit) 설정")]
         [SerializeField, Tooltip("Pit 생성 간격 (이동 거리 m)")]
@@ -47,8 +48,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         // 상태
         private bool _isDashing;
         private bool _isDashPreDelay;
+        private bool _isResting;
         private float _dashTimer;
         private float _preDelayTimer;
+        private float _restTimer;
         private Vector3 _dashDirection;
         private Vector3 _ambushTarget;
         private bool _isPlayerCamouflaged;
@@ -154,11 +157,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             OnVisibilityToggle?.Invoke(false);
             _isDashing = false;
-            _isDashPreDelay = true;
-            _preDelayTimer = dashPreDelay;
+            _isDashPreDelay = false;
+            _isResting = false;
             OnDashMoveTo?.Invoke(_bossTransform != null ? _bossTransform.position : Vector3.zero);
             OnSetChasePaused?.Invoke(true); // ChaseBehavior 정지 → 가자미가 직접 이동 제어
             OnCombatStateChanged?.Invoke(true); // Chase 시작 → 의심도 상승 차단
+            // 첫 공격 시작
+            StartNextAttack();
         }
 
         public void OnChaseUpdate(float deltaTime)
@@ -166,38 +171,50 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_isDashPreDelay)
             {
                 _preDelayTimer -= deltaTime;
-                if (_preDelayTimer <= 0f)
-                {
-                    StartDash();
-                }
+                if (_preDelayTimer <= 0f) StartDash();
                 return;
             }
 
             if (_isDashing)
             {
                 _dashTimer -= deltaTime;
-                // Dash 중에도 Player 쪽으로 방향 갱신 (추적 돌진)
-                UpdateDashDirection();
-                if (_dashTimer <= 0f)
+                UpdateDashDirection(); // 매 프레임 Player 추적
+                if (_dashTimer <= 0f) EndDash();
+                return;
+            }
+
+            if (_isResting)
+            {
+                _restTimer -= deltaTime;
+                // 휴식 중: 정지 상태 유지 (움직임 없음)
+                if (_restTimer <= 0f)
                 {
-                    EndDash();
+                    // 다음 공격 시작
+                    StartNextAttack();
                 }
                 return;
             }
 
-            // Post-dash: Player 지속 추적 (EndDash 후 OnChaseUpdate가 계속 불리므로)
-            if (_playerTransform != null && _bossTransform != null)
-            {
-                Vector3 target = _playerTransform.position;
-                target.y = _bossTransform.position.y;
-                OnDashMoveTo?.Invoke(target);
-            }
+            // 초기 상태 (OnChaseEnter 직후) → 첫 공격
+            StartNextAttack();
+        }
+
+        /// <summary>
+        /// 다음 공격(Predelay→Dash) 시작
+        /// </summary>
+        private void StartNextAttack()
+        {
+            _isResting = false;
+            _isDashPreDelay = true;
+            _preDelayTimer = dashPreDelay;
+            OnDashMoveTo?.Invoke(_bossTransform != null ? _bossTransform.position : Vector3.zero);
         }
 
         public void OnChaseExit()
         {
             _isDashing = false;
             _isDashPreDelay = false;
+            _isResting = false;
             OnSetChasePaused?.Invoke(false); // ChaseBehavior 재개
             OnMovementResume?.Invoke();
             OnCombatStateChanged?.Invoke(false); // Chase 종료 → 의심도 상승 허용
@@ -254,7 +271,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _isDashing = false;
             OnSpeedOverride?.Invoke(0f);
             OnMovementStop?.Invoke();
-            OnMovementResume?.Invoke();
+            // 휴식 시작: Dash 후 잠시 정지 → 다음 공격 준비
+            _isResting = true;
+            _restTimer = restDuration;
         }
 
         private void UpdateAmbushTarget()
@@ -430,7 +449,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         Vector3 IGimmickViewDirection.GetViewDirectionVector() => Vector3.right;
         bool IGimmickViewDirection.ShowChargeIndicator => false;
 
-        bool IGimmickCombatCycle.IsInCombatCycle => _isDashPreDelay || _isDashing;
+        bool IGimmickCombatCycle.IsInCombatCycle => _isDashPreDelay || _isDashing || _isResting;
         bool IGimmickCombatCycle.IsCharging => _isDashing;
 
         bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion) => false;

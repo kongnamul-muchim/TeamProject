@@ -324,15 +324,19 @@ namespace HideAndInk.Core.Enemy.Boss
 
         private void UpdateVisionConeVisibility()
         {
-            // Ambush도 Patrol에서 시각적 피드백: 항상 vision cone + 바닥 표시
+            // Ambush도 Patrol에서 시각적 피드백: vision cone + 바닥 표시
+            // Chase 중에는 바닥 숨김 (전투 중엔 범위 표시 불필요)
             bool isAmbush = _activeGimmick is AmbushGimmick;
             if (visionConeRenderer != null)
                 visionConeRenderer.SetChasing(isAmbush || (_stateMachine != null && _stateMachine.IsChase));
 
             if (suspicionSystem != null)
             {
-                suspicionSystem.SetFloorVisibilityMode(
-                    isAmbush ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.ChaseOnly);
+                bool isPatrol = _stateMachine != null && _stateMachine.IsPatrol;
+                SuspicionFloorVisibilityMode floorMode = isAmbush
+                    ? (isPatrol ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.Hidden)
+                    : SuspicionFloorVisibilityMode.ChaseOnly;
+                suspicionSystem.SetFloorVisibilityMode(floorMode);
             }
         }
 
@@ -366,9 +370,10 @@ namespace HideAndInk.Core.Enemy.Boss
                 case EnemyAIState.Chase:
                     if (isAmbushGimmick)
                     {
-                        // Ambush: PreDelay/Dash 중에는 강제로 Patrol 복귀하지 않음
+                        // Ambush: PreDelay/Dash/Rest 중에는 강제로 Patrol 복귀하지 않음
                         bool inCombatCycle = _combatCycle != null && _combatCycle.IsInCombatCycle;
-                        if (!inCombatCycle && suspicionValue < ambushDropThreshold)
+                        // 의심도가 Safe(30) 아래로 떨어지면 Patrol 복귀
+                        if (!inCombatCycle && suspicionValue < 30f)
                             _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
                     }
                     else
