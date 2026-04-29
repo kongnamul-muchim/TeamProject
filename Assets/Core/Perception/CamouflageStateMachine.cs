@@ -32,20 +32,13 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 생성자
         /// </summary>
-        /// <param name="attachDelay">Attached 상태 유지 시간 (0.2~0.3초)</param>
-        /// <param name="lockTime">Lock 시간</param>
-        /// <param name="blendTime">색상 보간 시간</param>
-        /// <param name="perfectTime">완벽 의태까지 걸리는 시간</param>
-        public CamouflageStateMachine(
-            float attachDelay = 0.3f,
-            float lockTime = 0.4f,
-            float blendTime = 1.0f,
-            float perfectTime = 2.0f)
+        /// <param name="config">상태 머신 설정 (인스펙터 값이 Config 객체로 주입됨)</param>
+        public CamouflageStateMachine(ICamouflageStateMachineConfig config)
         {
-            _attachDelay = attachDelay;
-            _lockTime = lockTime;
-            _blendTime = blendTime;
-            _perfectTime = perfectTime;
+            _attachDelay = config.AttachDelay;
+            _lockTime = config.LockTime;
+            _blendTime = config.BlendTime;
+            _perfectTime = config.PerfectTime;
 
             Reset();
         }

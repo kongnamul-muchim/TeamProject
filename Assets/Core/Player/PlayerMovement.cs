@@ -48,20 +48,13 @@ namespace HideAndInk.Core.Player
         /// <summary>
         /// 생성자
         /// </summary>
-        /// <param name="horizontalSpeed">좌우(수평) 이동 속도</param>
-        /// <param name="verticalSpeed">상하(수직) 이동 속도</param>
-        /// <param name="acceleration">가속도</param>
-        /// <param name="friction">마찰력 (0~1, 1이면 즉시 정지)</param>
-        public PlayerMovement(
-            float horizontalSpeed = 5.0f,
-            float verticalSpeed = 4.0f,
-            float acceleration = 10.0f,
-            float friction = 0.9f)
+        /// <param name="config">이동 설정 (인스펙터 값이 Config 객체로 주입됨)</param>
+        public PlayerMovement(IPlayerMovementConfig config)
         {
-            _horizontalSpeed = horizontalSpeed;
-            _verticalSpeed = verticalSpeed;
-            _acceleration = acceleration;
-            _friction = friction;
+            _horizontalSpeed = config.HorizontalSpeed;
+            _verticalSpeed = config.VerticalSpeed;
+            _acceleration = config.Acceleration;
+            _friction = config.Friction;
 
             _velocity = Vector2.zero;
             _inputDirection = Vector2.zero;
