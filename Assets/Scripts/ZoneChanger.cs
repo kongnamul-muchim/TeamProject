@@ -1,8 +1,11 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
+using HideAndInk.Core.Transition;
 
 /// <summary>
 /// 구역 전환 트리거: 플레이어가 닿으면 현재 구역을 끄고 다음 구역을 켭니다.
+/// 패턴 트랜지션 효과와 함께 화면 전환이 진행됩니다.
 /// 
 /// 사용 방법:
 /// 1. Inspector에서 직접 할당:
@@ -12,6 +15,10 @@ using System.Collections.Generic;
 /// 2. 자동 탐색 (Inspector 할당 없으면 번호로 자동 찾음):
 ///    fromZoneNumber = 1 → "Zone_1_*" 패턴의 오브젝트들을 자동 비활성화
 ///    toZoneNumber = 2   → "Zone_2_*" 패턴의 오브젝트들을 자동 활성화
+/// 
+/// 3. 트랜지션 효과:
+///    useTransition = true → 패턴 트랜지션 효과와 함께 구역 전환
+///    useTransition = false → 즉시 구역 전환 (트랜지션 없음)
 /// </summary>
 public class ZoneChanger : MonoBehaviour
 {
@@ -28,6 +35,10 @@ public class ZoneChanger : MonoBehaviour
 
     [Tooltip("활성화할 구역 번호 (예: 1 = Zone_1_*, 2 = Zone_2_*). -1이면 자동 탐색 안 함")]
     public int toZoneNumber = -1;
+
+    [Header("트랜지션 설정")]
+    [Tooltip("패턴 트랜지션 효과 사용 여부")]
+    public bool useTransition = true;
 
     private bool _alreadyTriggered = false;
 
@@ -50,13 +61,13 @@ public class ZoneChanger : MonoBehaviour
             $"위치={transform.position}");
     }
 
-    // 3D 콜라이더용 트리거
+// 3D 콜라이더용 트리거
     private void OnTriggerEnter(Collider other)
     {
         Debug.Log($"[ZoneChanger] '{name}' OnTriggerEnter: {other.gameObject.name} (tag={other.gameObject.tag})");
         if (other.CompareTag("Player") && !_alreadyTriggered)
         {
-            ChangeZone();
+            TriggerZoneChange();
         }
     }
 
@@ -66,13 +77,37 @@ public class ZoneChanger : MonoBehaviour
         Debug.Log($"[ZoneChanger] '{name}' OnTriggerEnter2D: {other.gameObject.name} (tag={other.gameObject.tag})");
         if (other.CompareTag("Player") && !_alreadyTriggered)
         {
+            TriggerZoneChange();
+        }
+    }
+
+    /// <summary>
+    /// 트랜지션 설정에 따라 구역 전환을 시작합니다.
+    /// useTransition이 true면 패턴 트랜지션 효과와 함께 전환,
+    /// false면 즉시 전환합니다.
+    /// </summary>
+    private void TriggerZoneChange()
+    {
+        _alreadyTriggered = true;
+
+        if (useTransition && PatternTransitionController.Instance != null)
+        {
+            // 트랜지션 인 → 구역 전환 → 트랜지션 아웃
+            PatternTransitionController.Instance.PlayIn(() =>
+            {
+                ChangeZone();
+                PatternTransitionController.Instance.PlayOut();
+            });
+        }
+        else
+        {
+            // 트랜지션 없이 즉시 전환
             ChangeZone();
         }
     }
 
-    void ChangeZone()
+void ChangeZone()
     {
-        _alreadyTriggered = true;
         bool changed = false;
 
         if (deactivateZones != null)
