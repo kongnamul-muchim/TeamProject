@@ -3,6 +3,7 @@ using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Enemy.AI;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Core.Enemy
 {
@@ -295,9 +296,18 @@ namespace HideAndInk.Core.Enemy
 
         /// <summary>
         /// CamouflageAdapter 캐싱 (Start에서 한 번만 호출)
+        /// DI 우선, fallback: FindObjectOfType
         /// </summary>
         protected virtual void CacheCamouflageAdapter()
         {
+            // 1순위: DI 컨테이너의 ICamouflageStateProvider
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageStateProvider>())
+            {
+                _camouflageAdapter = GameManager.Container.Resolve<ICamouflageStateProvider>() as HideAndInk.Player.CamouflageAdapter;
+                if (_camouflageAdapter != null) return;
+            }
+
+            // 2순위: FindObjectOfType (legacy fallback)
             _camouflageAdapter = FindObjectOfType<HideAndInk.Player.CamouflageAdapter>();
         }
 

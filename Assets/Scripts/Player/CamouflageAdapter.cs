@@ -120,6 +120,12 @@ namespace HideAndInk.Player
                     : GetComponentInChildren<SpriteRenderer>();
                 spriteDirector.SetSpriteRenderer(sr);
             }
+
+            // DI: ICamouflageStateProvider self-register (EnemyAIController 등에서 resolve)
+            if (GameManager.Container != null)
+            {
+                GameManager.Container.RegisterInstance<ICamouflageStateProvider>(this);
+            }
         }
 
         private void OnEnable()
