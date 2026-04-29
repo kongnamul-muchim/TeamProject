@@ -1011,6 +1011,28 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Spr_Ch1_BossGimmick
+      rect:
+        serializedVersion: 2
+        x: 511
+        y: 512
+        width: 256
+        height: 256
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 58a512d2c6a3ada4c88cd4da2b36f8d1
+      internalID: 420224435
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -1033,6 +1055,7 @@ TextureImporter:
       Spr_Ch1_BossChase_1: -536945610
       Spr_Ch1_BossChase_2: 905969502
       Spr_Ch1_BossChase_3: -1236790933
+      Spr_Ch1_BossGimmick: 420224435
       Spr_Ch1_BossPatrol_0: -810991736
       Spr_Ch1_BossPatrol_1: 925578392
       Spr_Ch1_CommonEnemy_0: -1025426736
