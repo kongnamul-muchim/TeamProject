@@ -75,26 +75,23 @@ namespace HideAndInk.Core.Enemy.Movement
         }
 
         /// <summary>
-        /// 생성자 (DI 주입)
+        /// 생성자 (DI 주입 — Config Object Pattern)
         /// </summary>
         public EnemyMovement(
             IEnemy enemy,
-            float speed = 3f,
-            float acceleration = 8f,
-            float friction = 0.9f,
-            float maxSpeed = 5f,
-            LayerMask groundLayer = default,
-            float groundCheckDistance = 0.5f,
-            float groundCheckRadius = 0.3f)
+            IEnemyMovementConfig config)
         {
-            _enemy = enemy ?? throw new System.ArgumentNullException(nameof(enemy));
-            _speed = speed;
-            _acceleration = acceleration;
-            _friction = friction;
-            _maxSpeed = maxSpeed;
-            _groundLayer = groundLayer;
-            _groundCheckDistance = groundCheckDistance;
-            _groundCheckRadius = groundCheckRadius;
+            if (enemy == null) throw new System.ArgumentNullException(nameof(enemy));
+            if (config == null) throw new System.ArgumentNullException(nameof(config));
+
+            _enemy = enemy;
+            _speed = config.Speed;
+            _acceleration = config.Acceleration;
+            _friction = config.Friction;
+            _maxSpeed = config.MaxSpeed;
+            _groundLayer = config.GroundLayer;
+            _groundCheckDistance = config.GroundCheckDistance;
+            _groundCheckRadius = config.GroundCheckRadius;
 
             _velocity = Vector3.zero;
             _targetPosition = null;

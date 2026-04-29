@@ -19,12 +19,11 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 생성자
         /// </summary>
-        /// <param name="detectionRadius">탐지 반경 (기본값: 1.0f)</param>
-        /// <param name="layerMask">탐지할 레이어 (기본값: Everything)</param>
-        public CamouflageDetector(float detectionRadius = 1.0f)
+        /// <param name="config">탐지기 설정 (인스펙터 값이 Config 객체로 주입됨)</param>
+        public CamouflageDetector(ICamouflageDetectorConfig config)
         {
-            _detectionRadius = detectionRadius;
-            _layerMask = -1; // Everything
+            _detectionRadius = config.DetectionRadius;
+            _layerMask = config.LayerMask;
         }
 
         /// <summary>

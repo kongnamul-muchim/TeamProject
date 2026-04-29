@@ -1,7 +1,7 @@
 # Agents - AI 작업 규칙
 
 > 마지막 업데이트: 2026-04-28
-> 참조: 항상 작업 시작前に此のファイルを読んでください
+> 참조: 항상 작업 시작 전에 이 파일을 먼저 읽을 것
 
 ---
 
@@ -17,7 +17,7 @@
 - **SOLID 원칙 준수**
 - **DI(의존성 주입) 패턴 채택**
 - Unity 스크립트의 경우 `Assets/Scripts/` 경로에 저장
-- 커밋 전에 코드品質 检查
+- 커밋 전에 코드 품질 검사
 
 ### 3. Git Commit 규칙
 - 작업 항목 완료 시 **즉시 Commit**
@@ -48,7 +48,7 @@
 
 ---
 
-## 🔄 작업 단계별 행동規範
+## 🔄 작업 단계별 행동 규범
 
 ### 계획단계
 ```
@@ -111,7 +111,133 @@ LogModule.Instance.Log("경고", "WARN");
 LogModule.Instance.Log("에러", "ERROR");
 ```
 
-**참조先**: `Assets/Scripts/LogModule.cs`
+**참조**: `Assets/Scripts/LogModule.cs`
+
+---
+
+## 🏗️ DI 컨테이너 아키텍처
+
+### 개요
+- **위치**: `Assets/Core/` 폴더에서 DI 컨테이너 관리
+- **컨테이너 본체**: 순수 C# 클래스 (`MonoBehaviour` 아님)
+- **초기화**: `GameManager` (`MonoBehaviour`)가 `Awake()`에서 생성 및 관리
+- **접근**: `GameManager.Container` 정적 프로퍼티로 전역 접근
+
+### 파일 구조
+```
+Assets/Core/
+├── Enemy/                       ← 적 AI 시스템 (Controller, Movement, Behaviors)
+├── Environment/                 ← 조류(Tide) 시스템
+├── Events/                      ← 전역 정적 이벤트 (CamouflageEvents, GameEvents 등)
+├── Interfaces/                  ← 모든 서비스 인터페이스 (DIP)
+│   ├── IDIContainer.cs          ← DI 컨테이너 인터페이스 + ServiceLifetime 열거형
+│   ├── IGameStateMachine.cs     ← 게임 상태 머신
+│   ├── IPlayerMovement.cs       ← 플레이어 이동
+│   ├── ICamouflageStateMachine.cs ← 의태 상태 머신
+│   ├── ICamouflageDetector.cs   ← 의태 탐지기
+│   ├── ICamouflageStateProvider.cs ← 의태 상태 제공
+│   ├── IMaterialCloner.cs       ← 메테리얼 클로닝
+│   ├── ISpriteDirector.cs       ← 스프라이트 관리
+│   ├── ISuspicionMeter.cs       ← 의심도 게이지
+│   ├── IVisionSensor.cs         ← 시야 센서
+│   ├── IThreatHandler.cs        ← 위협 처리
+│   └── ... (기타 인터페이스)
+├── Logging/                     ← 로그 모듈 (Singleton 예외)
+├── Managers/                    ← DI 컨테이너 및 시스템 관리자
+│   ├── DIContainer.cs           ← DI 컨테이너 구현체 (순수 C#)
+│   ├── GameManager.cs           ← MonoBehaviour, 컨테이너 초기화 및 관리
+│   └── GameStateMachine.cs      ← 게임 상태 머신 구현체
+├── Perception/                  ← 인지 시스템 (의태, 시야, 의심도)
+├── Player/                      ← 플레이어 서비스 (Movement, PlayerLives)
+├── Utilities/                   ← 유틸리티 (Singleton 베이스)
+└── VFX/                         ← 시각 효과
+```
+
+※ Enemy 전용 인터페이스는 `Assets/Core/Enemy/Interfaces/`에 별도 위치
+  (`IEnemy.cs`, `IEnemyMovement.cs`, `IEnemyAIState.cs`)
+
+### IDIContainer 인터페이스 (메서드 목록)
+
+| 메서드 | 설명 |
+|--------|------|
+| `Register<TInterface, TImpl>(lifetime)` | 인터페이스 → 구현체 매핑 등록 |
+| `Register<TImpl>(lifetime)` | 구현체 직접 등록 (인터페이스 없음) |
+| `RegisterInstance<T>(instance, lifetime)` | 인스턴스 직접 등록 (주로 Singleton) |
+| `Resolve<T>()` | 등록된 서비스 해결 (생성자 주입 자동 처리) |
+| `CreateScope()` | Scoped 생명주기용 자식 컨테이너 생성 |
+| `IsRegistered<T>()` | 특정 타입 등록 여부 확인 |
+
+### 서비스 생명주기 (ServiceLifetime)
+
+| 생명주기 | 동작 | 사용 예 |
+|---------|------|---------|
+| `Transient` | 요청할 때마다 **새 인스턴스** 생성 | 상태가 없는 경량 서비스 |
+| `Scoped` | 같은 스코프 내에서 **인스턴스 공유** | 요청 단위로 공유해야 하는 서비스 |
+| `Singleton` | 전역에서 **하나의 인스턴스**만 사용 | GameStateMachine, 설정 등 |
+
+### 현재 등록된 서비스 (GameManager.RegisterCoreServices)
+
+```csharp
+// GameManager.InitializeContainer()에서 등록
+_rootContainer = new DIContainer();
+
+// Singleton - 게임 상태 머신
+_rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLifetime.Singleton);
+```
+
+※ 새로운 서비스는 `GameManager.RegisterCoreServices()` 메서드에 추가할 것
+
+### 등록 필요한 서비스 (미등록)
+
+현재 `IGameStateMachine`만 등록되어 있으며, 아래 서비스들은 인터페이스는 정의되었으나
+아직 DI 컨테이너에 등록되지 않음. (Adapter에서 `IsRegistered` 체크 후 `new`로 fallback)
+
+| 인터페이스 | 구현체 | 생명주기 권장 |
+|-----------|--------|-------------|
+| `IPlayerMovement` | `PlayerMovement` | Transient |
+| `ICamouflageStateMachine` | `CamouflageStateMachine` | Transient |
+| `ICamouflageDetector` | `CamouflageDetector` | Transient |
+
+### 의존성 주입 방식
+
+**① 생성자 주입 (권장)**
+```csharp
+public class SomeService : ISomeService
+{
+    private readonly IGameStateMachine _stateMachine;
+    
+    // DIContainer가 자동으로 생성자 파라미터를 해결함
+    public SomeService(IGameStateMachine stateMachine)
+    {
+        _stateMachine = stateMachine;
+    }
+}
+```
+
+**② GameManager.Container 직접 접근 (Adapter 한정)**
+```csharp
+// MonoBehaviour는 생성자 주입이 안 되므로 Adapter에서 사용
+if (GameManager.Container != null && GameManager.Container.IsRegistered<ISomeService>())
+{
+    _service = GameManager.Container.Resolve<ISomeService>();
+}
+```
+
+### 새 서비스 등록 가이드
+
+```
+1. 인터페이스 정의: Assets/Core/Interfaces/ 에 ISomeService.cs 생성
+2. 구현체 작성: 생성자 주입으로 의존성 받음
+3. GameManager.RegisterCoreServices()에 등록 코드 추가
+4. 사용처에서 Resolve<T>() 또는 생성자 주입으로 사용
+```
+
+### 코드 작성 시 체크리스트
+- [ ] 인터페이스로 추상화했는가? (DIP)
+- [ ] 의존성은 생성자로 주입받는가? (DI)
+- [ ] MonoBehaviour에는 생성자 주입이 안 되므로 Adapter 패턴 활용
+- [ ] 서비스 생명주기를 적절히 선택했는가?
+- [ ] 등록 전에 `IsRegistered<T>()`로 중복 등록 확인할 것
 
 ---
 
@@ -154,7 +280,7 @@ LogModule.Instance.Log("에러", "ERROR");
 | DI | 의존성 명확히 분리 |
 | Commit | 항목 완료 시 즉시 |
 | 문서화 | 상태 변화 시 기록 |
-| 코드 리뷰 | 자기 检查 후 제출 |
+| 코드 리뷰 | 자기 검사 후 제출 |
 | 의견 검증 | 제안 전 반드시 사실 확인 및 검증 |
 
 ---
@@ -162,9 +288,9 @@ LogModule.Instance.Log("에러", "ERROR");
 ## 📌 핵심 원칙
 
 > "별거 아니니까 기억하지 마."
-> - 항상 결과로証明すること
-> - ユーザー操作防止のため確認を必ず行う
-> - 問題を早期に発見して報告する
+> - 항상 결과로 증명할 것
+> - 유저 조작 방지를 위해 확인을 반드시 할 것
+> - 문제를 조기에 발견하여 보고할 것
 
 ---
 

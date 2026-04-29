@@ -1,6 +1,7 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
+using HideAndInk.Core.Player;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Logging;
 
@@ -72,6 +73,15 @@ namespace HideAndInk.Core.Managers
             // 게임 상태 머신 (Singleton)
             _gameStateMachine = new GameStateMachine(GameState.Playing);
             _rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLifetime.Singleton);
+
+            // 플레이어 이동 (Transient — 각 Adapter가 Config 등록 후 Resolve)
+            _rootContainer.Register<IPlayerMovement, PlayerMovement>(ServiceLifetime.Transient);
+
+            // 의태 탐지기 (Transient)
+            _rootContainer.Register<ICamouflageDetector, CamouflageDetector>(ServiceLifetime.Transient);
+
+            // 의태 상태 머신 (Transient)
+            _rootContainer.Register<ICamouflageStateMachine, CamouflageStateMachine>(ServiceLifetime.Transient);
         }
 
         /// <summary>
