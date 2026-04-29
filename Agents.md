@@ -126,13 +126,35 @@ LogModule.Instance.Log("에러", "ERROR");
 ### 파일 구조
 ```
 Assets/Core/
-├── Interfaces/
-│   └── IDIContainer.cs       ← DI 컨테이너 인터페이스 + ServiceLifetime 열거형
-├── Managers/
-│   ├── DIContainer.cs        ← DI 컨테이너 구현체 (순수 C#)
-│   └── GameManager.cs        ← MonoBehaviour, 컨테이너 초기화 및 관리
-└── (기타 서비스 인터페이스/구현체)
+├── Enemy/                       ← 적 AI 시스템 (Controller, Movement, Behaviors)
+├── Environment/                 ← 조류(Tide) 시스템
+├── Events/                      ← 전역 정적 이벤트 (CamouflageEvents, GameEvents 등)
+├── Interfaces/                  ← 모든 서비스 인터페이스 (DIP)
+│   ├── IDIContainer.cs          ← DI 컨테이너 인터페이스 + ServiceLifetime 열거형
+│   ├── IGameStateMachine.cs     ← 게임 상태 머신
+│   ├── IPlayerMovement.cs       ← 플레이어 이동
+│   ├── ICamouflageStateMachine.cs ← 의태 상태 머신
+│   ├── ICamouflageDetector.cs   ← 의태 탐지기
+│   ├── ICamouflageStateProvider.cs ← 의태 상태 제공
+│   ├── IMaterialCloner.cs       ← 메테리얼 클로닝
+│   ├── ISpriteDirector.cs       ← 스프라이트 관리
+│   ├── ISuspicionMeter.cs       ← 의심도 게이지
+│   ├── IVisionSensor.cs         ← 시야 센서
+│   ├── IThreatHandler.cs        ← 위협 처리
+│   └── ... (기타 인터페이스)
+├── Logging/                     ← 로그 모듈 (Singleton 예외)
+├── Managers/                    ← DI 컨테이너 및 시스템 관리자
+│   ├── DIContainer.cs           ← DI 컨테이너 구현체 (순수 C#)
+│   ├── GameManager.cs           ← MonoBehaviour, 컨테이너 초기화 및 관리
+│   └── GameStateMachine.cs      ← 게임 상태 머신 구현체
+├── Perception/                  ← 인지 시스템 (의태, 시야, 의심도)
+├── Player/                      ← 플레이어 서비스 (Movement, PlayerLives)
+├── Utilities/                   ← 유틸리티 (Singleton 베이스)
+└── VFX/                         ← 시각 효과
 ```
+
+※ Enemy 전용 인터페이스는 `Assets/Core/Enemy/Interfaces/`에 별도 위치
+  (`IEnemy.cs`, `IEnemyMovement.cs`, `IEnemyAIState.cs`)
 
 ### IDIContainer 인터페이스 (메서드 목록)
 
@@ -164,6 +186,17 @@ _rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLif
 ```
 
 ※ 새로운 서비스는 `GameManager.RegisterCoreServices()` 메서드에 추가할 것
+
+### 등록 필요한 서비스 (미등록)
+
+현재 `IGameStateMachine`만 등록되어 있으며, 아래 서비스들은 인터페이스는 정의되었으나
+아직 DI 컨테이너에 등록되지 않음. (Adapter에서 `IsRegistered` 체크 후 `new`로 fallback)
+
+| 인터페이스 | 구현체 | 생명주기 권장 |
+|-----------|--------|-------------|
+| `IPlayerMovement` | `PlayerMovement` | Transient |
+| `ICamouflageStateMachine` | `CamouflageStateMachine` | Transient |
+| `ICamouflageDetector` | `CamouflageDetector` | Transient |
 
 ### 의존성 주입 방식
 
