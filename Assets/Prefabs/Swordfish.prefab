@@ -32,7 +32,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2882860118672073844}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 12.29754, y: -0.94532, z: 0}
   m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
@@ -159,9 +159,12 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   chargeIndicatorLength: 12
   chargeIndicatorWidth: 1.5
+  targetIndicatorPrefab: {fileID: 0}
   bossSprite: {fileID: 8042631673233397286}
   sandPitPrefab: {fileID: 0}
+  chargeDirector: {fileID: 0}
   knockbackForce: 12
+  defaultFacingLeft: 1
 --- !u!114 &6232481768224056454
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -211,7 +214,6 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 256
-  linkedGimmick: {fileID: 0}
   floorVisibilityMode: 2
 --- !u!114 &7379492449872102103
 MonoBehaviour:
@@ -276,7 +278,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3

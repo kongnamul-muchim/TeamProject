@@ -14,8 +14,8 @@ namespace HideAndInk.Player
     /// </summary>
     public sealed class SpriteDirector : MonoBehaviour, ISpriteDirector
     {
-        [SerializeField] private string spritePath = "Art/1_Characters/Player/Spr_Player_Idle_";
-        [SerializeField] private string maskPath = "Art/1_Characters/Player/Mask_Player_Idle_";
+        [SerializeField, Tooltip("스프라이트 리소스 경로")] private string spritePath = "Art/1_Characters/Player/Spr_Player_Idle_";
+        [SerializeField, Tooltip("마스크 리소스 경로")] private string maskPath = "Art/1_Characters/Player/Mask_Player_Idle_";
 
         private SpriteRenderer _spriteRenderer;
         private Dictionary<MoveDirection, Sprite> _spriteCache = new();

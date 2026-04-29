@@ -14,16 +14,23 @@ namespace HideAndInk.Player
     public sealed class PlayerMovementAdapter : MonoBehaviour
     {
         [Header("이동 속도 설정")]
+        [Tooltip("수평 이동 속도")]
         [SerializeField] private float horizontalSpeed = 5.0f;
+        [Tooltip("수직 이동 속도")]
         [SerializeField] private float verticalSpeed = 4.0f;
+        [Tooltip("이동 가속도")]
         [SerializeField] private float acceleration = 10.0f;
+        [Tooltip("이동 마찰 계수")]
         [SerializeField] private float friction = 0.9f;
 
         [Header("입력 설정")]
+        [Tooltip("수평 입력 축 이름")]
         [SerializeField] private string horizontalAxis = "Horizontal";
+        [Tooltip("수직 입력 축 이름")]
         [SerializeField] private string verticalAxis = "Vertical";
 
         [Header("로거 (DI)")]
+        [Tooltip("이동 로거 참조")]
         [SerializeField] private MovementLogger movementLogger;
 
         private IPlayerMovement _playerMovement;
@@ -154,6 +161,7 @@ namespace HideAndInk.Player
         }
 
         // 충돌 감지용 레이어
+        [Tooltip("벽 레이어 마스크")]
         [SerializeField] private LayerMask wallLayer;
 
         private void OnDestroy()

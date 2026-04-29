@@ -31,12 +31,17 @@ namespace HideAndInk.Core.Enemy.Normal
         [SerializeField] private float attackRange = 1.5f;
 
         [Header("순찰 패턴")]
+        [Tooltip("이동 간격 시간")]
         [SerializeField] private float moveInterval = 2f;
+        [Tooltip("이동 거리")]
         [SerializeField] private float moveDistance = 2f;
+        [Tooltip("대기 시간")]
         [SerializeField] private float idleTime = 1f;
 
         [Header("스프라이트 방향")]
+        [Tooltip("적 스프라이트 렌더러")]
         [SerializeField] private SpriteRenderer enemySpriteRenderer;
+        [Tooltip("적 애니메이터")]
         [SerializeField] private Animator enemyAnimator;
 
         [Header("감지 범위 시각화")]

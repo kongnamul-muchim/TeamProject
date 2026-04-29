@@ -9,27 +9,41 @@ using HideAndInk.Player;
 public class ChichiFollower : MonoBehaviour
 {
     [Header("🔗 References")]
+    [Tooltip("치치 상태 머신 참조")]
     [SerializeField] private ChichiStateMachine stateMachine;
+    [Tooltip("치치 스프라이트 렌더러")]
     [SerializeField] private SpriteRenderer spriteRenderer;
+    [Tooltip("플레이어 이동 컨트롤러 참조")]
     [SerializeField] private PlayerMovementAdapter playerMovement;
 
     [Header("🎨 Sprites")]
+    [Tooltip("정면(앞) 스프라이트")]
     [SerializeField] private Sprite spriteFront;
+    [Tooltip("후면(뒤) 스프라이트")]
     [SerializeField] private Sprite spriteBack;
+    [Tooltip("측면(옆) 스프라이트")]
     [SerializeField] private Sprite spriteSide;
 
     [Header("📍 Offset")]
+    [Tooltip("플레이어 위쪽 오프셋")]
     [SerializeField] private Vector3 liftOffset = new Vector3(0f, 0.5f, 0f);
+    [Tooltip("가이드 위치 오프셋")]
     [SerializeField] private Vector2 guideOffset = new Vector2(0f, 0f);
 
     [Header("⚡ Move Speed")]
+    [Tooltip("Idle 상태 이동 보간 시간")]
     [SerializeField] private float idleSmoothTime = 0.3f;
+    [Tooltip("Follow 상태 이동 보간 시간")]
     [SerializeField] private float followSmoothTime = 0.4f;
+    [Tooltip("CatchUp 상태 이동 보간 시간")]
     [SerializeField] private float catchUpSmoothTime = 0.15f;
+    [Tooltip("방향 전환 속도")]
     [SerializeField] private float turnSpeed = 8f;
 
     [Header("🧭 Sprite")]
+    [Tooltip("방향 전환 각도 임계값")]
     [SerializeField] private float directionAngleThreshold = 45f;
+    [Tooltip("스프라이트 변경 최소 간격")]
     [SerializeField] private float minSpriteChangeInterval = 0.15f;
 
     private Vector3 _smoothedPlayerDirection = Vector3.forward;

@@ -15,19 +15,27 @@ namespace HideAndInk.Player
     public sealed class CamouflageAdapter : MonoBehaviour, ICamouflageStateProvider
     {
         [Header("의태 탐지 설정")]
+        [Tooltip("의태 가능 오브젝트 탐지 반경")]
         [SerializeField] private float detectionRadius = 1.0f;
+        [Tooltip("의태 감지 레이어 마스크")]
         [SerializeField] private LayerMask camouflageLayer = -1;
 
         [Header("의태 시간 설정")]
+        [Tooltip("의태 부착 지연 시간")]
         [SerializeField] private float attachDelay = 0.3f;
+        [Tooltip("의태 잠금 시간")]
         [SerializeField] private float lockTime = 0.4f;
+        [Tooltip("의태 혼합(블렌드) 시간")]
         [SerializeField] private float blendTime = 1.0f;
+        [Tooltip("완벽 의태 도달 시간")]
         [SerializeField] private float perfectTime = 2.0f;
 
         [Header("의태 키 설정")]
+        [Tooltip("의태 키")]
         [SerializeField] private KeyCode camouflageKey = KeyCode.C;
 
         [Header("의존성")]
+        [Tooltip("스프라이트 디렉터 참조")]
         [SerializeField] private SpriteDirector spriteDirector;
 
         private ICamouflageDetector _detector;
@@ -47,6 +55,7 @@ namespace HideAndInk.Player
 
         // C 키 쿨타임: 연타 방지
         private float _camouflageCooldown;
+        [Tooltip("의태 쿨타임 (연타 방지)")]
         [SerializeField] private float camouflageCooldownTime = 0.5f;
 
         // 의태 취소 시 InvokeCamouflageEnd 중복 호출 방지
@@ -56,6 +65,7 @@ namespace HideAndInk.Player
         private float _ignoreMovementTimer;
 
         [Header("의태 이동 설정")]
+        [Tooltip("의태 부착 중 이동 속도")]
         [SerializeField] private float attachMoveSpeed = 5f;
         private float _positionLerpProgress;
 

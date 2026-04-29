@@ -58,6 +58,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private float wallCheckRadius = 0.8f;
         [SerializeField, Tooltip("Wall 레이어 이름")]
         private string wallLayerName = "Wall";
+        [SerializeField, Tooltip("Ground 레이어 이름 (돌진 이탈 감지용)")]
+        private string groundLayerName = "Ground";
         [SerializeField, Tooltip("Wall 충돌 후 밀려날 거리")]
         private float wallPushbackDistance = 1.5f;
         [SerializeField, Tooltip("Wall 충돌 후 Aim 재진입 금지 시간")]
@@ -86,12 +88,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         // Player 시야 가시성 (true=현재 시야에 보임)
         private bool _isPlayerVisible;
 
-        // GroundBounds (GetPatrolTarget에서 캐싱)
-        private GroundBounds _cachedBounds;
-        private bool _hasCachedBounds;
-
-        // Wall 레이어 캐싱
+        // Wall / Ground 레이어 캐싱
         private int _wallLayerIndex = -1;
+        private int _groundLayerIndex = -1;
 
         #endregion
 
@@ -113,8 +112,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _normalizedSuspicion = 0f;
             _isPlayerCamouflaged = false;
             _isPlayerVisible = false;
-            _hasCachedBounds = false;
             _wallLayerIndex = LayerMask.NameToLayer(wallLayerName);
+            _groundLayerIndex = LayerMask.NameToLayer(groundLayerName);
             _wallCooldownTimer = 0f;
         }
 
@@ -184,20 +183,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
-            // GroundBounds 캐싱 (UpdateCharging에서 사용)
-            if (!_hasCachedBounds && (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ))
-            {
-                _cachedBounds = bounds;
-                _hasCachedBounds = true;
-            }
-
             switch (_currentPhase)
             {
                 case Phase.Charging:
                 {
                     Vector3 target = currentPos + _chargeDirection * 5f;
                     target.y = currentPos.y;
-                    return ClampToBounds(target, bounds);
+                    return target;
                 }
 
                 case Phase.Aiming:
@@ -351,8 +343,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 {
                     Vector3 pushbackPos = _bossTransform.position + (-_chargeDirection) * wallPushbackDistance;
                     pushbackPos.y = _bossTransform.position.y;
-                    if (_hasCachedBounds)
-                        pushbackPos = ClampToBounds(pushbackPos, _cachedBounds);
+                    // Ground 위에 있는지 확인하고, 없으면 현재 위치 유지
+                    if (!IsGroundAtPosition(pushbackPos))
+                        pushbackPos = _bossTransform.position;
                     _bossTransform.position = pushbackPos;
 
                     _wallCooldownTimer = wallCooldownDuration;
@@ -388,22 +381,22 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _phaseTimer -= deltaTime;
 
-            // 돌진 중 충돌 체크: GroundBounds 이탈 + Wall Layer 충돌
+            // 돌진 중 충돌 체크: Ground 이탈 + Wall Layer 충돌
             if (!_hasHitWall && _bossTransform != null)
             {
                 Vector3 currentPos = _bossTransform.position;
                 Vector3 nextPos = currentPos + _chargeDirection * GetScaledChargeSpeed() * deltaTime;
 
-                // GroundBounds 이탈 체크 (현재 위치 + 다음 위치)
-                if (!IsPositionWithinBounds(nextPos) || !IsPositionWithinBounds(currentPos))
+                // Ground 이탈 체크 (다음 위치에 Ground가 없으면 충돌)
+                if (!IsGroundAtPosition(nextPos))
                 {
                     _hasHitWall = true;
                 }
 
-                // Wall Layer 충돌 체크 (현재 위치 + 다음 위치)
+                // Wall Layer 충돌 체크 — 돌진 방향으로만 Raycast (정밀 판정, OverlapSphere 대체)
                 if (!_hasHitWall && _wallLayerIndex >= 0)
                 {
-                    _hasHitWall = CheckWallCollision(currentPos) || CheckWallCollision(nextPos);
+                    _hasHitWall = CheckWallCollision(nextPos);
                 }
             }
 
@@ -470,42 +463,31 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// GroundBounds 기반 위치 유효성 검사
+        /// 지정 위치 아래에 Ground가 있는지 확인 (Physics Raycast)
         /// </summary>
-        private bool IsPositionWithinBounds(Vector3 pos)
+        private bool IsGroundAtPosition(Vector3 pos)
         {
             if (_bossTransform == null) return true;
-            if (!_hasCachedBounds) return true; // bounds 정보 없으면 일단 허용
+            if (_groundLayerIndex < 0) return true; // 레이어 미설정 시 일단 허용
 
-            // X축 bounds 체크
-            if (pos.x < _cachedBounds.MinX || pos.x > _cachedBounds.MaxX)
-                return false;
-
-            // Z축 bounds 체크
-            if (pos.z < _cachedBounds.MinZ || pos.z > _cachedBounds.MaxZ)
-                return false;
-
-            return true;
+            int layerMask = 1 << _groundLayerIndex;
+            Vector3 origin = new Vector3(pos.x, pos.y + 0.5f, pos.z);
+            return Physics.Raycast(origin, Vector3.down, out _, 2f, layerMask);
         }
 
         /// <summary>
-        /// Wall Layer 충돌 체크 (Physics.OverlapSphere)
+        /// Wall Layer 충돌 체크 — 돌진 방향 Raycast (정밀 판정)
+        /// OverlapSphere는 반경 내 모든 Wall을 감지하여 너무 쉽게 충돌했음
         /// </summary>
         private bool CheckWallCollision(Vector3 checkPos)
         {
             if (_wallLayerIndex < 0) return false;
 
             int layerMask = 1 << _wallLayerIndex;
-            Collider[] hits = Physics.OverlapSphere(checkPos, wallCheckRadius, layerMask);
+            // 한 프레임 이동 거리만큼만 전방 체크 (불필요한 여유 제거)
+            float checkDistance = GetScaledChargeSpeed() * Time.deltaTime + 0.1f;
 
-            foreach (var hit in hits)
-            {
-                if (hit.transform == _bossTransform) continue;
-                if (hit.transform.IsChildOf(_bossTransform)) continue;
-                return true; // Wall 충돌 감지
-            }
-
-            return false;
+            return Physics.Raycast(checkPos, _chargeDirection, checkDistance, layerMask);
         }
 
         #endregion
@@ -531,8 +513,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             return Mathf.Lerp(minPredictionFactor, maxPredictionFactor, _normalizedSuspicion);
         }
 
-        #endregion
-
         /// <summary>
         /// Player가 돌진 발동 범위 내에 있는지 확인
         /// 의태 중이거나 너무 멀면 false
@@ -543,18 +523,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_isPlayerCamouflaged) return false; // 의태 중엔 돌진 안 함
             float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
             return dist <= chargeRange;
-        }
-
-        #region Helpers
-
-        private Vector3 ClampToBounds(Vector3 pos, GroundBounds bounds)
-        {
-            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
-            {
-                pos.x = bounds.ClampX(pos.x);
-                pos.z = bounds.ClampZ(pos.z);
-            }
-            return pos;
         }
 
         #endregion

@@ -6,21 +6,31 @@ using UnityEngine;
 public class PlayerInk : MonoBehaviour
 {
         [Header("Ink")]
+        [Tooltip("현재 잉크량")]
         [SerializeField] private float currentInk = 0f;
+        [Tooltip("최대 잉크량")]
         [SerializeField] private float maxInk = 100f;
         [Tooltip("자연 회복으로 0→최대까지 차오르는 데 걸리는 시간(초)")]
         [SerializeField] private float passiveRechargeDuration = 10f;
 
     [Header("State")]
+    [Tooltip("위협 상태 여부")]
     [SerializeField] private bool isUnderThreat = false;
+    [Tooltip("연막 사용 중 여부")]
     [SerializeField] private bool isUsingSmoke = false;
+    [Tooltip("보스 모방 사용 중 여부")]
     [SerializeField] private bool isUsingBossMimic = false;
+    [Tooltip("접촉 충전 중 여부")]
     [SerializeField] private bool isContactCharging = false;
 
     [Header("Smoke")]
+    [Tooltip("연막 키")]
     [SerializeField] private KeyCode smokeKey = KeyCode.Space;
+    [Tooltip("연막 지속 시간")]
     [SerializeField] private float smokeDuration = 2f;
+    [Tooltip("연막 준비 허용 오차")]
     [SerializeField] private float smokeReadyTolerance = 0.5f;
+    [Tooltip("연막 파티클 이펙트")]
     [SerializeField] private ParticleSystem smokeEffect;
 
     private float _smokeTimer;

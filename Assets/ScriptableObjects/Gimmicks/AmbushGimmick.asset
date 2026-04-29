@@ -21,10 +21,13 @@ MonoBehaviour:
   restDuration: 2
   maxConsecutiveAttacks: 3
   patrolMoveSpeed: 4
-  pitSpawnInterval: 3
-  pitClusterRadius: 3
-  pitClusterCount: {x: 2, y: 4}
+  pitSpawnInterval: 2
+  pitClusterRadius: 4
+  pitClusterCount: {x: 1, y: 3}
   positionAvoidRadius: 2
   pitSlowPercent: 0.5
   pitSlowDuration: 3
+  pitSpawnRadiusMin: 1
+  pitSpawnRadiusMax: 3
+  pitForwardBias: 1.5
   proximityChaseDistance: 1.5

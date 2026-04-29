@@ -11,19 +11,25 @@ namespace HideAndInk.Player.Visual
     public sealed class PlayerVisualBridge : MonoBehaviour
     {
         [Header("연결 컴포넌트 (자동 할당)")]
+        [Tooltip("플레이어 이동 컨트롤러")]
         [SerializeField] private PlayerMovementAdapter movementAdapter;
         private Animator _animator;
         private SpriteRenderer _spriteRenderer;
         private Material _material;
 
         [Header("마스크 시트 설정")]
+        [Tooltip("마스크 스프라이트 배열")]
         [SerializeField] private Sprite[] maskSprites; // 마스크 시트 슬라이스 파일들을 여기에 드래그 앤 드롭
         private int _lastSpriteIndex = -1;
 
         [Header("애니메이터 파라미터 이름")]
+        [Tooltip("X 이동 애니메이션 파라미터명")]
         [SerializeField] private string moveXParam = "MoveX";
+        [Tooltip("Y 이동 애니메이션 파라미터명")]
         [SerializeField] private string moveYParam = "MoveY";
+        [Tooltip("이동 중 애니메이션 파라미터명")]
         [SerializeField] private string isMovingParam = "isMoving";
+        [Tooltip("탈출 중 애니메이션 파라미터명")]
         [SerializeField] private string isEscapingParam = "isEscaping";
 
         private bool _debugIsEscaping = false;

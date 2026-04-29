@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 475003200736606910}
   - component: {fileID: 2482639456243943227}
   - component: {fileID: 5522215657372517195}
+  - component: {fileID: 6512345678901234567}
   m_Layer: 0
   m_Name: Gajami
   m_TagString: Untagged
@@ -158,6 +159,7 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   chargeIndicatorLength: 12
   chargeIndicatorWidth: 1.5
+  targetIndicatorPrefab: {fileID: 0}
   bossSprite: {fileID: 7369304145225627012}
   sandPitPrefab: {fileID: 3988595746840827156, guid: 30ba88e5611bad74fa2f3aba77413bc2, type: 3}
   chargeDirector: {fileID: 0}
@@ -256,7 +258,11 @@ MonoBehaviour:
   chargeDelay: 0.2
   playerPredictionTime: 0.4
   screenEdgeOffset: 2
-  indicatorFloorY: 0
+  viewportEdgeMargin: 0.1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  indicatorFloorY: 0.05
 --- !u!114 &5522215657372517195
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274,3 +280,24 @@ MonoBehaviour:
   imminentColor: {r: 1, g: 0, b: 0, a: 0.9}
   heightOffset: 0.2
   poolSize: 5
+--- !u!65 &6512345678901234567
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2110494144277291207}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2, y: 0.3, z: 2}
+  m_Center: {x: 0, y: 0, z: 0}

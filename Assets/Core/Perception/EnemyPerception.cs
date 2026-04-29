@@ -14,31 +14,47 @@ namespace HideAndInk.Core.Perception
     public sealed class EnemyPerception : MonoBehaviour
     {
         [Header("시야 감지")]
+        [Tooltip("시야 감지 센서")]
         [SerializeField] private ConeVisionSensor visionSensor;
 
         [Header("의심도 설정")]
+        [Tooltip("기본 감지 강도")]
         [SerializeField] private float baseDetectionIntensity = 1f;
+        [Tooltip("정찰 상태 감지 배율")]
         [SerializeField] private float patrolDetectionMultiplier = 1.5f;
+        [Tooltip("관찰 상태 감지 배율")]
         [SerializeField] private float observeDetectionMultiplier = 1.0f;
+        [Tooltip("경비 상태 감지 배율")]
         [SerializeField] private float guardDetectionMultiplier = 1.2f;
 
         [Header("그라데이션 기반 감지 배율")]
+        [Tooltip("시야 중앙 감지 배율")]
         [SerializeField] private float centerDetectionMultiplier = 1.2f;
+        [Tooltip("시야 가장자리 감지 배율")]
         [SerializeField] private float edgeDetectionMultiplier = 0.2f;
+        [Tooltip("거리별 감지 보간 커브")]
         [SerializeField] private AnimationCurve distanceGradient = AnimationCurve.Linear(0f, 1f, 1f, 0.15f);
 
         [Header("근접 감지 설정")]
+        [Tooltip("근접 거리 감지 배율")]
         [SerializeField] private float nearbyDistanceMultiplier = 1.5f;
+        [Tooltip("근접 감지 강도")]
         [SerializeField, Range(0f, 1f)] private float nearbyDetectionIntensity = 0.2f;
+        [Tooltip("근접 최소 감지 계수")]
         [SerializeField, Range(0f, 1f)] private float nearbyMinIntensityFactor = 0.3f;
 
         [Header("AI 기억 설정")]
+        [Tooltip("AI 기억 유지 시간")]
         [SerializeField] private float memoryDuration = 3f;
+        [Tooltip("기억 기반 감지 배율")]
         [SerializeField, Range(0f, 1f)] private float memoryDetectionMultiplier = 0.4f;
 
         [Header("추적 설정")]
+        [Tooltip("추적 시작 임계값")]
         [SerializeField] private float trackingThreshold = 0.5f;
+        [Tooltip("추적 중 기억 배율")]
         [SerializeField] private float trackingMemoryMultiplier = 1.5f;
+        [Tooltip("타겟 상실 판정 임계값")]
         [SerializeField] private float lostTargetThreshold = 0.2f;
 
         // 상태

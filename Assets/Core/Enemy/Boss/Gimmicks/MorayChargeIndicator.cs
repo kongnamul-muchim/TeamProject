@@ -12,10 +12,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     public class MorayChargeIndicator : MonoBehaviour
     {
         [Header("네모 설정")]
+        [Tooltip("인디케이터 너비")]
         [SerializeField] private float indicatorWidth = 2.5f;
+        [Tooltip("활성화 색상")]
         [SerializeField] private Color activeColor = new Color(1f, 0.2f, 0.2f, 0.6f);
+        [Tooltip("임박 색상")]
         [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 0.9f);
+        [Tooltip("높이 오프셋")]
         [SerializeField] private float heightOffset = 0f; // 바닥 높이 (Director가 _floorY로 조정)
+        [Tooltip("오브젝트 풀 크기")]
         [SerializeField] private int poolSize = 5; // 최대 동시 네모 수
 
         // Director가 값을 적용할 수 있도록 public setter (중복 설정 방지)

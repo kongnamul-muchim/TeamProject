@@ -16,24 +16,35 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     public class MorayChargeDirector : MonoBehaviour
     {
         [Header("네모 설정")]
+        [Tooltip("곰치 돌진 인디케이터")]
         [SerializeField] private MorayChargeIndicator indicator;
+        [Tooltip("인디케이터 너비")]
         [SerializeField] private float indicatorWidth = 2.5f;
+        [Tooltip("활성화 색상")]
         [SerializeField] private Color activeColor = new Color(1f, 0.2f, 0.2f, 0.6f);
+        [Tooltip("임박 색상 (곧 돌진)")]
         [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 0.9f);
 
         [Header("돌진 설정")]
+        [Tooltip("돌진 속도")]
         [SerializeField] private float chargeSpeed = 18f;
+        [Tooltip("최소 사각형 간격")]
         [SerializeField] private float minSquareInterval = 0.3f;
+        [Tooltip("돌진 지연 시간")]
         [SerializeField] private float chargeDelay = 0.2f; // 돌진 사이 텀
+        [Tooltip("플레이어 예측 시간")]
         [SerializeField] private float playerPredictionTime = 0.4f; // Player 예측 시간
 
         [Header("화면 여유")]
+        [Tooltip("화면 가장자리 오프셋")]
         [SerializeField] private float screenEdgeOffset = 2f;
         [SerializeField, Range(0f, 0.4f), Tooltip("Viewport 좌/우에서 안쪽으로 margin (frustum culling 방지). 0.1 = 10%")]
         private float viewportEdgeMargin = 0.1f;
 
         [Header("바닥 높이")]
-        [SerializeField, Tooltip("인디케이터/돌진 Y 위치. Ground 표면 Y값을 직접 입력 (기본 0)")]
+        [SerializeField, Tooltip("Ground 레이어 (Raycast로 바닥 높이 탐색)")]
+        private LayerMask groundLayer;
+        [SerializeField, Tooltip("인디케이터/돌진 Y 위치. Raycast 실패 시 fallback")]
         private float indicatorFloorY = 0f;
 
         // ──────────────────────────────────────────────
@@ -57,10 +68,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private Transform _bossTransform;
         private Transform _playerTransform;
-        private GroundBounds _groundBounds;
-        private bool _hasGroundBounds;
         private Vector3 _playerVelocity;
         private HideAndInk.Player.PlayerMovementAdapter _cachedMovement;
+
+        // ★ GroundBounds 캐싱 (CalculateChargePath에서 클램핑용)
+        private GroundBounds? _groundBounds;
 
         private int _currentChargeIndex;
         private int _totalCharges;
@@ -117,8 +129,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void Initialize(Transform bossTransform, GroundBounds bounds)
         {
             _bossTransform = bossTransform;
-            _groundBounds = bounds;
-            _hasGroundBounds = true;
+            _groundBounds = bounds; // ★ GroundBounds 캐싱
             _currentChargeIndex = 0;
             _totalCharges = 0;
             _lastDirection = -1;
@@ -162,12 +173,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 CalculateChargePath(i);
             }
 
-            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (boss Y 유지)
+            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (Ground 높이 사용, boss Y 무시)
             if (_chargeStarts.Length > 0)
             {
                 Vector3 preparePos = _chargeStarts[0];
-                if (_bossTransform != null)
-                    preparePos.y = _bossTransform.position.y;
+                // _chargeStarts의 Y는 이미 CalculateChargePath에서 Ground 높이로 설정됨
                 OnPrepareTeleport?.Invoke(preparePos);
             }
 
@@ -227,11 +237,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             OnChargesComplete?.Invoke();
         }
 
-        /// <summary>GroundBounds 재설정</summary>
+        /// <summary>GroundBounds 재설정 (더 이상 사용하지 않음)</summary>
         public void SetGroundBounds(GroundBounds bounds)
         {
-            _groundBounds = bounds;
-            _hasGroundBounds = true;
+            // Player/Camera 중심 동적 범위로 대체
         }
 
         // ──────────────────────────────────────────────
@@ -278,9 +287,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            // ★ boss는 자기 Y 유지, 네모만 indicatorFloorY 사용
-            start.y = _bossTransform != null ? _bossTransform.position.y : start.y;
-            end.y = start.y;
+            // ★ Ground 높이로 통일 (boss Y 무시, Raycast로 찾은 groundY 사용)
+            float groundY = GetGroundY(start, start.y);
+            start.y = groundY;
+            end.y = groundY;
 
             OnChargeExecute?.Invoke(start, end);
             OnSpeedOverride?.Invoke(chargeSpeed);
@@ -322,25 +332,77 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         // 경로 계산 (Player 예측 포함)
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// 지정 위치의 Ground 높이를 Raycast로 탐색 (실패 시 fallback 반환)
+        /// <br/>개선: position.y 기준 양방향 Raycast + GroundBounds 클램핑
+        /// </summary>
+        private float GetGroundY(Vector3 position, float fallback)
+        {
+            if (groundLayer.value == 0) return fallback;
+
+            // 1순위: 위에서 아래로 Raycast (position.y 기준 +10m 위에서 시작)
+            float checkHeight = position.y + 10f;
+            if (Physics.Raycast(new Vector3(position.x, checkHeight, position.z), Vector3.down,
+                out RaycastHit hit, 20f, groundLayer))
+            {
+                return hit.point.y + 0.05f;
+            }
+
+            // 2순위: 아래에서 위로 Raycast (position.y가 Ground보다 낮은 경우)
+            float checkLow = position.y - 0.1f;
+            if (checkLow > -100f && Physics.Raycast(new Vector3(position.x, checkLow, position.z), Vector3.up,
+                out hit, 20f, groundLayer))
+            {
+                return hit.point.y + 0.05f;
+            }
+
+            // 3순위: GroundBounds 내에서 최근접 Ground Y 탐색
+            if (_groundBounds.HasValue && _bossTransform != null)
+            {
+                float scanX = _groundBounds.Value.ClampX(position.x);
+                float scanZ = _groundBounds.Value.ClampZ(position.z);
+                float scanY = Mathf.Max(position.y, fallback) + 10f;
+                if (Physics.Raycast(new Vector3(scanX, scanY, scanZ), Vector3.down,
+                    out hit, 20f, groundLayer))
+                {
+                    return hit.point.y + 0.05f;
+                }
+            }
+
+            return fallback;
+        }
+
         private void CalculateChargePath(int index)
         {
-            float groundY = indicatorFloorY;
             float chargeZ = PredictChargeZ(index);
 
             // Camera Viewport 기준 X 범위 (해당 chargeZ depth에서 계산)
-            // Orthographic / Perspective 모두 대응
             float left, right;
             if (!TryGetViewBoundsAtZ(chargeZ, out left, out right))
             {
-                // Fallback: GroundBounds
-                if (_hasGroundBounds)
+                // Fallback: Player 기준 고정 범위
+                if (_playerTransform != null)
                 {
-                    left = _groundBounds.MinX - screenEdgeOffset;
-                    right = _groundBounds.MaxX + screenEdgeOffset;
+                    left = _playerTransform.position.x - 15f - screenEdgeOffset;
+                    right = _playerTransform.position.x + 15f + screenEdgeOffset;
                 }
                 else
                 {
                     left = -20f; right = 20f;
+                }
+            }
+
+            // ★ 1단계: Camera Viewport X → GroundBounds 클램핑 (Ground 밖 돌진 방지)
+            if (_groundBounds.HasValue)
+            {
+                left = _groundBounds.Value.ClampX(left);
+                right = _groundBounds.Value.ClampX(right);
+                // 최소 간격 보장 (뷰포트가 Ground 가장자리에 걸친 경우)
+                if (right - left < 5f)
+                {
+                    float cx = (left + right) * 0.5f;
+                    left = cx - 5f;
+                    right = cx + 5f;
                 }
             }
 
@@ -349,8 +411,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             int endDir = (_lastDirection == 0) ? 0 : 1;
             _lastDirection = startDir;
 
-            _chargeStarts[index] = new Vector3(startDir == 0 ? left : right, groundY, chargeZ);
-            _chargeEnds[index] = new Vector3(endDir == 0 ? left : right, groundY, chargeZ);
+            float startX = startDir == 0 ? left : right;
+            float endX = endDir == 0 ? left : right;
+
+            // ★ 개선: boss 실제 Y 기준으로 GetGroundY 호출 (fallback도 boss Y 사용)
+            float bossY = _bossTransform != null ? _bossTransform.position.y : indicatorFloorY;
+            float startY = GetGroundY(new Vector3(startX, bossY, chargeZ), bossY);
+            float endY = GetGroundY(new Vector3(endX, bossY, chargeZ), bossY);
+            float groundY = Mathf.Min(startY, endY); // 둘 중 낮은 쪽으로 통일
+
+            _chargeStarts[index] = new Vector3(startX, groundY, chargeZ);
+            _chargeEnds[index] = new Vector3(endX, groundY, chargeZ);
         }
 
         /// <summary>
@@ -358,12 +429,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// </summary>
         private float PredictChargeZ(int index)
         {
-            if (!_hasGroundBounds) return 0f;
-            float centerZ = (_groundBounds.MinZ + _groundBounds.MaxZ) * 0.5f;
+            // Player Z 위치 기준으로 돌진 Z 결정
+            float centerZ = _playerTransform != null ? _playerTransform.position.z : 0f;
             if (_totalCharges <= 1) return centerZ;
 
-            // 여러 돌진: Z축으로 퍼뜨리되 중심 범위 내에서만
-            float halfRange = (_groundBounds.MaxZ - _groundBounds.MinZ) * 0.3f;
+            // 여러 돌진: Player Z 기준 ±5m 범위로 퍼뜨림
+            float halfRange = 5f;
             float t = (float)index / (_totalCharges - 1);
             return centerZ + (t - 0.5f) * 2f * halfRange;
         }
