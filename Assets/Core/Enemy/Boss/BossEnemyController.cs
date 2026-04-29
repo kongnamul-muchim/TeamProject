@@ -7,6 +7,10 @@ using HideAndInk.Core.Enemy.Boss.Gimmicks;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Events;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace HideAndInk.Core.Enemy.Boss
 {
@@ -46,6 +50,9 @@ namespace HideAndInk.Core.Enemy.Boss
         [Header("가자미 구덩이 (SandPit)")]
         [SerializeField] private SandPit sandPitPrefab;
 
+        [Header("곰치 돌진 디렉터")]
+        [SerializeField] private MorayChargeDirector chargeDirector;
+
         [Header("데미지")]
         [SerializeField] private float knockbackForce = 12f;
 
@@ -54,6 +61,7 @@ namespace HideAndInk.Core.Enemy.Boss
         private ChaseBehavior _chaseBehavior;
         private SearchBehavior _searchBehavior;
         private IEnemyGimmick _activeGimmick;
+        private Animator _animator;
         private PlayerLives _playerLives;
         private Rigidbody _playerRigidbody;
 
@@ -69,17 +77,55 @@ namespace HideAndInk.Core.Enemy.Boss
         // 가자미 구덩이 디버프
         private float _pitDebuffTimer;
 
+        // 곰치 Chase 진입 횟수 (MonoBehaviour에서 직접 관리)
+        private int _morayChaseEntryCount;
+        // 돌진 시퀀스 활성화 플래그 (의심도 자동 증가 차단)
+        private bool _isMorayCharging;
+        // 곰치 렌더러/콜라이더 캐시 (숨김/표시 전환)
+        private Renderer[] _bossRenderers;
+        private Collider[] _bossColliders;
+        private bool _isBossVisible;
+
+        // Animator flipX override 방지용 캐시
+        private Vector3 _lastFacingDir;
+        private bool _hasFacingDir;
+
+        // Ambush 근접 Chase 쿨타임 (강제 Patrol 후 재발견 방지)
+        private float _ambushProximityCooldown;
+
+        // Moray charge 방향 (Prepare/Charge 중 시야각 동기화용)
+        private Vector3 _morayFacingDirection = Vector3.right;
+
+        [Header("스프라이트 방향")]
+        [SerializeField, Tooltip("Sprite 기본 방향이 왼쪽이면 true, 오른쪽이면 false")]
+        private bool defaultFacingLeft = true;
+
         protected override void Start()
         {
-            isDefaultFacingLeft = true; // 청새치 Sprite: Y=0에서 왼쪽 바라봄
+            isDefaultFacingLeft = defaultFacingLeft;
             base.Start();
-            CacheCamouflageAdapter(); // 의태 감지를 위해 반드시 필요
+            _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
+            CacheCamouflageAdapter();
             CacheBossPlayerComponents();
             SetupRigidbody();
             InitializeGimmick();
             InitializeBehaviors();
-            InitializeStateMachine();
-            InitializeChargeIndicator(); // Indicator는 Start에서 미리 생성
+            InitializeStateMachine(); // ← 이제 _animator가 null 아님, SetBool 정상 동작
+            InitializeChargeIndicator();
+
+            // 렌더러/콜라이더 캐시
+            _bossRenderers = GetComponentsInChildren<Renderer>();
+            _bossColliders = GetComponentsInChildren<Collider>();
+        }
+
+        protected override void ScanGroundBounds()
+        {
+            base.ScanGroundBounds();
+            // GroundBounds 확보 후 Director 재초기화
+            if (_isGroundBoundsScanned && chargeDirector != null)
+            {
+                chargeDirector.Initialize(transform, _groundBounds);
+            }
         }
 
         #region Gimmick
@@ -104,20 +150,58 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (_activeGimmick is AmbushGimmick ambush && suspicionSystem != null)
             {
-                suspicionSystem.SetSuspicionRadius(ambush.SuspicionRadius);
-                suspicionSystem.linkedGimmick = ambush; // Editor OnValidate용
-                var suspicionModule = new AmbushSuspicionModule(ambush);
-                suspicionSystem.SetSuspicionModule(suspicionModule);
+                // 거리 기반 감지 모듈 제거 — 근접 Chase(12m)로만 발각
+                // 의심도는 Pit 밟을 때만 상승 (+30)
+                suspicionSystem.SetSuspicionModule(null);
 
-                // 의심도 100% 발각 → 강제 Chase 전환
+                // 바닥 원형 시각화를 근접 Chase 범위로 설정
+                suspicionSystem.SetSuspicionRadius(Vector2.one * ambush.ProximityChaseDistance);
+
+                // 의심도 100% 발각 → 강제 Chase 전환 (Pit 누적으로만 발동)
                 suspicionSystem.OnDetected += () =>
                 {
-                    if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Patrol)
+                    if (_stateMachine != null)
+                    {
+                        var cur = _stateMachine.CurrentState;
+                        if (cur != EnemyAIState.Chase)
+                            _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
+                };
+
+                // Ambush 전용 근접 Chase 거리 동기화 (인스펙터에서 조절 가능)
+                proximityChaseDistance = ambush.ProximityChaseDistance;
+
+                if (_isGroundBoundsScanned)
+                    ambush.SetGroundBounds(_groundBounds);
+            }
+
+            if (_activeGimmick is RelentlessChaseGimmick relentless && suspicionSystem != null)
+            {
+                // 곰치는 ChaseBehavior 이동을 사용하지 않음 (돌진 중에만 움직임)
+                _chaseBehavior?.SetPaused(true);
+
+                // 의심도 100% → Patrol→Chase 전환
+                suspicionSystem.OnDetected += () =>
+                {
+                    if (_stateMachine != null && _stateMachine.CurrentState != EnemyAIState.Chase)
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                 };
 
                 if (_isGroundBoundsScanned)
-                    ambush.SetGroundBounds(_groundBounds);
+                    relentless.SetGroundBounds(_groundBounds);
+
+                // Director 초기화 (GroundBounds 사용 가능 시에만)
+                if (chargeDirector != null)
+                {
+                    if (_isGroundBoundsScanned)
+                        chargeDirector.Initialize(transform, _groundBounds);
+                    chargeDirector.OnPrepareTeleport += OnMorayPrepareTeleport;
+                    chargeDirector.OnChargeExecute += OnMorayChargeExecute;
+                    chargeDirector.OnChargesComplete += OnMorayChargesComplete;
+                    chargeDirector.OnPlayerHit += OnMorayPlayerHit;
+                    chargeDirector.OnSpeedOverride += OnMoraySpeedOverride;
+                    chargeDirector.OnMovementStop += OnMorayMovementStop;
+                }
             }
         }
 
@@ -126,12 +210,30 @@ namespace HideAndInk.Core.Enemy.Boss
             switch (_activeGimmick)
             {
                 case AmbushGimmick ambush:
-                    ambush.OnSpeedOverride = (s) => { _movement.Speed = s; if (_movement is EnemyMovement em) em.SetMaxSpeed(Mathf.Max(s, 1f)); };
+                    ambush.OnSpeedOverride = (s) =>
+                    {
+                        _movement.Speed = s;
+                        if (_movement is EnemyMovement em)
+                        {
+                            em.SetMaxSpeed(Mathf.Max(s, 1f));
+                            // Dash 시 가속도도 함께 높여 순간적인 속도 도달 보장
+                            if (s > 5f)
+                                em.SetAcceleration(s * 2f); // dashSpeed=12 → accel=24
+                            else
+                                em.SetAcceleration(8f);     // 기본값 복원
+                        }
+                    };
                     ambush.OnMovementStop = () => _movement.Stop();
                     ambush.OnMovementResume = () => { _movement.Speed = chaseSpeed; if (_movement is EnemyMovement em) em.SetMaxSpeed(chaseSpeed); };
                     ambush.OnVisibilityToggle = (v) => visionSensor?.SetDistanceOnlyMode(v);
                     ambush.OnDashMoveTo = (t) => _movement.MoveTo(t);
                     ambush.OnSpawnPit = SpawnSandPitCluster;
+                    ambush.OnSetChasePaused = (p) => _chaseBehavior?.SetPaused(p);
+                    ambush.OnDashTrigger = () =>
+                    {
+                        var anim = GetComponent<Animator>();
+                        if (anim != null) anim.SetTrigger("OnDash");
+                    };
                     ambush.OnCombatStateChanged = (inCombat) =>
                     {
                         if (inCombat)
@@ -139,10 +241,32 @@ namespace HideAndInk.Core.Enemy.Boss
                         else
                             suspicionSystem?.AllowSuspicionIncrease();
                     };
+                    ambush.OnForcePatrol = () =>
+                    {
+                        _ambushProximityCooldown = 5f; // 강제 Patrol 후 5초 근접 Chase 쿨타임
+                        if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
+                            _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                    };
                     break;
 
                 case RelentlessChaseGimmick relentless:
-                    relentless.OnSuspicionDecayRateOverride = (m) => suspicionSystem?.SetSuspicionDecayMultiplier(m);
+                    // Director 콜백: Chase 진입 시 돌진 준비
+                    relentless.OnDirectorBeginPrepare = (_) =>
+                    {
+                        _chaseBehavior?.SetPaused(true);
+                        if (_isMorayCharging) return;
+                        _morayChaseEntryCount++;
+                        int chargeCount = Mathf.Min(_morayChaseEntryCount, relentless.MaxChargesPerCycle);
+                        _isMorayCharging = true;
+                        chargeDirector?.BeginPrepare(chargeCount);
+                    };
+                    relentless.OnDirectorReset = () => chargeDirector?.ResetCharges();
+                    // 의심도 증가
+                    relentless.OnIncreaseSuspicion = (rate, dt) =>
+                    {
+                        if (_isMorayCharging) return; // 돌진 중엔 정지
+                        suspicionSystem?.AddSuspicion(rate, dt);
+                    };
                     break;
 
                 case SwordfishGimmick swordfish:
@@ -189,6 +313,37 @@ namespace HideAndInk.Core.Enemy.Boss
 
         #region AI Update
 
+        /// <summary>
+        /// Animator가 flipX를 덮어쓰므로 LateUpdate에서 localScale로 재적용
+        /// </summary>
+        protected virtual void LateUpdate()
+        {
+            if (_hasFacingDir)
+            {
+                bool flip = isDefaultFacingLeft ? _lastFacingDir.x > 0f : _lastFacingDir.x < 0f;
+
+                Vector3 scale = transform.localScale;
+                scale.x = Mathf.Abs(scale.x) * (flip ? -1f : 1f);
+                transform.localScale = scale;
+
+                if (bossSprite != null)
+                    bossSprite.flipX = flip;
+
+                // localEulerAngles.y 재적용 (Animator가 Y회전을 덮어쓸 수 있으므로)
+                float spriteY = isDefaultFacingLeft
+                    ? (flip ? 180f : 0f)
+                    : (flip ? 0f : 180f);
+                transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
+
+                // 시야각 방향 동기화 — flip 기준으로 강제 설정 (ApplyFacingDirection 누락 방지)
+                if (visionSensor != null)
+                {
+                    float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
+                    visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
+                }
+            }
+        }
+
         protected override void UpdateAI(float deltaTime)
         {
             if (_stateMachine == null) return;
@@ -208,6 +363,10 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _playerAware.SetSuspicionLevel(Mathf.Clamp01(suspicionSystem.CurrentValue / 100f));
             }
+            // Ambush 근접 Chase 쿨타임 감소
+            if (_ambushProximityCooldown > 0f)
+                _ambushProximityCooldown -= deltaTime;
+
             UpdateCamouflageState();
             UpdateSuspicion(canSeePlayer);
             UpdateVisionConeVisibility();
@@ -295,7 +454,7 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (suspicionSystem == null) return;
 
-            // Ambush는 OnCombatStateChanged 콜백이 직접 Block/Allow 관리
+            // Ambush: 시야각은 순수 시각 표시용 — 의심도에 영향 없음
             if (_activeGimmick is AmbushGimmick) return;
 
             if (canSeePlayer && !IsPlayerCamouflaging() && visionSensor != null && visionSensor.RaisesSuspicion)
@@ -306,15 +465,19 @@ namespace HideAndInk.Core.Enemy.Boss
 
         private void UpdateVisionConeVisibility()
         {
+            // Ambush도 Patrol에서 시각적 피드백: vision cone + 바닥 표시
+            // Chase 중에는 바닥 숨김 (전투 중엔 범위 표시 불필요)
+            bool isAmbush = _activeGimmick is AmbushGimmick;
             if (visionConeRenderer != null)
                 visionConeRenderer.SetChasing(_stateMachine != null && _stateMachine.IsChase);
 
             if (suspicionSystem != null)
             {
-                suspicionSystem.SetFloorVisibilityMode(
-                    _activeGimmick is AmbushGimmick
-                        ? SuspicionFloorVisibilityMode.Hidden
-                        : SuspicionFloorVisibilityMode.ChaseOnly);
+                bool isPatrol = _stateMachine != null && _stateMachine.IsPatrol;
+                SuspicionFloorVisibilityMode floorMode = isAmbush
+                    ? (isPatrol ? SuspicionFloorVisibilityMode.AlwaysOn : SuspicionFloorVisibilityMode.Hidden)
+                    : SuspicionFloorVisibilityMode.ChaseOnly;
+                suspicionSystem.SetFloorVisibilityMode(floorMode);
             }
         }
 
@@ -329,22 +492,47 @@ namespace HideAndInk.Core.Enemy.Boss
             var currentState = _stateMachine.CurrentState;
             float suspicionValue = suspicionSystem.CurrentValue;
             bool isAmbushGimmick = _activeGimmick is AmbushGimmick;
+            bool isRelentlessGimmick = _activeGimmick is RelentlessChaseGimmick;
             float ambushDropThreshold = isAmbushGimmick ? ((AmbushGimmick)_activeGimmick).SuspicionDropThreshold : 0f;
 
             switch (currentState)
             {
                 case EnemyAIState.Patrol:
-                    if (canSeePlayer || IsPlayerCloseEnough())
+                    if (isRelentlessGimmick)
+                    {
+                        // Moray: 의심도 시스템(OnDetected)으로만 Chase 진입
+                    }
+                    else if (isAmbushGimmick)
+                    {
+                        // Ambush: 시야각 무시, 오직 근접 거리로만 Chase 진입
+                        if (_ambushProximityCooldown <= 0f && IsPlayerCloseEnough())
+                            _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
+                    else if (canSeePlayer || IsPlayerCloseEnough())
+                    {
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
                     break;
 
                 case EnemyAIState.Chase:
                     if (isAmbushGimmick)
                     {
-                        // Ambush: PreDelay/Dash 중에는 강제로 Patrol 복귀하지 않음
+                        // Ambush: PreDelay/Dash/Rest 중에는 강제로 Patrol 복귀하지 않음
                         bool inCombatCycle = _combatCycle != null && _combatCycle.IsInCombatCycle;
-                        if (!inCombatCycle && suspicionValue < ambushDropThreshold)
+                        // 의심도 Safe + Player가 근접 범위 밖으로 나갔을 때만 Patrol 복귀
+                        if (!inCombatCycle && suspicionValue < 30f && !IsPlayerCloseEnough())
                             _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                    }
+                    else if (isRelentlessGimmick)
+                    {
+                        // Moray: 돌진 중이 아닐 때만 Player 이탈 체크
+                        // (돌진 중엔 Boss가 멀리 이동하므로 ForceInterrupt 방지)
+                        if (_playerTransform != null && chargeDirector != null && !_isMorayCharging)
+                        {
+                            float dist = Vector3.Distance(transform.position, _playerTransform.position);
+                            if (dist > 40f)
+                                chargeDirector.ForceInterrupt();
+                        }
                     }
                     else
                     {
@@ -379,7 +567,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     break;
 
                 case EnemyAIState.Search:
-                    if (canSeePlayer)
+                    if (canSeePlayer && !isAmbushGimmick) // Ambush: 시야각 무시
                         _stateMachine.TryTransitionTo(EnemyAIState.Chase);
                     else if (isAmbushGimmick && suspicionValue < ambushDropThreshold)
                         _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
@@ -397,24 +585,55 @@ namespace HideAndInk.Core.Enemy.Boss
                     _movement.Speed = patrolSpeed;
                     if (suspicionSystem != null)
                     {
-                        suspicionSystem.SetVisionIncreaseSpeed(10f); // Patrol 중 기본 상승
-                        suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                        bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
+                        if (isRelentless)
+                        {
+                            // Moray Patrol: 배회 + 의심도 자동 상승
+                            suspicionSystem.SetVisionIncreaseSpeed(0f);
+                            suspicionSystem.SetSuspicionDecayMultiplier(1f);
+                            suspicionSystem.SetAutoDecayEnabled(false);
+                            suspicionSystem.ResetDetected();
+                        }
+                        else
+                        {
+                            suspicionSystem.SetVisionIncreaseSpeed(10f);
+                            suspicionSystem.SetAutoDecayEnabled(true);
+                            float decayMul = _activeGimmick is AmbushGimmick ? 0.2f : 1f;
+                            suspicionSystem.SetSuspicionDecayMultiplier(decayMul);
+                            if (_activeGimmick is AmbushGimmick)
+                                suspicionSystem.ResetDetected();
+                        }
                     }
+                    // 애니메이션: Patrol
+                    if (_animator != null) _animator.SetBool("IsChase", false);
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
                     if (suspicionSystem != null)
                     {
-                        // Chase 중 빠른 의심도 상승 (점프 없이 rate 기반)
-                        suspicionSystem.SetVisionIncreaseSpeed(30f);
-                        suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
+                        bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
+                        if (isRelentless)
+                        {
+                            // Moray Chase: 방해 금지
+                            suspicionSystem.SetVisionIncreaseSpeed(0f);
+                            suspicionSystem.SetSuspicionDecayMultiplier(0f);
+                            suspicionSystem.SetAutoDecayEnabled(false);
+                        }
+                        else
+                        {
+                            suspicionSystem.SetVisionIncreaseSpeed(30f);
+                            suspicionSystem.SetAutoDecayEnabled(true);
+                            suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
+                        }
                     }
+                    // 애니메이션: Chase
+                    if (_animator != null) _animator.SetBool("IsChase", true);
                     break;
                 case EnemyAIState.Search:
                     _movement.Speed = searchSpeed;
                     if (suspicionSystem != null)
                     {
-                        suspicionSystem.SetVisionIncreaseSpeed(15f); // Search 중 중간 상승
+                        suspicionSystem.SetVisionIncreaseSpeed(15f);
                         suspicionSystem.SetSuspicionDecayMultiplier(1f);
                     }
                     break;
@@ -467,7 +686,28 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateMovement(float deltaTime)
         {
-            base.UpdateMovement(deltaTime);
+            bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
+
+            if (isMorayChase)
+            {
+                // Moray Chase: Ground edge 체크 건너뜀 (돌진 시작 위치가 경계에 있음)
+                // _movement.Stop()이 호출되면 charge가 중단됨
+                if (_movement != null)
+                {
+                    _movement.Update(deltaTime);
+                    if (_movement.IsMoving)
+                    {
+                        Vector3 newPos = transform.position;
+                        newPos.x += _movement.Velocity.x * deltaTime;
+                        newPos.z += _movement.Velocity.z * deltaTime;
+                        transform.position = newPos;
+                    }
+                }
+            }
+            else
+            {
+                base.UpdateMovement(deltaTime);
+            }
 
             if (_isGroundBoundsScanned)
             {
@@ -500,17 +740,35 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 HideChargeIndicator();
 
-                if (_movement == null || !_movement.IsMoving) return;
-                if (_directionChangeTimer > 0f) return; // 쿨타임 중
+                if (_movement == null) return;
+
+                bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
+
+                if (!_movement.IsMoving)
+                {
+                    // Moray: Prepare/Charge 전환 중이면 저장된 돌진 방향 사용
+                    if (isMorayChase && _morayFacingDirection != Vector3.zero)
+                    {
+                        ApplyFacingDirection(_morayFacingDirection);
+                        return;
+                    }
+                    return;
+                }
+
+                if (!isMorayChase)
+                {
+                    // 일반 Chase: 쿨타임 적용
+                    if (_directionChangeTimer > 0f) return;
+                }
 
                 float vx = _movement.Velocity.x;
                 if (Mathf.Abs(vx) < 0.01f) return;
 
                 facingDir = vx > 0f ? Vector3.right : Vector3.left;
 
-                // 방향 변경 쿨타임 (base class와 동일한 flicker 방지)
+                // 방향 변경 쿨타임 (Moray는 항상 통과)
                 MoveDirection newDir = vx > 0f ? MoveDirection.Right : MoveDirection.Left;
-                if (newDir != _lastAppliedDirection)
+                if (newDir != _lastAppliedDirection || isMorayChase)
                 {
                     _lastAppliedDirection = newDir;
                     _directionChangeTimer = _directionChangeCooldown;
@@ -529,9 +787,20 @@ namespace HideAndInk.Core.Enemy.Boss
         /// </summary>
         private void ApplyFacingDirection(Vector3 dir)
         {
+            _lastFacingDir = dir;
+            _hasFacingDir = true;
+
+            // ★ Animator가 flipX를 덮어쓰므로, localScale로 flip하여 우회
+            bool flip = isDefaultFacingLeft ? dir.x > 0f : dir.x < 0f;
+
+            // localScale.x를 반전시켜 SpriteRenderer 방향 전환 (Animator가 건드리지 않음)
+            Vector3 scale = transform.localScale;
+            scale.x = Mathf.Abs(scale.x) * (flip ? -1f : 1f);
+            transform.localScale = scale;
+
+            // flipX도 함께 설정 (다른 시스템 호환용)
             if (bossSprite != null)
             {
-                bool flip = isDefaultFacingLeft ? dir.x > 0f : dir.x < 0f;
                 bossSprite.flipX = flip;
 
 #if UNITY_EDITOR
@@ -539,10 +808,17 @@ namespace HideAndInk.Core.Enemy.Boss
 #endif
             }
 
-            // Vision cone 방향 동기화 (transform.right 대신 custom 방향 사용)
+            // localEulerAngles.y 동기화 (ConeVisionSensor의 viewDirectionRef.forward 방향 보정)
+            float spriteY = isDefaultFacingLeft
+                ? (flip ? 180f : 0f)
+                : (flip ? 0f : 180f);
+            transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
+
+            // Vision cone 방향 동기화 — flip 기준으로 강제 설정 (dir.x가 0이어도 안전)
             if (visionSensor != null)
             {
-                visionSensor.SetCustomViewDirection(new Vector3(dir.x, 0f, 0f).normalized);
+                float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
+                visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
             }
         }
 
@@ -684,8 +960,11 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (_activeGimmick != null)
             {
-                // Ambush는 HasMovementOverride로 판정 (항상 override라 dashing 여부와 무관)
+                // Ambush는 HasMovementOverride로 판정
                 if (_activeGimmick is AmbushGimmick ambush && ambush.HasMovementOverride) return true;
+                // Moray는 Director가 OnPlayerHit으로 처리 (OverlapBox 기반)
+                // 여기서는 Collision 기반 물리 충돌만 처리
+                if (_activeGimmick is RelentlessChaseGimmick) return false;
                 // 그 외 기믹은 IGimmickCombatCycle.IsCharging으로 판정
                 if (_combatCycle != null && _combatCycle.IsCharging) return true;
             }
@@ -698,6 +977,89 @@ namespace HideAndInk.Core.Enemy.Boss
             Vector3 dir = (_playerTransform.position - transform.position).normalized;
             dir.y = 0f;
             _playerRigidbody.AddForce(dir * knockbackForce, ForceMode.Impulse);
+        }
+
+        #endregion
+
+        #region Moray Charge Director Handlers
+
+        private void OnMorayPrepareTeleport(Vector3 position)
+        {
+            // Prepare 시작 시 화면 밖 진입점으로 순간이동
+            if (_movement is EnemyMovement em)
+                em.TeleportTo(position);
+
+            // 첫 번째 Charge 방향으로 시야각 설정
+            if (chargeDirector != null)
+                _morayFacingDirection = chargeDirector.GetPrepareDirection();
+        }
+
+        private void OnMorayChargeExecute(Vector3 start, Vector3 end)
+        {
+            // ChaseBehavior 정지 (방해 방지)
+            _chaseBehavior?.SetPaused(true);
+            // 돌진 방향 저장 (시야각 동기화용)
+            Vector3 dir = (end - start);
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f)
+                _morayFacingDirection = dir.normalized;
+            // 순간이동 + 돌진
+            if (_movement is EnemyMovement em)
+            {
+                em.TeleportTo(start);
+                em.MoveTo(end);
+            }
+        }
+
+        private void OnMorayChargesComplete()
+        {
+            // 모든 돌진 완료 → 의심도 리셋 → Patrol 복귀 (배회)
+            if (_activeGimmick is RelentlessChaseGimmick relentless)
+            {
+                suspicionSystem?.ForceSetSuspicion(relentless.PostChaseSuspicion);
+                suspicionSystem?.ResetDetected(); // 재발각 가능
+                _isMorayCharging = false;         // 의심도 증가 재개
+                if (_stateMachine != null && _stateMachine.CurrentState != EnemyAIState.Patrol)
+                    _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+            }
+        }
+
+        /// <summary>곰치 렌더러/콜라이더 전환 (돌진 중에만 보임)</summary>
+        private void SetBossVisibility(bool visible)
+        {
+            if (_isBossVisible == visible) return;
+            _isBossVisible = visible;
+            foreach (var r in _bossRenderers)
+                if (r != null) r.enabled = visible;
+            foreach (var c in _bossColliders)
+                if (c != null) c.enabled = visible;
+        }
+
+        private void OnMorayPlayerHit()
+        {
+            if (_playerLives != null && !_playerLives.IsInvincible)
+            {
+                _playerLives.TakeDamage();
+                ApplyKnockback();
+            }
+        }
+
+        private void OnMorayMovementStop()
+        {
+            _movement.Stop();
+        }
+
+        private void OnMoraySpeedOverride(float speed)
+        {
+            _movement.Speed = speed;
+            if (_movement is EnemyMovement em)
+            {
+                em.SetMaxSpeed(Mathf.Max(speed, 1f));
+                if (speed > 5f)
+                    em.SetAcceleration(speed * 2f);
+                else
+                    em.SetAcceleration(8f);
+            }
         }
 
         #endregion
@@ -759,6 +1121,12 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
                 // 5초간 의심도 하락 차단 디버프
                 _pitDebuffTimer = 5f;
+
+                // Pit 슬로우 효과 (AmbushGimmick 전용: 이동 속도 감소)
+                if (_activeGimmick is AmbushGimmick ambush)
+                {
+                    EnemyEvents.InvokePlayerSlowed(pos, ambush.PitSlowPercent, ambush.PitSlowDuration);
+                }
             };
         }
 
@@ -808,8 +1176,38 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (_chargeIndicator != null && _chargeIndicator.gameObject != null)
             {
-                Destroy(_chargeIndicator.gameObject); // GameObject Destroy 시 Material도 자동 해제
+                Destroy(_chargeIndicator.gameObject);
+            }
+
+            // 곰치 디렉터 이벤트 정리
+            if (chargeDirector != null)
+            {
+                chargeDirector.OnPrepareTeleport -= OnMorayPrepareTeleport;
+                chargeDirector.OnChargeExecute -= OnMorayChargeExecute;
+                chargeDirector.OnChargesComplete -= OnMorayChargesComplete;
+                chargeDirector.OnPlayerHit -= OnMorayPlayerHit;
+                chargeDirector.OnSpeedOverride -= OnMoraySpeedOverride;
+                chargeDirector.OnMovementStop -= OnMorayMovementStop;
             }
         }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            // AmbushGimmick 근접 Chase 범위 표시 (주황 원)
+            // AmbushGimmick 에셋의 ProximityChaseDistance를 직접 읽어서 실시간 반영
+            AmbushGimmick ambush = gimmickAsset as AmbushGimmick;
+            if (ambush != null)
+            {
+                float range = ambush.ProximityChaseDistance;
+                // 평면 원 (2D) — 3D 구체보다 시각적 왜곡 없음
+                Handles.color = new Color(1f, 0.5f, 0f, 0.4f);
+                Handles.DrawWireDisc(transform.position, Vector3.up, range);
+
+                Gizmos.color = Color.red;
+                Gizmos.DrawSphere(transform.position, 0.15f);
+            }
+        }
+#endif
     }
 }

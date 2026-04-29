@@ -1,7 +1,6 @@
 using UnityEngine;
 using System;
 using HideAndInk.Core.Interfaces;
-using HideAndInk.Core.Enemy.Boss.Gimmicks;
 
 namespace HideAndInk.Core.Perception
 {
@@ -53,11 +52,6 @@ namespace HideAndInk.Core.Perception
         [Tooltip("바닥으로 인식할 레이어")]
         [SerializeField] private LayerMask groundLayer = -1;
 
-#if UNITY_EDITOR
-        [Header("에디터 Gizmos (AmbushGimmick 연동)")]
-        [SerializeField] public AmbushGimmick linkedGimmick;
-#endif
-
         // 상태
         private float _currentValue;
         private SuspicionLevel _currentLevel;
@@ -66,6 +60,7 @@ namespace HideAndInk.Core.Perception
         private bool _wasDetected;
         private float _lastDetectedTime;
         private float _suspicionDecayMultiplier = 1f; // 의심도 하락 배율 (RelentlessChase용)
+        private bool _autoDecayEnabled = true; // 자체 하락 활성화 (false면 기믹 전담)
         private bool _isIncreaseBlocked = false; // 의심도 상승 차단 플래그 (Ambush Chase용)
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
@@ -160,18 +155,9 @@ namespace HideAndInk.Core.Perception
         private void OnModuleSuspicionIncrease(float rate, float deltaTime)
         {
             if (_isIncreaseBlocked) return; // 차단 중이면 상승 무시
+            if (_isCamouflaging) return; // 의태 중이면 거리 감지 무시 (시야각 밖 안전)
             AddSuspicion(rate, deltaTime);
         }
-
-#if UNITY_EDITOR
-        private void OnValidate()
-        {
-            if (linkedGimmick != null)
-            {
-                _suspicionRadius = linkedGimmick.SuspicionRadius;
-            }
-        }
-#endif
 
         // 이벤트
         public event Action<SuspicionLevel> OnLevelChanged;
@@ -205,8 +191,8 @@ namespace HideAndInk.Core.Perception
                 OnDetected?.Invoke();
             }
 
-            // 의심도 하락 처리
-            if (_currentValue > 0f)
+            // 의심도 하락 처리 (autoDecayEnabled=false면 기믹이 전담)
+            if (_autoDecayEnabled && _currentValue > 0f)
             {
                 // 의태 중이면 빠른 하락
                 float decreaseSpeed = _isCamouflaging ? camouflageDecreaseSpeed : normalDecreaseSpeed;
@@ -296,6 +282,16 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 발각 상태 리셋 (Patrol 복귀 시 재발각 가능하도록)
+        /// 의심도 값은 유지됨
+        /// </summary>
+        public void ResetDetected()
+        {
+            _wasDetected = false;
+            _lastDetectedTime = 0f;
+        }
+
+        /// <summary>
         /// 의심도 리셋 (챕터 전환 등)
         /// </summary>
         public void ResetSuspicion()
@@ -343,6 +339,24 @@ namespace HideAndInk.Core.Perception
         public void SetSuspicionDecayMultiplier(float multiplier)
         {
             _suspicionDecayMultiplier = Mathf.Max(0.1f, multiplier);
+        }
+
+        /// <summary>
+        /// 의심도 자체 하락 활성/비활성화 (RelentlessChaseGimmick에서 호출)
+        /// false: 기믹이 OnIncreaseSuspicion으로 의심도 전담 제어
+        /// </summary>
+        public void SetAutoDecayEnabled(bool enabled)
+        {
+            _autoDecayEnabled = enabled;
+        }
+
+        /// <summary>
+        /// 의심도 강제 설정 (RelentlessChaseGimmick 강제 Chase 전환/종료 시)
+        /// </summary>
+        public void ForceSetSuspicion(float value)
+        {
+            _currentValue = Mathf.Clamp(value, 0f, 100f);
+            CheckLevelChange();
         }
 
         /// <summary>
@@ -535,27 +549,7 @@ namespace HideAndInk.Core.Perception
         /// 의심도 상승 범위 Gizmos 표시 (단일 타원형)
         /// - 타원형 영역: 주황색 와이어프레임 (SuspicionRadius 기준)
         /// </summary>
-        private void OnDrawGizmosSelected()
-        {
-            Vector2 radius = _suspicionRadius;
-
-#if UNITY_EDITOR
-            if (linkedGimmick != null)
-            {
-                radius = linkedGimmick.SuspicionRadius;
-            }
-#endif
-
-            // 타원형 영역 - 주황색
-            Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
-            Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(radius.x, 0.05f, radius.y));
-            Gizmos.DrawWireSphere(Vector3.zero, 1f);
-
-            // 중심점 표시
-            Gizmos.color = Color.red;
-            Gizmos.matrix = Matrix4x4.identity;
-            Gizmos.DrawSphere(transform.position, 0.15f);
-        }
+        // Gizmos는 BossEnemyController.OnDrawGizmosSelected에서 관리
 
         private void OnDestroy()
         {
