@@ -55,9 +55,8 @@ namespace HideAndInk.Core.Perception
         private float _lastDetectedTime;
         private bool _wasDetected;  // cooldown 상태 추적 (Service의 _wasDetected와 별개)
 
-        // 경보 공유
-        private List<EnemyPerception> _registeredEnemies = new();
-        private Dictionary<GameObject, float> _lastBroadcastTime = new();
+        // === EnemyAlertCoordinator — 적 관리·경보 공유 순수 C# 서비스 ===
+        private EnemyAlertCoordinator _alertCoordinator;
 
         // ===== Events =====
 
@@ -91,9 +90,9 @@ namespace HideAndInk.Core.Perception
         public bool IsPerfectCamouflage => _meterService?.IsPerfectCamouflage ?? false;
         public bool IsInDetectedCooldown => _wasDetected && (Time.time - _lastDetectedTime < detectedStateDuration);
 
-        // 인스펙터 설정 직접 노출
-        public float AlertBroadcastRadius => alertBroadcastRadius;
-        public float SharedSuspicionAmount => sharedSuspicionAmount;
+        // 인스펙터 설정 직접 노출 (Coordinator 위임)
+        public float AlertBroadcastRadius => _alertCoordinator?.AlertBroadcastRadius ?? alertBroadcastRadius;
+        public float SharedSuspicionAmount => _alertCoordinator?.SharedSuspicionAmount ?? sharedSuspicionAmount;
 
         // ===== MonoBehaviour Lifecycle =====
 
@@ -121,6 +120,17 @@ namespace HideAndInk.Core.Perception
             _meterService.OnLevelChanged += _onLevelChangedHandler;
             _meterService.OnDetected += _onDetectedHandler;
             _meterService.OnClear += _onClearHandler;
+
+            // EnemyAlertCoordinator 생성 (인스펙터 값을 그대로 전달)
+            _alertCoordinator = new EnemyAlertCoordinator(
+                alertBroadcastRadius,
+                sharedSuspicionAmount,
+                sharedSuspicionCooldown
+            );
+
+            // Coordinator 이벤트 포워딩
+            _alertCoordinator.OnAlertBroadcast += (source, pos, intensity) =>
+                OnAlertBroadcast?.Invoke(source, pos, intensity);
 
             // DI 컨테이너에 ISuspicionMeter로 등록 (외부 소비자용)
             if (GameManager.Container != null)
@@ -265,17 +275,14 @@ namespace HideAndInk.Core.Perception
             _lastDetectedTime = 0f;
         }
 
-        #region 경보 공유
+        #region 경보 공유 (Coordinator 위임)
 
         /// <summary>
         /// EnemyPerception 등록
         /// </summary>
         public void RegisterEnemy(EnemyPerception enemy)
         {
-            if (!_registeredEnemies.Contains(enemy))
-            {
-                _registeredEnemies.Add(enemy);
-            }
+            _alertCoordinator?.RegisterEnemy(enemy);
         }
 
         /// <summary>
@@ -283,7 +290,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void UnregisterEnemy(EnemyPerception enemy)
         {
-            _registeredEnemies.Remove(enemy);
+            _alertCoordinator?.UnregisterEnemy(enemy);
         }
 
         /// <summary>
@@ -291,29 +298,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void BroadcastAlert(EnemyPerception sourceEnemy, Vector3 alertPosition, float alertIntensity)
         {
-            if (sourceEnemy == null) return;
-
-            float currentTime = Time.time;
-            if (_lastBroadcastTime.TryGetValue(sourceEnemy.gameObject, out float lastTime))
-            {
-                if (currentTime - lastTime < sharedSuspicionCooldown) return;
-            }
-            _lastBroadcastTime[sourceEnemy.gameObject] = currentTime;
-
-            foreach (var enemy in _registeredEnemies)
-            {
-                if (enemy == null || enemy == sourceEnemy) continue;
-
-                float distance = Vector3.Distance(enemy.transform.position, sourceEnemy.transform.position);
-                if (distance <= alertBroadcastRadius)
-                {
-                    float distanceFactor = 1f - (distance / alertBroadcastRadius);
-                    float sharedIntensity = sharedSuspicionAmount * distanceFactor * alertIntensity;
-                    enemy.ReceiveSharedAlert(alertPosition, sharedIntensity);
-                }
-            }
-
-            OnAlertBroadcast?.Invoke(sourceEnemy, alertPosition, alertIntensity);
+            _alertCoordinator?.BroadcastAlert(sourceEnemy, alertPosition, alertIntensity);
         }
 
         #endregion
