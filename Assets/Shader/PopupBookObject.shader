@@ -26,8 +26,10 @@ Shader "HideAndInk/PopupBook_Caustics"
             "RenderType"="TransparentCutout" 
             "RenderPipeline"="UniversalPipeline" 
             "Queue"="AlphaTest"
+            "CanUseSpriteAtlas"="True"
+            "PreviewType"="Plane"
         }
-        
+
         // ============================================
         // PASS 1: Main Forward Rendering (포그 대응 가능)
         // ============================================
