@@ -2,14 +2,16 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using HideAndInk.Core.Utilities;
 
 namespace HideAndInk.Core.Perception
 {
     /// <summary>
-    /// 전역 의심도 관리 시스템
-    /// - Player 의심도 계산/관리
+    /// 전역 의심도 관리 시스템 (MonoBehaviour Shell)
+    /// - 의심도 계산: SuspicionMeterService에 위임
     /// - 적 간 경보 상태 공유
+    /// - Update() 타이머 기반 의심도 감소 처리
     /// - UI/게임 상태 연동 이벤트 제공
     /// </summary>
     public sealed class SuspicionManager : Singleton<SuspicionManager>
@@ -40,203 +42,247 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float sharedSuspicionAmount = 0.3f;
         [SerializeField] private float sharedSuspicionCooldown = 2f;
 
-        // 의심도 상태
-        private float _currentValue;
-        private SuspicionLevel _currentLevel;
-        private bool _isCamouflaging;
-        private bool _isPerfectCamouflage;
+        // === SuspicionMeterService — 의심도 계산 순수 C# 서비스 ===
+        private SuspicionMeterService _meterService;
+
+        // 이벤트 핸들러 참조 (구독 해제용)
+        private Action<SuspicionLevel> _onLevelChangedHandler;
+        private Action _onDetectedHandler;
+        private Action _onClearHandler;
+
+        // 발각 cooldown 타이머 상태 (MonoBehaviour 전용)
         private float _lastDetectionTime;
         private float _lastDetectedTime;
-        private bool _wasDetected;
+        private bool _wasDetected;  // cooldown 상태 추적 (Service의 _wasDetected와 별개)
 
-        // 경보 공유
-        private List<EnemyPerception> _registeredEnemies = new();
-        private Dictionary<GameObject, float> _lastBroadcastTime = new();
+        // === EnemyAlertCoordinator — 적 관리·경보 공유 순수 C# 서비스 ===
+        private EnemyAlertCoordinator _alertCoordinator;
 
-        // 이벤트
+        // ===== Events =====
+
+        /// <summary>
+        /// Service의 OnLevelChanged를 외부로 전달
+        /// </summary>
         public event Action<SuspicionLevel> OnLevelChanged;
+
+        /// <summary>
+        /// Service의 OnDetected를 외부로 전달 (+ cooldown 타이머 기록)
+        /// </summary>
         public event Action OnDetected;
+
+        /// <summary>
+        /// Service의 OnClear를 외부로 전달
+        /// </summary>
         public event Action OnClear;
+
+        /// <summary>
+        /// 의심도 값 변경 시 발생 (MonoBehaviour Update 타이머 기반)
+        /// </summary>
         public event Action<float> OnSuspicionValueChanged;
+
         public event Action<EnemyPerception, Vector3, float> OnAlertBroadcast;
 
-        // 프로퍼티
-        public float CurrentValue => Mathf.Clamp(_currentValue, 0f, 100f);
-        public SuspicionLevel CurrentLevel => _currentLevel;
-        public bool IsCamouflaging => _isCamouflaging;
-        public bool IsPerfectCamouflage => _isPerfectCamouflage;
+        // ===== Properties (Service 위임) =====
+
+        public float CurrentValue => _meterService?.CurrentValue ?? 0f;
+        public SuspicionLevel CurrentLevel => _meterService?.CurrentLevel ?? SuspicionLevel.Safe;
+        public bool IsCamouflaging => _meterService?.IsCamouflaging ?? false;
+        public bool IsPerfectCamouflage => _meterService?.IsPerfectCamouflage ?? false;
         public bool IsInDetectedCooldown => _wasDetected && (Time.time - _lastDetectedTime < detectedStateDuration);
-        public float AlertBroadcastRadius => alertBroadcastRadius;
-        public float SharedSuspicionAmount => sharedSuspicionAmount;
+
+        // 인스펙터 설정 직접 노출 (Coordinator 위임)
+        public float AlertBroadcastRadius => _alertCoordinator?.AlertBroadcastRadius ?? alertBroadcastRadius;
+        public float SharedSuspicionAmount => _alertCoordinator?.SharedSuspicionAmount ?? sharedSuspicionAmount;
+
+        // ===== MonoBehaviour Lifecycle =====
 
         protected override void Awake()
         {
             base.Awake();
+
+            // SuspicionMeterService 생성 (인스펙터 값을 그대로 전달)
+            _meterService = new SuspicionMeterService(
+                cautionThreshold,
+                dangerThreshold,
+                criticalThreshold,
+                detectedThreshold,
+                camouflageReduceMultiplier,
+                perfectCamouflageReducePerSec,
+                increaseSpeed,
+                decreaseSpeed
+            );
+
+            // Service 이벤트 → SuspicionManager 이벤트로 포워딩 (명시적 핸들러 저장)
+            _onLevelChangedHandler = level => OnLevelChanged?.Invoke(level);
+            _onDetectedHandler = () => HandleServiceDetected();
+            _onClearHandler = () => OnClear?.Invoke();
+
+            _meterService.OnLevelChanged += _onLevelChangedHandler;
+            _meterService.OnDetected += _onDetectedHandler;
+            _meterService.OnClear += _onClearHandler;
+
+            // EnemyAlertCoordinator 생성 (인스펙터 값을 그대로 전달)
+            _alertCoordinator = new EnemyAlertCoordinator(
+                alertBroadcastRadius,
+                sharedSuspicionAmount,
+                sharedSuspicionCooldown
+            );
+
+            // Coordinator 이벤트 포워딩
+            _alertCoordinator.OnAlertBroadcast += (source, pos, intensity) =>
+                OnAlertBroadcast?.Invoke(source, pos, intensity);
+
+            // DI 컨테이너에 ISuspicionMeter로 등록 (외부 소비자용)
+            if (GameManager.Container != null)
+            {
+                GameManager.Container.RegisterInstance<ISuspicionMeter>(_meterService);
+            }
+
             ResetSuspicion();
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+
+            if (_meterService != null)
+            {
+                if (_onLevelChangedHandler != null)
+                    _meterService.OnLevelChanged -= _onLevelChangedHandler;
+                if (_onDetectedHandler != null)
+                    _meterService.OnDetected -= _onDetectedHandler;
+                if (_onClearHandler != null)
+                    _meterService.OnClear -= _onClearHandler;
+            }
         }
 
         private void Update()
         {
+            if (_meterService == null) return;
+
             // Grace period 감소
             _lastDetectionTime -= Time.deltaTime;
 
             // 발각 후 추적 복귀 체크
             bool isInDetectedCooldown = _wasDetected && (Time.time - _lastDetectedTime < detectedStateDuration);
 
-            // 발각 상태에서 벗어남
-            if (_wasDetected && _currentValue < detectedThreshold)
+            // 발각 상태에서 벗어남 → Service의 Detected 플래그도 함께 클리어
+            if (_wasDetected && _meterService.CurrentValue < detectedThreshold)
             {
                 _wasDetected = false;
+                _meterService.ClearDetectedFlag();
             }
 
             // 의심도 하락 처리
-            if (isInDetectedCooldown && _currentValue > minSuspicionAfterDetected)
+            if (isInDetectedCooldown && _meterService.CurrentValue > minSuspicionAfterDetected)
             {
-                ReduceSuspicion(1f, Time.deltaTime);
-                _currentValue = Mathf.Max(_currentValue, minSuspicionAfterDetected);
+                _meterService.ReduceSuspicion(1f, Time.deltaTime);
+                _meterService.ApplyMinimumValue(minSuspicionAfterDetected);
             }
-            else if (_lastDetectionTime <= 0f && _currentValue > 0f)
+            else if (_lastDetectionTime <= 0f && _meterService.CurrentValue > 0f)
             {
-                ReduceSuspicion(1f, Time.deltaTime);
+                _meterService.ReduceSuspicion(1f, Time.deltaTime);
             }
 
-            OnSuspicionValueChanged?.Invoke(CurrentValue);
+            OnSuspicionValueChanged?.Invoke(_meterService.CurrentValue);
         }
 
-        #region 의심도 관리
+        /// <summary>
+        /// Service의 OnDetected 이벤트 핸들러
+        /// </summary>
+        private void HandleServiceDetected()
+        {
+            _lastDetectedTime = Time.time;
+            OnDetected?.Invoke();
+        }
+
+        // ===== 의심도 관리 (Service 위임) =====
 
         /// <summary>
         /// 감지 보고 받음 (EnemyPerception에서 호출)
         /// </summary>
         public void ReportDetection(float detectionIntensity = 1f)
         {
+            if (_meterService == null) return;
             _lastDetectionTime = detectionGracePeriod;
-            AddSuspicion(detectionIntensity, Time.deltaTime);
+            _meterService.AddSuspicion(detectionIntensity, Time.deltaTime);
         }
 
+        /// <summary>
+        /// 의심도 증가
+        /// </summary>
         public void AddSuspicion(float amount, float deltaTime)
         {
-            _currentValue += amount * increaseSpeed * deltaTime;
-            _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
-
-            CheckLevelChange();
-            CheckDetected();
+            _meterService?.AddSuspicion(amount, deltaTime);
         }
 
+        /// <summary>
+        /// 의심도 감소
+        /// </summary>
         public void ReduceSuspicion(float amount, float deltaTime)
         {
-            float decreaseAmount = amount * decreaseSpeed * deltaTime;
-
-            if (_isCamouflaging)
-            {
-                decreaseAmount *= (1f + camouflageReduceMultiplier);
-            }
-
-            if (_isPerfectCamouflage)
-            {
-                decreaseAmount += perfectCamouflageReducePerSec * deltaTime;
-            }
-
-            _currentValue -= decreaseAmount;
-            _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
-
-            CheckLevelChange();
-            CheckClear();
+            _meterService?.ReduceSuspicion(amount, deltaTime);
         }
 
+        /// <summary>
+        /// 의심도 리셋 (0, Safe)
+        /// </summary>
         public void ResetSuspicion()
         {
-            float previousValue = _currentValue;
-            _currentValue = 0f;
-            _currentLevel = SuspicionLevel.Safe;
+            _meterService?.Reset();
             _wasDetected = false;
             _lastDetectedTime = 0f;
-
-            if (previousValue > 0f)
-            {
-                OnClear?.Invoke();
-            }
         }
 
+        /// <summary>
+        /// 의심도 직접 설정 (private) — Service에 위임
+        /// </summary>
         private void SetSuspicion(float value)
         {
-            float prev = _currentValue;
-            _currentValue = Mathf.Clamp(value, 0f, 100f);
-            CheckLevelChange();
-            CheckDetected();
-            CheckClear();
-
-#if UNITY_EDITOR
-            if (Mathf.Abs(_currentValue - prev) > 1f)
-                Debug.LogWarning($"[SuspicionManager] SetSuspicion: {prev:F1} → {_currentValue:F1} (점프 발생)");
-#endif
+            _meterService?.SetSuspicion(value);
         }
 
-        public void SetIncreaseSpeed(float speed) => increaseSpeed = Mathf.Max(0f, speed);
-        public void SetDecreaseSpeed(float speed) => decreaseSpeed = Mathf.Max(0f, speed);
+        /// <summary>
+        /// 상승 속도 설정
+        /// </summary>
+        public void SetIncreaseSpeed(float speed)
+        {
+            _meterService?.SetIncreaseSpeed(speed);
+        }
 
+        /// <summary>
+        /// 하락 속도 설정
+        /// </summary>
+        public void SetDecreaseSpeed(float speed)
+        {
+            _meterService?.SetDecreaseSpeed(speed);
+        }
+
+        /// <summary>
+        /// 의태 상태 설정
+        /// </summary>
         public void SetCamouflageState(bool isCamouflaging, bool isPerfect = false)
         {
-            _isCamouflaging = isCamouflaging;
-            _isPerfectCamouflage = isPerfect;
+            _meterService?.SetCamouflageState(isCamouflaging, isPerfect);
         }
 
+        /// <summary>
+        /// 발각 cooldown 리셋
+        /// </summary>
         public void ResetDetectedCooldown()
         {
             _wasDetected = false;
             _lastDetectedTime = 0f;
         }
 
-        private SuspicionLevel CalculateLevel(float value)
-        {
-            if (value >= detectedThreshold) return SuspicionLevel.Detected;
-            if (value >= criticalThreshold) return SuspicionLevel.Critical;
-            if (value >= dangerThreshold) return SuspicionLevel.Danger;
-            if (value >= cautionThreshold) return SuspicionLevel.Caution;
-            return SuspicionLevel.Safe;
-        }
-
-        private void CheckLevelChange()
-        {
-            SuspicionLevel newLevel = CalculateLevel(_currentValue);
-            if (newLevel != _currentLevel)
-            {
-                _currentLevel = newLevel;
-                OnLevelChanged?.Invoke(_currentLevel);
-            }
-        }
-
-        private void CheckDetected()
-        {
-            if (_currentValue >= detectedThreshold && !_wasDetected)
-            {
-                _wasDetected = true;
-                _lastDetectedTime = Time.time;
-                OnDetected?.Invoke();
-            }
-        }
-
-        private void CheckClear()
-        {
-            if (_currentValue <= 0f)
-            {
-                OnClear?.Invoke();
-            }
-        }
-
-        #endregion
-
-        #region 경보 공유
+        #region 경보 공유 (Coordinator 위임)
 
         /// <summary>
         /// EnemyPerception 등록
         /// </summary>
         public void RegisterEnemy(EnemyPerception enemy)
         {
-            if (!_registeredEnemies.Contains(enemy))
-            {
-                _registeredEnemies.Add(enemy);
-            }
+            _alertCoordinator?.RegisterEnemy(enemy);
         }
 
         /// <summary>
@@ -244,7 +290,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void UnregisterEnemy(EnemyPerception enemy)
         {
-            _registeredEnemies.Remove(enemy);
+            _alertCoordinator?.UnregisterEnemy(enemy);
         }
 
         /// <summary>
@@ -252,29 +298,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         public void BroadcastAlert(EnemyPerception sourceEnemy, Vector3 alertPosition, float alertIntensity)
         {
-            if (sourceEnemy == null) return;
-
-            float currentTime = Time.time;
-            if (_lastBroadcastTime.TryGetValue(sourceEnemy.gameObject, out float lastTime))
-            {
-                if (currentTime - lastTime < sharedSuspicionCooldown) return;
-            }
-            _lastBroadcastTime[sourceEnemy.gameObject] = currentTime;
-
-            foreach (var enemy in _registeredEnemies)
-            {
-                if (enemy == null || enemy == sourceEnemy) continue;
-
-                float distance = Vector3.Distance(enemy.transform.position, sourceEnemy.transform.position);
-                if (distance <= alertBroadcastRadius)
-                {
-                    float distanceFactor = 1f - (distance / alertBroadcastRadius);
-                    float sharedIntensity = sharedSuspicionAmount * distanceFactor * alertIntensity;
-                    enemy.ReceiveSharedAlert(alertPosition, sharedIntensity);
-                }
-            }
-
-            OnAlertBroadcast?.Invoke(sourceEnemy, alertPosition, alertIntensity);
+            _alertCoordinator?.BroadcastAlert(sourceEnemy, alertPosition, alertIntensity);
         }
 
         #endregion

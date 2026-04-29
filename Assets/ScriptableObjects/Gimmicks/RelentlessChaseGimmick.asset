@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 157a616db6cecc048b02155aab6c4056, type: 3}
   m_Name: RelentlessChaseGimmick
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.RelentlessChaseGimmick
-  suspicionDecayMultiplier: 0.3
-  patrolCenter: {x: 0, y: 0, z: 0}
-  patrolRadius: 5
-  searchRadiusMultiplier: 1.5
-  originalSpeed: 2
+  suspicionAutoRate: 8
+  suspicionMoveBonus: 12
+  moveThreshold: 1
+  postChaseSuspicion: 0
+  patrolStalkRadius: 5
+  maxChargesPerCycle: 5

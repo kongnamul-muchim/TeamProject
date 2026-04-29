@@ -61,8 +61,7 @@ namespace HideAndInk.Core.Enemy.Normal
 
         protected override void InitializeMovement()
         {
-            _movement = new EnemyMovement(
-                enemy: this,
+            var config = new EnemyMovementConfig(
                 speed: patrolSpeed,
                 acceleration: 5f,
                 friction: 0.8f,
@@ -70,6 +69,8 @@ namespace HideAndInk.Core.Enemy.Normal
                 groundLayer: groundLayer,
                 groundCheckDistance: groundCheckDistance,
                 groundCheckRadius: groundCheckRadius);
+
+            _movement = new EnemyMovement(this, config);
         }
 
         protected override void Start()

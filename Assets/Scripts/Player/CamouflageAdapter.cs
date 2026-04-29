@@ -84,23 +84,28 @@ namespace HideAndInk.Player
                 _playerRenderer = GetComponentInChildren<Renderer>();
             }
 
+            // Detector: Config 생성 + DI 등록 후 Resolve
+            var detectorConfig = new CamouflageDetectorConfig(detectionRadius, camouflageLayer);
             if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageDetector>())
             {
+                GameManager.Container.RegisterInstance<ICamouflageDetectorConfig>(detectorConfig);
                 _detector = GameManager.Container.Resolve<ICamouflageDetector>();
             }
             else
             {
-                _detector = new CamouflageDetector(detectionRadius);
-                _detector.SetLayerMask(camouflageLayer);
+                _detector = new CamouflageDetector(detectorConfig);
             }
 
+            // StateMachine: Config 생성 + DI 등록 후 Resolve
+            var stateConfig = new CamouflageStateMachineConfig(attachDelay, lockTime, blendTime, perfectTime);
             if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageStateMachine>())
             {
+                GameManager.Container.RegisterInstance<ICamouflageStateMachineConfig>(stateConfig);
                 _stateMachine = GameManager.Container.Resolve<ICamouflageStateMachine>();
             }
             else
             {
-                _stateMachine = new CamouflageStateMachine(attachDelay, lockTime, blendTime, perfectTime);
+                _stateMachine = new CamouflageStateMachine(stateConfig);
             }
 
             if (_playerRenderer != null)
@@ -114,6 +119,12 @@ namespace HideAndInk.Player
                     ? visual.GetComponentInChildren<SpriteRenderer>()
                     : GetComponentInChildren<SpriteRenderer>();
                 spriteDirector.SetSpriteRenderer(sr);
+            }
+
+            // DI: ICamouflageStateProvider self-register (EnemyAIController 등에서 resolve)
+            if (GameManager.Container != null)
+            {
+                GameManager.Container.RegisterInstance<ICamouflageStateProvider>(this);
             }
         }
 
@@ -697,6 +708,34 @@ namespace HideAndInk.Player
         /// 완벽 의태 여부 - ICamouflageStateProvider 구현
         /// </summary>
         public bool IsPerfect => _stateMachine.CurrentState == CamouflageState.Perfect;
+
+        /// <summary>
+        /// 현재 의태 중인 타겟 오브젝트 (없으면 null)
+        /// </summary>
+        public GameObject CurrentTarget => _stateMachine?.TargetObject;
+
+        /// <summary>
+        /// 강제 의태 해제 (백상아리 오브젝트 파괴 등)
+        /// 지정된 targetObject와 현재 의태 대상이 같을 때만 해제
+        /// </summary>
+        /// <returns>실제로 의태가 해제되었으면 true</returns>
+        public bool ForceCancelCamouflage(GameObject targetObject)
+        {
+            if (_stateMachine == null) return false;
+            if (_stateMachine.CurrentState == CamouflageState.None) return false;
+            if (_stateMachine.TargetObject != targetObject) return false;
+
+            _hasInvokedEndEvent = true;
+            CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+
+            _stateMachine.CancelCamouflage(true);
+            _isRestoringRate = true;
+            _rateRestoreProgress = 0f;
+            StartRestoreOutline();
+            _justTransitionedFromPerfect = false;
+            _transitionTimer = 0f;
+            return true;
+        }
 
         /// <summary>
         /// 의태 가능한 오브젝트 탐지 (디버그/UI용)

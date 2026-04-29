@@ -1,180 +1,169 @@
 using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
-using HideAndInk.Core.Enemy.Boss.Gimmicks;
 
 namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 {
     /// <summary>
-    /// Ch.2 곰치: 집요한 추격 기믹
-    /// - 의심도 하락률 감소 (집요함 표현)
-    /// - 수색 반경 확대
-    /// - 집중 순찰 영역 (중심점 + 반경)
+    /// Zone 3 곰치 (Moray Eel) — 오케스트레이터
+    /// 
+    /// Patrol: 맵 배회 + 의심도 자동 상승
+    /// Chase:  돌진 시퀀스
+    /// 실제 돌진 로직은 MorayChargeDirector가 처리.
     /// </summary>
-    [CreateAssetMenu(fileName = "RelentlessChaseGimmick", menuName = "HideAndInk/Enemy/Gimmicks/RelentlessChase")]
-    public class RelentlessChaseGimmick : ScriptableObject, IEnemyGimmick,
+    [CreateAssetMenu(menuName = "Enemy Gimmicks/Relentless Chase Gimmick", fileName = "RelentlessChaseGimmick")]
+    public sealed class RelentlessChaseGimmick : ScriptableObject, IEnemyGimmick,
         IGimmickPlayerAware, IGimmickViewDirection, IGimmickCombatCycle, IGimmickTransitionOverride
     {
         public GimmickType Type => GimmickType.RelentlessChase;
 
-        [Header("의심도 설정")]
-        [Tooltip("Chase 중 의심도 하락 배율 (1=기본, 0.3=30% 속도로 하락)")]
-        [SerializeField] [Range(0f, 1f)] private float suspicionDecayMultiplier = 0.3f;
+        [Header("의심도")]
+        [SerializeField] private float suspicionAutoRate = 8f;      // 초당 자동 증가
+        [SerializeField] private float suspicionMoveBonus = 12f;    // Player 이동 시 추가 증가
+        [SerializeField] private float moveThreshold = 1f;          // 이동 감지 임계 속도
+        [SerializeField] private float postChaseSuspicion = 0f;     // 돌진 후 리셋값
 
-        [Header("순찰 설정")]
-        [Tooltip("집중 순찰 중심점 (로컬 좌표)")]
-        [SerializeField] private Vector3 patrolCenter = Vector3.zero;
+        [Header("Patrol 서성임")]
+        [SerializeField, Tooltip("Player 주변 서성임 반경")]
+        private float patrolStalkRadius = 8f;
 
-        [Tooltip("집중 순찰 반경 (m)")]
-        [SerializeField] private float patrolRadius = 5f;
+        [Header("돌진")]
+        [SerializeField] private int maxChargesPerCycle = 5;
+        public int MaxChargesPerCycle => maxChargesPerCycle;
 
-        [Header("수색 설정")]
-        [Tooltip("수색 반경 배율 (1=기본, 2=2배)")]
-        [SerializeField] [Range(1f, 3f)] private float searchRadiusMultiplier = 1.5f;
+        // ─── 콜백 (Controller 연결) ───
+        public System.Action<int> OnDirectorBeginPrepare; // chargeCount → Director.BeginPrepare
+        public System.Action OnDirectorReset;              // Chase 종료 → Director.ResetCharges
+        public System.Action<float, float> OnIncreaseSuspicion;
 
-        [Header("속도 설정")]
-        [Tooltip("기본 순찰 속도")]
-        [SerializeField] private float originalSpeed = 2f;
+        // ─── 인터페이스 구현용 ───
+        private Transform _playerTransform;
+        private bool _isInChase;
+        private bool _hasGroundBounds;
+        private GroundBounds _groundBounds;
 
-        // 콜백 (BossEnemyController에서 설정)
-        public System.Action<float> OnSuspicionDecayRateOverride;
-        public System.Action<float> OnSearchRadiusOverride;
-        public System.Action<Vector3, float> OnPatrolAreaOverride;
+        // Patrol stalk target
+        private Vector3 _stalkTarget;
+        private float _lastStalkPickTime;
 
-        // 내부 상태
-        private Transform _bossTransform;
-        private bool _isActivated;
+        // Patrol 중 의심도가 100%가 되는 시점이 Chase 진입 시점
+        // Controller의 suspicionSystem.OnDetected가 Chase 전환 처리
 
-        public bool HasMovementOverride => true;
+        public float PostChaseSuspicion => postChaseSuspicion;
+        public float SuspicionAutoRate => suspicionAutoRate;
+        public float SuspicionMoveBonus => suspicionMoveBonus;
+        public float MoveThreshold => moveThreshold;
 
         public void OnActivate(Transform bossTransform)
         {
-            _bossTransform = bossTransform;
-            _isActivated = true;
-
-#if UNITY_EDITOR
-            Debug.Log($"[RelentlessChaseGimmick] Activated on {bossTransform.name}");
-#endif
+            _isInChase = false;
+            _hasGroundBounds = false;
         }
 
         public void OnDeactivate()
         {
-            _isActivated = false;
-            _bossTransform = null;
+            _isInChase = false;
         }
 
+        // ─── Patrol: 배회 + 의심도 자동 상승 ───
         public void OnPatrolEnter()
         {
-            // 집중 순찰 영역 설정
-            if (_bossTransform != null)
-            {
-                Vector3 worldCenter = _bossTransform.position + patrolCenter;
-                OnPatrolAreaOverride?.Invoke(worldCenter, patrolRadius);
-            }
+            _isInChase = false;
         }
 
         public void OnPatrolUpdate(float deltaTime)
         {
-            // 집요한 순찰: 좁은 영역에서 반복 순회
+            if (_playerTransform == null || !_hasGroundBounds) return;
+
+            // 항상 자동 증가
+            OnIncreaseSuspicion?.Invoke(suspicionAutoRate, deltaTime);
+
+            // Zone 내면 추가 증가
+            if (IsPlayerInZone())
+                OnIncreaseSuspicion?.Invoke(suspicionAutoRate * 0.5f, deltaTime);
+
+            // Player 이동 시 추가 증가
+            var movement = _playerTransform.GetComponent<HideAndInk.Player.PlayerMovementAdapter>();
+            if (movement != null && movement.CurrentVelocity.sqrMagnitude >= moveThreshold * moveThreshold)
+                OnIncreaseSuspicion?.Invoke(suspicionMoveBonus, deltaTime);
         }
 
-        public void OnPatrolExit()
-        {
-        }
+        public void OnPatrolExit() { }
 
+        // ─── Chase: 돌진 시퀀스 ───
         public void OnChaseEnter()
         {
-            // 의심도 하락률 감소
-            OnSuspicionDecayRateOverride?.Invoke(suspicionDecayMultiplier);
+            _isInChase = true;
 
-#if UNITY_EDITOR
-            Debug.Log($"[RelentlessChaseGimmick] Chase started. Suspicion decay multiplier: {suspicionDecayMultiplier}");
-#endif
+            // Director에게 돌진 준비 요청
+            // 실제 chargeCount는 Controller의 OnDirectorBeginPrepare 콜백이 결정
+            int chargeCount = 0; // Controller가 재정의
+            OnDirectorBeginPrepare?.Invoke(chargeCount);
         }
 
         public void OnChaseUpdate(float deltaTime)
         {
-            // 집요한 추적: Player와 거리 유지하며 따라감
+            // Chase 중 director가 모든 로직 처리
         }
 
         public void OnChaseExit()
         {
-            // 의심도 하락률 복원은 BossEnemyController에서 처리
+            _isInChase = false;
+            OnDirectorReset?.Invoke();
         }
 
-        public void OnSearchEnter()
-        {
-            // 수색 반경 확대
-            OnSearchRadiusOverride?.Invoke(searchRadiusMultiplier);
+        public void OnSearchEnter() { }
+        public void OnSearchUpdate(float deltaTime) { }
+        public void OnSearchExit() { }
 
-#if UNITY_EDITOR
-            Debug.Log($"[RelentlessChaseGimmick] Search started. Search radius multiplier: {searchRadiusMultiplier}");
-#endif
-        }
+        // 항상 true: GetPatrolTarget으로 PatrolBehavior 제어
+        public bool HasMovementOverride => true;
 
-        public void OnSearchUpdate(float deltaTime)
-        {
-            // 집요한 수색: 넓은 반경으로 탐색
-        }
-
-        public void OnSearchExit()
-        {
-        }
-
-        /// <summary>
-        /// Patrol 상태 이동 목표 계산 (집중 순찰 영역 내)
-        /// </summary>
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
         {
-            if (_bossTransform == null) return null;
+            if (!_hasGroundBounds)
+            {
+                _groundBounds = bounds;
+                _hasGroundBounds = true;
+            }
+            if (_playerTransform == null) return null;
 
-            // 집중 순찰 중심점 (월드 좌표)
-            Vector3 center = _bossTransform.position + patrolCenter;
-
-            // 중심점 기준 랜덤 방향 + 반경 내 거리
-            Vector2 randomDir = Random.insideUnitCircle.normalized;
-            float distance = Random.Range(patrolRadius * 0.3f, patrolRadius);
-
-            Vector3 target = new Vector3(
-                center.x + randomDir.x * distance,
-                currentPos.y,
-                center.z + randomDir.y * distance
-            );
-
-            // Ground 범위 내로 제한
-            return bounds.ClampXZ(target);
+            // Player 근처 랜덤 위치로 서성임 (일정 시간마다 새 목표)
+            if (Time.time - _lastStalkPickTime > Random.Range(2f, 5f))
+            {
+                Vector2 offset = Random.insideUnitCircle * patrolStalkRadius;
+                _stalkTarget = _playerTransform.position + new Vector3(offset.x, 0f, offset.y);
+                _stalkTarget.y = currentPos.y;
+                if (_hasGroundBounds)
+                {
+                    _stalkTarget.x = Mathf.Clamp(_stalkTarget.x, _groundBounds.MinX, _groundBounds.MaxX);
+                    _stalkTarget.z = Mathf.Clamp(_stalkTarget.z, _groundBounds.MinZ, _groundBounds.MaxZ);
+                }
+                _lastStalkPickTime = Time.time;
+            }
+            return _stalkTarget;
         }
 
-        /// <summary>
-        /// Search 상태 이동 목표 계산 (수색 반경 확대 적용)
-        /// </summary>
         public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
         {
-            // 마지막 발견 위치 기준 확대된 반경 내 랜덤 탐색
-            float searchRadius = 3f * searchRadiusMultiplier;
-
-            Vector2 randomDir = Random.insideUnitCircle.normalized;
-            float distance = Random.Range(0f, searchRadius);
-
-            Vector3 target = new Vector3(
-                lastKnownPos.x + randomDir.x * distance,
-                currentPos.y,
-                lastKnownPos.z + randomDir.y * distance
-            );
-
-            return bounds.ClampXZ(target);
+            return null; // Search 없음
         }
 
-        /// <summary>
-        /// 기본 속도 설정 (BossEnemyController에서 호출)
-        /// </summary>
-        public void SetOriginalSpeed(float speed)
+        public void SetGroundBounds(GroundBounds bounds)
         {
-            originalSpeed = speed;
+            _groundBounds = bounds;
+            _hasGroundBounds = true;
         }
 
-        #region Interface Implementations
+        private bool IsPlayerInZone()
+        {
+            if (_playerTransform == null || !_hasGroundBounds) return false;
+            Vector3 p = _playerTransform.position;
+            return p.x >= _groundBounds.MinX && p.x <= _groundBounds.MaxX
+                && p.z >= _groundBounds.MinZ && p.z <= _groundBounds.MaxZ;
+        }
 
-        void IGimmickPlayerAware.SetPlayerTransform(Transform playerTransform) { }
+        // ─── 인터페이스 구현 ───
+        void IGimmickPlayerAware.SetPlayerTransform(Transform playerTransform) { _playerTransform = playerTransform; }
         void IGimmickPlayerAware.SetSuspicionLevel(float normalizedSuspicion) { }
         void IGimmickPlayerAware.SetCamouflageState(bool isCamouflaging) { }
         void IGimmickPlayerAware.SetPlayerVisible(bool isVisible) { }
@@ -183,11 +172,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         Vector3 IGimmickViewDirection.GetViewDirectionVector() => Vector3.right;
         bool IGimmickViewDirection.ShowChargeIndicator => false;
 
-        bool IGimmickCombatCycle.IsInCombatCycle => false;
-        bool IGimmickCombatCycle.IsCharging => false;
+        bool IGimmickCombatCycle.IsInCombatCycle => _isInChase;
+        bool IGimmickCombatCycle.IsCharging => _isInChase;
 
-        bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion) => false;
-
-        #endregion
+        bool IGimmickTransitionOverride.ShouldSkipSearchOnLostPlayer(float normalizedSuspicion) => true;
     }
 }

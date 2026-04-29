@@ -41,18 +41,18 @@ namespace HideAndInk.Player
             _rigidbody.freezeRotation = true;
             _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
+            // Config 객체 생성 (인스펙터 값 보존)
+            var config = new PlayerMovementConfig(horizontalSpeed, verticalSpeed, acceleration, friction);
+
             // DI 컨테이너에서 해결하거나 직접 생성
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IPlayerMovement>())
             {
+                GameManager.Container.RegisterInstance<IPlayerMovementConfig>(config);
                 _playerMovement = GameManager.Container.Resolve<IPlayerMovement>();
             }
             else
             {
-                _playerMovement = new PlayerMovement(
-                    horizontalSpeed,
-                    verticalSpeed,
-                    acceleration,
-                    friction);
+                _playerMovement = new PlayerMovement(config);
             }
         }
 
