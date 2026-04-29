@@ -1,5 +1,6 @@
 using System;
 using HideAndInk.Core.Interfaces;
+using UnityEngine;
 
 namespace HideAndInk.Core.Perception
 {
