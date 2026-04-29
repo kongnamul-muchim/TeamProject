@@ -121,12 +121,11 @@ namespace HideAndInk.Core.Enemy
         }
 
         /// <summary>
-        /// 이동 시스템 초기화
+        /// 이동 시스템 초기화 (Config Object Pattern)
         /// </summary>
         protected virtual void InitializeMovement()
         {
-            _movement = new EnemyMovement(
-                enemy: this,
+            var config = new EnemyMovementConfig(
                 speed: moveSpeed,
                 acceleration: acceleration,
                 friction: friction,
@@ -134,6 +133,8 @@ namespace HideAndInk.Core.Enemy
                 groundLayer: groundLayer,
                 groundCheckDistance: groundCheckDistance,
                 groundCheckRadius: groundCheckRadius);
+
+            _movement = new EnemyMovement(this, config);
         }
 
         /// <summary>
