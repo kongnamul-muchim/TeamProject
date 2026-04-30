@@ -37,15 +37,25 @@ namespace HideAndInk.Siyeon1
         private void Start()
         {
             ResolveDependencies();
+            ResolvePlayerTransform();
 
             if (duduTransform == null)
             {
-                Debug.LogWarning("[ChichiStateMachine] duduTransform이 할당되지 않음! 치치가 두두를 따라가지 못함.", this);
+                Debug.LogWarning("[ChichiStateMachine] duduTransform을 찾을 수 없음! PlayerInk가 씬에 있는지 확인.", this);
             }
 
             if (chargeController == null)
             {
                 Debug.LogWarning("[ChichiStateMachine] chargeController가 할당되지 않음! X키 충전이 동작하지 않음.", this);
+            }
+        }
+
+        private void ResolvePlayerTransform()
+        {
+            // PlayerInk.Instance 싱글톤으로 Player Transform 확보 (크로스-프리팹 참조 문제 회피)
+            if (PlayerInk.Instance != null)
+            {
+                duduTransform = PlayerInk.Instance.transform;
             }
         }
 

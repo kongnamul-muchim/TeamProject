@@ -43,6 +43,23 @@ namespace HideAndInk.Siyeon1
 
             initialY = transform.position.y;
             initialZ = transform.position.z;
+
+            ResolvePlayerTransform();
+        }
+
+        private void ResolvePlayerTransform()
+        {
+            // PlayerInk.Instance 싱글톤으로 Player Transform 확보
+            // (크로스-프리팹 참조가 깨져서 위치가 업데이트되지 않는 문제 회피)
+            if (PlayerInk.Instance != null)
+            {
+                duduTransform = PlayerInk.Instance.transform;
+            }
+
+            if (duduTransform == null)
+            {
+                Debug.LogError("[ChichiMovementController] duduTransform을 찾을 수 없음! PlayerInk가 씬에 있는지 확인.", this);
+            }
         }
 
         private void Update()
