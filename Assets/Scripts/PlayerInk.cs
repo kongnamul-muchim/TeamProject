@@ -74,7 +74,7 @@ public class PlayerInk : MonoBehaviour
 
     public bool CanReceiveContactCharge()
     {
-        return NeedsInk() && !isUnderThreat && !_isDashing && !isUsingBossMimic;
+        return !isUnderThreat && !_isDashing && !isUsingBossMimic;
     }
 
     public void AddInk(float amount)

@@ -735,6 +735,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     // 애니메이션: Patrol
                     if (_animator != null) _animator.SetBool("IsChase", false);
+                    PlayerInk.Instance?.SetThreat(false);
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
@@ -758,6 +759,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     // 애니메이션: Chase
                     if (_animator != null) _animator.SetBool("IsChase", true);
+                    PlayerInk.Instance?.SetThreat(true);
                     break;
                 case EnemyAIState.Search:
                     _movement.Speed = searchSpeed;
@@ -766,6 +768,7 @@ namespace HideAndInk.Core.Enemy.Boss
                         suspicionSystem.SetVisionIncreaseSpeed(15f);
                         suspicionSystem.SetSuspicionDecayMultiplier(1f);
                     }
+                    PlayerInk.Instance?.SetThreat(false);
                     break;
             }
 
