@@ -365,13 +365,14 @@ public class ZoneChanger : MonoBehaviour
     }
 
     /// <summary>
-    /// "Zone_{number}_*" 패턴의 오브젝트를 씬에서 찾습니다.
+    /// "Zone_{number}_*" 패턴과 "Ground_{number:D2}" 오브젝트를 씬에서 찾습니다.
     /// Resources.FindObjectsOfTypeAll + 씬 루트 재귀 탐색 모두 사용하여
     /// 비활성 오브젝트도 확실히 찾습니다.
     /// </summary>
     static GameObject[] FindZoneObjects(int zoneNumber)
     {
         string prefix = $"Zone_{zoneNumber}_";
+        string groundName = $"Ground_{zoneNumber:D2}";
         List<GameObject> found = new List<GameObject>();
         HashSet<int> added = new HashSet<int>();
 
@@ -403,14 +404,29 @@ public class ZoneChanger : MonoBehaviour
             }
         }
 
+        // 방법 3: Ground_{zoneNumber:D2} 탐색 (Zone 외 Ground 오브젝트 포함)
+        foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+        {
+            if (go == null) continue;
+            if (go.hideFlags != HideFlags.None) continue;
+            if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+            if (added.Contains(go.GetInstanceID())) continue;
+
+            if (go.name.Trim() == groundName)
+            {
+                found.Add(go);
+                added.Add(go.GetInstanceID());
+            }
+        }
+
         if (found.Count == 0)
         {
-            Debug.LogWarning($"[ZoneChanger] Zone_{zoneNumber}_* 오브젝트를 찾을 수 없습니다!");
+            Debug.LogWarning($"[ZoneChanger] Zone_{zoneNumber}_* / {groundName} 오브젝트를 찾을 수 없습니다!");
         }
         else
         {
             string names = string.Join(", ", found.ConvertAll(g => g.name.Trim()));
-            Debug.Log($"[ZoneChanger] Zone_{zoneNumber}_* 발견: {found.Count}개 ({names})");
+            Debug.Log($"[ZoneChanger] Zone_{zoneNumber} (Zone+Ground) 발견: {found.Count}개 ({names})");
         }
 
         return found.ToArray();
