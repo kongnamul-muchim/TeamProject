@@ -58,7 +58,7 @@ public class ZoneSaveHandler : MonoBehaviour
     private void OnZoneChanged(int toZoneNumber)
     {
         Vector3 playerPos = playerTransform != null ? playerTransform.position : Vector3.zero;
-        Vector3 squidPos = squidTransform != null ? squidTransform.position : playerPos;
+        Vector3 squidPos = squidTransform != null ? squidTransform.position : Vector3.zero;
 
         Debug.Log($"[ZoneSaveHandler] Zone_{toZoneNumber} 도착 → 자동 저장 " +
             $"(Player: {playerPos}, 치치: {squidPos})");

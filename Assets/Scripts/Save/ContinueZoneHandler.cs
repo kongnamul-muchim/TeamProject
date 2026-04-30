@@ -93,15 +93,15 @@ public class ContinueZoneHandler : MonoBehaviour
 
         ActivateZoneOnly(allZones, targetZone);
 
-        // Player 위치 복원
-        if (playerTransform != null && playerPos != Vector3.zero)
+        // Player 위치 복원 (저장된 위치가 있으면 항상 복원)
+        if (playerTransform != null)
         {
             playerTransform.position = playerPos;
             Debug.Log($"[ContinueZoneHandler] Player 위치 복원: {playerPos}");
         }
 
         // 치치 위치 복원
-        if (squidTransform != null && squidPos != Vector3.zero)
+        if (squidTransform != null)
         {
             squidTransform.position = squidPos;
             Debug.Log($"[ContinueZoneHandler] 치치 위치 복원: {squidPos}");
