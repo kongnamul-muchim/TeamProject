@@ -62,8 +62,10 @@ namespace HideAndInk.Core.Transition
         [SerializeField] private Vector2 _pixelation = new Vector2(2f, 2f);
         [Tooltip("노이즈 줌 레벨")]
         [SerializeField] private float _zoom = 2f;
-        [Tooltip("트랜지션 색상")]
+        [Tooltip("트랜지션 색상 (이미지 없을 때 단색으로 사용, 이미지 있을 때 틴트 역할)")]
         [SerializeField] private Color _color = Color.black;
+        [Tooltip("트랜지션 이미지 (None이면 _Color 단색 사용)")]
+        [SerializeField] private Texture2D _transitionImage;
 
         private Material _material;
         private Coroutine _currentTransition;
@@ -122,7 +124,7 @@ namespace HideAndInk.Core.Transition
         /// <summary>
         /// 셰이더의 시각 설정을 현재 인스펙터 값으로 동기화합니다.
         /// </summary>
-        private void ApplyVisualSettings()
+private void ApplyVisualSettings()
         {
             if (_material == null) return;
 
@@ -130,6 +132,10 @@ namespace HideAndInk.Core.Transition
             _material.SetVector("_Pixelation", _pixelation);
             _material.SetFloat("_Zoom", _zoom);
             _material.SetColor("_Color", _color);
+            if (_transitionImage != null)
+            {
+                _material.SetTexture("_TransitionImage", _transitionImage);
+            }
         }
 
         /// <summary>

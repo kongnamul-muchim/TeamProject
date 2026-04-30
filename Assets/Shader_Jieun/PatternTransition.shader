@@ -5,6 +5,9 @@
 // Godot 캔버스 아이템 셰이더를 Unity URP로 변환.
 // PatternTransitionController와 함께 사용.
 // _Progress: 0 = 투명, 0.5 = 완전 덮임, 1.0 = 다시 투명
+//
+// _TransitionImage가 설정되지 않으면 _Color(단색)로 채움.
+// _TransitionImage가 설정되면 해당 텍스처로 채움 (_Color는 틴트 역할).
 
 Shader "Custom/FractalNoiseTransition"
 {
@@ -15,7 +18,8 @@ Shader "Custom/FractalNoiseTransition"
         _Speed ("Animation Speed", Float) = 0.1
         _Pixelation ("Pixelation", Vector) = (2.0, 2.0, 0, 0)
         _Zoom ("Zoom", Float) = 2.0
-        _Color ("Transition Color", Color) = (0.0, 0.0, 0.0, 1.0)
+        _Color ("Transition Color (Tint)", Color) = (0.0, 0.0, 0.0, 1.0)
+        _TransitionImage ("Transition Image", 2D) = "white" {}
         _Seed ("Seed", Float) = 0.0
     }
 
@@ -39,11 +43,16 @@ Shader "Custom/FractalNoiseTransition"
                 float _Zoom;
                 float4 _Color;
                 float _Seed;
+                float4 _TransitionImage_TexelSize;
             CBUFFER_END
 
-            // RawImage/Canvas 호환성을 위한 _MainTex 선언 (실제로는 사용하지 않음)
+            // RawImage/Canvas 호환성
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+
+            // 트랜지션 이미지
+            TEXTURE2D(_TransitionImage);
+            SAMPLER(sampler_TransitionImage);
 
             // FBM 회전 행렬 (Godot: mat2(vec2(0.80,-0.60), vec2(0.60,0.80)))
             static const float2x2 _FbmRot = float2x2(0.80, 0.60, -0.60, 0.80);
@@ -119,14 +128,25 @@ Shader "Custom/FractalNoiseTransition"
                 }
                 else if (x < clrThreshold)
                 {
-                    return lerp(
-                        float4(0.0, 0.0, 0.0, 0.0),
-                        _Color,
-                        round((x - bgThreshold) / (clrThreshold - bgThreshold))
-                    );
+                    // 전환 영역: 텍스처 또는 색상으로 보간
+                    float blendFactor = round((x - bgThreshold) / (clrThreshold - bgThreshold));
+
+                    // _TransitionImage가 설정되어 있으면 텍스처 사용, 아니면 _Color 사용
+                    float4 fillColor = _Color;
+                    if (_TransitionImage_TexelSize.z > 0)
+                    {
+                        fillColor = SAMPLE_TEXTURE2D(_TransitionImage, sampler_TransitionImage, uv) * _Color;
+                    }
+
+                    return lerp(float4(0.0, 0.0, 0.0, 0.0), fillColor, blendFactor);
                 }
                 else
                 {
+                    // 완전 덮임 영역
+                    if (_TransitionImage_TexelSize.z > 0)
+                    {
+                        return SAMPLE_TEXTURE2D(_TransitionImage, sampler_TransitionImage, uv) * _Color;
+                    }
                     return _Color;
                 }
             }
