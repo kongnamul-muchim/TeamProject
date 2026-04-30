@@ -257,9 +257,24 @@ public class ZoneChanger : MonoBehaviour
         if (finalSize.y <= 0) finalSize.y = triggerSize.y;
         if (finalSize.z <= 0) finalSize.z = triggerSize.z;
 
+        // 플레이어 위치를 기준으로 콜라이더 중심을 플레이어 반대편으로 offset
+        // (플레이어가 벽 생성 시점에 벽 영역 안에 있으면 갇히는 문제 방지)
+        Vector3 colliderCenterOffset = Vector3.zero;
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            Vector3 toPlayer = playerObj.transform.position - wallPosition;
+            colliderCenterOffset = new Vector3(
+                -Mathf.Sign(toPlayer.x) * finalSize.x * 0.5f,
+                -Mathf.Sign(toPlayer.y) * finalSize.y * 0.5f,
+                -Mathf.Sign(toPlayer.z) * finalSize.z * 0.5f
+            );
+        }
+
         // 3D BoxCollider - 부모에 직접 추가
         var collider3D = _autoCreatedWall.AddComponent<BoxCollider>();
         collider3D.size = finalSize;
+        collider3D.center = colliderCenterOffset;
         collider3D.isTrigger = false;
 
         // 2D BoxCollider - 자식 GameObject에 추가 (Unity에서 같은 GameObject에 추가 불가)
@@ -270,11 +285,12 @@ public class ZoneChanger : MonoBehaviour
         child2D.transform.localScale = Vector3.one;
         var collider2D = child2D.AddComponent<BoxCollider2D>();
         collider2D.size = new Vector2(finalSize.x, finalSize.y);
+        collider2D.offset = new Vector2(colliderCenterOffset.x, colliderCenterOffset.y);
         collider2D.usedByComposite = false;
         collider2D.isTrigger = false;
 
         Debug.Log($"[ZoneChanger] 투명 벽 자동 생성: {_autoCreatedWall.name} " +
-            $"위치={wallPosition}, 크기={finalSize} " +
+            $"위치={wallPosition}, 크기={finalSize}, centerOffset={colliderCenterOffset} " +
             $"(3D BoxCollider=부모, 2D BoxCollider2D=자식)");
     }
 
