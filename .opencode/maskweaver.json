@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ulgerang/maskweaver/master/schemas/plugin-config.json",
+  "masks": {
+    "autoActivate": false
+  },
+  "logging": {
+    "verbose": false
+  },
+  "notifications": {
+    "completionSound": {
+      "enabled": false
+    }
+  }
+}
