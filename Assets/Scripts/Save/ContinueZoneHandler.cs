@@ -38,9 +38,8 @@ public class ContinueZoneHandler : MonoBehaviour
 
     private void Start()
     {
-        // ResolveTransforms는 이미 Registry에 등록되어 있거나 Inspector에 할당되어 있음
-        // (PlayerMovementAdapter.Awake()에서 CharacterRegistry에 자동 등록)
-        DebugLogRegistryStatus();
+        // Transform 참조 해결 (Inspector > Registry > 씬 탐색 순)
+        ResolveTransforms();
 
         List<GameObject> allZones = FindAllZoneObjects();
 
@@ -53,26 +52,45 @@ public class ContinueZoneHandler : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 참조 가능한 Transform 상태를 로그로 출력합니다.
+    /// Player/치치 Transform 참조를 다음 순서로 해결:
+    /// 1. Inspector에 직접 할당된 값
+    /// 2. CharacterRegistry에 등록된 값 (PlayerMovementAdapter가 자동 등록)
+    /// 3. 씬에서 태그/이름으로 탐색 (최후의 fallback)
     /// </summary>
-    private void DebugLogRegistryStatus()
+    private void ResolveTransforms()
     {
-        Transform player = playerTransform != null ? playerTransform : CharacterRegistry.Player;
-        Transform squid = squidTransform != null ? squidTransform : CharacterRegistry.Squid;
+        // Player
+        if (playerTransform == null)
+            playerTransform = CharacterRegistry.Player;
+        if (playerTransform == null)
+        {
+            var go = GameObject.FindGameObjectWithTag("Player");
+            if (go != null)
+            {
+                playerTransform = go.transform;
+                Debug.Log($"[ContinueZoneHandler] Player 씬 탐색: {go.name} at {go.transform.position}");
+            }
+        }
 
-        Debug.Log($"[ContinueZoneHandler] Player 참조: {(player != null ? $"{player.name} at {player.position}" : "없음")}");
-        Debug.Log($"[ContinueZoneHandler] 치치 참조: {(squid != null ? $"{squid.name} at {squid.position}" : "없음")}");
+        // 치치
+        if (squidTransform == null)
+            squidTransform = CharacterRegistry.Squid;
+        if (squidTransform == null)
+        {
+            var go = GameObject.Find("Chichi_Robot") ?? GameObject.Find("치치");
+            if (go != null)
+            {
+                squidTransform = go.transform;
+                Debug.Log($"[ContinueZoneHandler] 치치 씬 탐색: {go.name} at {go.transform.position}");
+            }
+        }
+
+        Debug.Log($"[ContinueZoneHandler] Player 참조: {(playerTransform != null ? $"{playerTransform.name} at {playerTransform.position}" : "없음")}");
+        Debug.Log($"[ContinueZoneHandler] 치치 참조: {(squidTransform != null ? $"{squidTransform.name} at {squidTransform.position}" : "없음")}");
     }
 
-    /// <summary>
-    /// 현재 사용 가능한 Player Transform 반환.
-    /// </summary>
-    private Transform GetPlayer() => playerTransform != null ? playerTransform : CharacterRegistry.Player;
-
-    /// <summary>
-    /// 현재 사용 가능한 치치 Transform 반환.
-    /// </summary>
-    private Transform GetSquid() => squidTransform != null ? squidTransform : CharacterRegistry.Squid;
+    private Transform GetPlayer() => playerTransform;
+    private Transform GetSquid() => squidTransform;
 
     // =====================================================
     // 새 게임

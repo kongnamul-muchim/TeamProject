@@ -45,11 +45,28 @@ public class ZoneSaveHandler : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 시점의 Player/치치 Transform을 반환합니다.
-    /// 우선순위: Inspector 할당 > CharacterRegistry 등록 > null
+    /// 현재 시점의 Player Transform을 반환합니다.
+    /// Inspector 할당 > CharacterRegistry > 태그 탐색 순
     /// </summary>
-    private Transform ResolvePlayer() => playerTransform != null ? playerTransform : CharacterRegistry.Player;
-    private Transform ResolveSquid() => squidTransform != null ? squidTransform : CharacterRegistry.Squid;
+    private Transform ResolvePlayer()
+    {
+        if (playerTransform != null) return playerTransform;
+        if (CharacterRegistry.Player != null) return CharacterRegistry.Player;
+        var go = GameObject.FindGameObjectWithTag("Player");
+        return go != null ? go.transform : null;
+    }
+
+    /// <summary>
+    /// 현재 시점의 치치 Transform을 반환합니다.
+    /// Inspector 할당 > CharacterRegistry > 이름 탐색 순
+    /// </summary>
+    private Transform ResolveSquid()
+    {
+        if (squidTransform != null) return squidTransform;
+        if (CharacterRegistry.Squid != null) return CharacterRegistry.Squid;
+        var go = GameObject.Find("Chichi_Robot") ?? GameObject.Find("치치");
+        return go != null ? go.transform : null;
+    }
 
     /// <summary>
     /// ZoneChanger.onZoneChanged 콜백.
