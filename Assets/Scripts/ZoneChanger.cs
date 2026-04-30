@@ -143,12 +143,14 @@ public class ZoneChanger : MonoBehaviour
                 cameraFollow.Pause();
             }
 
-            // 트랜지션 인 → 구역 전환 + 카메라 이동 + 투명 벽 → 트랜지션 아웃
+            // 트랜지션 인 → 투명 벽 생성 → 구역 전환 + 카메라 이동 → 트랜지션 아웃
+            // 주의: 투명 벽을 ChangeZone()보다 먼저 생성해야
+            //       Zone 비활성화 시 벽이 같이 사라지는 문제를 방지할 수 있음
             PatternTransitionController.Instance.PlayIn(() =>
             {
+                ActivateInvisibleWalls();
                 ChangeZone();
                 MoveCamera();
-                ActivateInvisibleWalls();
 
                 // 카메라 이동 완료 후 추적 재개
                 if (enableCameraMove && cameraFollow != null)
@@ -162,8 +164,8 @@ public class ZoneChanger : MonoBehaviour
         else
         {
             // 트랜지션 없이 즉시 전환
-            ChangeZone();
             ActivateInvisibleWalls();
+            ChangeZone();
 
             if (enableCameraMove)
             {
@@ -204,6 +206,8 @@ public class ZoneChanger : MonoBehaviour
     /// 렌더러가 없는 콜라이더만 포함하여 시각적으로 보이지 않습니다.
     /// 트리거에 부착된 콜라이더 타입(2D/3D)을 자동 감지하여
     /// 동일한 타입의 콜라이더로 벽을 생성합니다.
+    /// 
+    /// 중요: 벽은 항상 씬 루트에 생성되어 Zone 비활성화에 영향받지 않습니다.
     /// </summary>
     private void CreateInvisibleWall()
     {
@@ -215,14 +219,9 @@ public class ZoneChanger : MonoBehaviour
             return;
         }
 
-        // 투명 벽 GameObject 생성
+        // 투명 벽 GameObject 생성 (항상 씬 루트에 생성 → Zone 비활성화에 영향받지 않음)
         _autoCreatedWall = new GameObject($"InvisibleWall_{name}");
-
-        // 부모가 있으면 같은 부모에, 없으면 루트에 생성
-        if (transform.parent != null)
-        {
-            _autoCreatedWall.transform.SetParent(transform.parent);
-        }
+        // 씬 루트에 배치 (부모 설정 안 함 → Zone 비활성화와 무관하게 유지)
 
         // 트리거 위치 + 오프셋에 배치
         Vector3 wallPosition = transform.position + wallOffset;
