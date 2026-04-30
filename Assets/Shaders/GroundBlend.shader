@@ -183,7 +183,7 @@ Shader "HideAndInk/GroundBlend"
                 #if _CASTING_PUNCTUAL_LIGHT_SHADOW
                     float3 lightDirectionWS = normalize(_LightPosition - positionWS);
                 #else
-                    float3 lightDirectionWS = _LightDirection;
+                    float3 lightDirectionWS = _MainLightPosition.xyz;
                 #endif
 
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, lightDirectionWS));
