@@ -679,8 +679,9 @@ public class ZoneChanger : MonoBehaviour
     }
 
     /// <summary>
-    /// Zone 오브젝트의 자식들 중 Tag가 "BoundaryWall"인 오브젝트를 자동으로 활성화합니다.
+    /// Zone 오브젝트의 자식들 중 이름에 "Wall" 또는 "Boundary"가 포함된 오브젝트를 자동으로 활성화합니다.
     /// 수동으로 배치한 벽을 Inspector에 연결하지 않아도 자동으로 인식됩니다.
+    /// (태그를 정의할 필요 없이 이름만 맞추면 됨)
     /// </summary>
     private void ActivateBoundaryWallsInZone(Transform zoneTransform)
     {
@@ -689,10 +690,11 @@ public class ZoneChanger : MonoBehaviour
         // 직계 자식만 검색 (너무 깊게 들어가면 다른 Collider도 걸릴 수 있음)
         foreach (Transform child in zoneTransform)
         {
-            if (child.CompareTag("BoundaryWall"))
+            string childNameLower = child.name.ToLower();
+            if (childNameLower.Contains("wall") || childNameLower.Contains("boundary"))
             {
                 child.gameObject.SetActive(true);
-                Debug.Log($"[ZoneChanger] 경계 벽 자동 활성화 (태그): {child.name}");
+                Debug.Log($"[ZoneChanger] 경계 벽 자동 활성화 (이름): {child.name}");
             }
         }
     }
