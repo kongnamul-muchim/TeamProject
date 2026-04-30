@@ -66,6 +66,8 @@ namespace HideAndInk.Core.Transition
         [SerializeField] private Color _color = Color.black;
         [Tooltip("트랜지션 이미지 (None이면 _Color 단색 사용)")]
         [SerializeField] private Texture2D _transitionImage;
+        [Tooltip("가장자리 부드러움 정도 (0.01=날카로움, 0.5=매우 부드러움)")]
+        [SerializeField] private float _softEdge = 0.1f;
 
         private Material _material;
         private Coroutine _currentTransition;
@@ -131,6 +133,7 @@ private void ApplyVisualSettings()
             _material.SetFloat("_Speed", _speed);
             _material.SetVector("_Pixelation", _pixelation);
             _material.SetFloat("_Zoom", _zoom);
+            _material.SetFloat("_SoftEdge", _softEdge);
             _material.SetColor("_Color", _color);
             if (_transitionImage != null)
             {

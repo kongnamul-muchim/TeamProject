@@ -21,6 +21,7 @@ Shader "Custom/FractalNoiseTransition"
         _Zoom ("Zoom", Float) = 2.0
         _Color ("Transition Color (Tint)", Color) = (0.0, 0.0, 0.0, 1.0)
         _TransitionImage ("Transition Image", 2D) = "white" {}
+        _SoftEdge ("Soft Edge Width", Range(0.01, 0.5)) = 0.1
         _Seed ("Seed", Float) = 0.0
     }
 
@@ -43,6 +44,7 @@ Shader "Custom/FractalNoiseTransition"
                 float2 _Pixelation;
                 float _Zoom;
                 float4 _Color;
+                float _SoftEdge;
                 float _Seed;
             CBUFFER_END
 
@@ -118,7 +120,6 @@ Shader "Custom/FractalNoiseTransition"
                 // _Progress에 따라 대각선 마스크 계산
                 // progress 0→0.5: 화면이 덮임, 0.5→1.0: 화면이 걷힘
                 float bgThreshold = abs(1.0 - _Progress * 2.0) - 0.5;
-                float clrThreshold = min(1.0, abs(-4.0 + _Progress * 8.0)) * 0.48;
 
                 x *= max(0.0, min(-abs(_Progress * 4.0 - uv.x - uv.y - 1.0) + 1.0, 1.0) * 2.0);
 
@@ -129,19 +130,11 @@ Shader "Custom/FractalNoiseTransition"
                 //   - 텍스처 있음 + 색상 틴트: 텍스처 × 색상
                 float4 fillColor = SAMPLE_TEXTURE2D(_TransitionImage, sampler_TransitionImage, uv) * _Color;
 
-                if (x < bgThreshold)
-                {
-                    return float4(0.0, 0.0, 0.0, 0.0);
-                }
-                else if (x < clrThreshold)
-                {
-                    float blendFactor = round((x - bgThreshold) / (clrThreshold - bgThreshold));
-                    return lerp(float4(0.0, 0.0, 0.0, 0.0), fillColor, blendFactor);
-                }
-                else
-                {
-                    return fillColor;
-                }
+                // smoothstep으로 배경→채움 전이를 부드럽게 블렌딩
+                // if-else 하드 컷 대신 _SoftEdge 범위만큼 자연스럽게 스무딩
+                float alpha = smoothstep(bgThreshold - _SoftEdge, bgThreshold + _SoftEdge, x);
+
+                return float4(fillColor.rgb, fillColor.a * alpha);
             }
 
             // --- 버텍스/프래그먼트 ---
