@@ -204,7 +204,8 @@ public class ZoneChanger : MonoBehaviour
     /// <summary>
     /// 트리거 위치에 투명 벽 GameObject를 자동 생성합니다.
     /// 렌더러가 없는 콜라이더만 포함하여 시각적으로 보이지 않습니다.
-    /// 2D와 3D 물리 모두 지원하기 위해 두 콜라이더를 모두 추가합니다.
+    /// 2D와 3D 물리 모두 지원하기 위해 자식 GameObject에 각각 콜라이더를 추가합니다.
+    /// (Unity에서 BoxCollider와 BoxCollider2D를 같은 GameObject에 추가할 수 없기 때문)
     /// 벽은 항상 씬 루트에 생성되어 Zone 비활성화에 영향받지 않습니다.
     /// </summary>
     private void CreateInvisibleWall()
@@ -217,7 +218,7 @@ public class ZoneChanger : MonoBehaviour
             return;
         }
 
-        // 투명 벽 GameObject 생성 (항상 씬 루트에 → Zone 비활성화와 무관하게 유지)
+        // 투명 벽 부모 GameObject 생성 (항상 씬 루트에 → Zone 비활성화와 무관하게 유지)
         _autoCreatedWall = new GameObject($"InvisibleWall_{name}");
 
         // 트리거 위치 + 오프셋에 배치
@@ -233,20 +234,25 @@ public class ZoneChanger : MonoBehaviour
             finalSize = Vector3.Max(finalSize, new Vector3(2f, 10f, 2f));
         }
 
-        // 3D BoxCollider 추가 (3D 물리용)
+        // 3D BoxCollider - 부모에 직접 추가
         var collider3D = _autoCreatedWall.AddComponent<BoxCollider>();
         collider3D.size = finalSize;
         collider3D.isTrigger = false;
 
-        // 2D BoxCollider 추가 (2D 물리용)
-        var collider2D = _autoCreatedWall.AddComponent<BoxCollider2D>();
+        // 2D BoxCollider - 자식 GameObject에 추가 (Unity에서 같은 GameObject에 추가 불가)
+        var child2D = new GameObject("Collider2D");
+        child2D.transform.SetParent(_autoCreatedWall.transform);
+        child2D.transform.localPosition = Vector3.zero;
+        child2D.transform.localRotation = Quaternion.identity;
+        child2D.transform.localScale = Vector3.one;
+        var collider2D = child2D.AddComponent<BoxCollider2D>();
         collider2D.size = new Vector2(finalSize.x, finalSize.y);
         collider2D.usedByComposite = false;
         collider2D.isTrigger = false;
 
         Debug.Log($"[ZoneChanger] 투명 벽 자동 생성: {_autoCreatedWall.name} " +
             $"위치={wallPosition}, 크기={finalSize} " +
-            $"(3D BoxCollider + 2D BoxCollider 모두 추가)");
+            $"(3D BoxCollider=부모, 2D BoxCollider2D=자식)");
     }
 
     /// <summary>
