@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 using System.Collections;
 using System.Collections.Generic;
 using HideAndInk.Core.Transition;
@@ -54,6 +55,10 @@ public class ZoneChanger : MonoBehaviour
 
     [Tooltip("카메라 이동 완료 후 CameraFollow의 타겟 위치로 스냅할지 여부")]
     public bool snapToTargetAfterMove = true;
+
+    [Header("Events")]
+    [Tooltip("구역 전환 완료 시 호출 (매개변수: toZoneNumber)")]
+    public UnityEvent<int> onZoneChanged;
 
     [Header("DI - 카메라 추적 (미할당 시 자동 탐색)")]
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
@@ -225,6 +230,10 @@ public class ZoneChanger : MonoBehaviour
             string fromName = fromZoneNumber >= 0 ? $"Zone_{fromZoneNumber}" : "?";
             string toName = toZoneNumber >= 0 ? $"Zone_{toZoneNumber}" : "?";
             Debug.Log($"[ZoneChanger] 구역 전환 완료: {fromName} → {toName}");
+
+            // 구역 전환 이벤트 발생 (Save 등 외부에서 구독)
+            if (toZoneNumber >= 0)
+                onZoneChanged?.Invoke(toZoneNumber);
         }
         else
         {

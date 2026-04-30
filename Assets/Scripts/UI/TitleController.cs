@@ -1,7 +1,9 @@
 using HideAndInk.Core.Transition;
+using HideAndInk.Scripts.Save;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace HideAndInk.Scripts.UI
 {
@@ -11,10 +13,13 @@ namespace HideAndInk.Scripts.UI
     /// 
     /// 연결 가이드 (Inspector):
     /// - popupSetting: Popup_Setting 오브젝트
+    /// - btnContinue: Btn_Continue (Button)
+    /// - btnContinueText: Btn_Continue의 Text (TMP) — 저장 유무에 따라 색상 변경
     /// - fadeInObj: FadeInObj 프리팹 인스턴스 (Animator 기반, 선택)
     /// 
     /// 버튼 OnClick 연결:
-    /// - Btn_NewGame → TitleController.OnNewGameClicked
+    /// - Btn_NewGame  → TitleController.OnNewGameClicked
+    /// - Btn_Continue → TitleController.OnContinueClicked
     /// - Btn_ExitGame → TitleController.OnExitGameClicked
     /// - Btn_Setting  → TitleController.OnSettingClicked
     /// - Btn_ExitPopup → TitleController.OnExitPopupClicked
@@ -29,6 +34,12 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("설정 팝업 오브젝트 (Popup_Setting)")]
         [SerializeField] private GameObject popupSetting;
 
+        [Tooltip("이어하기 버튼 (저장 데이터 유무에 따라 interactable 제어)")]
+        [SerializeField] private Button btnContinue;
+
+        [Tooltip("이어하기 버튼의 텍스트 (색상 변경용)")]
+        [SerializeField] private TMPro.TextMeshProUGUI btnContinueText;
+
         [Tooltip("FadeInObj (Animator 기반 스프라이트 트랜지션, 선택 사항)")]
         [SerializeField] private GameObject fadeInObj;
 
@@ -40,8 +51,11 @@ namespace HideAndInk.Scripts.UI
         [SerializeField] private bool useSceneTransition = true;
 
         [Header("Scene Config")]
-        [Tooltip("새 게임 시작 시 로드할 씬의 Build Index (기본: 1 = Title 다음 씬)")]
+        [Tooltip("새 게임 / 이어하기 시작 시 로드할 씬의 Build Index (기본: 1)")]
         [SerializeField] private int newGameSceneIndex = 1;
+
+        [Tooltip("Continue 로드할 씬의 Build Index (기본: 1)")]
+        [SerializeField] private int continueSceneIndex = 1;
 
         private PatternTransitionController _transition;
         private bool _isTransitioning = false;
@@ -55,6 +69,33 @@ namespace HideAndInk.Scripts.UI
             // FadeInObj가 있다면 처음에는 비활성화 (애니메이션 동기화 문제 방지)
             if (fadeInObj != null)
                 fadeInObj.SetActive(false);
+        }
+
+        private void Start()
+        {
+            // PatternTransitionController 인스턴스 캐싱
+            _transition = PatternTransitionController.Instance;
+
+            // 이어하기 버튼 상태 업데이트
+            UpdateContinueButton();
+
+            // 씬 진입 트랜지션 실행
+            StartCoroutine(PlayEntryTransition());
+        }
+
+        /// <summary>
+        /// 저장 데이터 유무에 따라 이어하기 버튼 상태를 업데이트합니다.
+        /// </summary>
+        private void UpdateContinueButton()
+        {
+            bool hasSave = SaveManager.HasSaveData();
+            Debug.Log($"[TitleController] 저장 데이터 존재: {hasSave}");
+
+            if (btnContinue != null)
+                btnContinue.interactable = hasSave;
+
+            if (btnContinueText != null)
+                btnContinueText.color = hasSave ? Color.white : Color.gray;
         }
 
         private void Start()
@@ -122,20 +163,105 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// Btn_NewGame → 인스펙터 OnClick 연결
+        /// 우선순위: FadeInObjController 출구 > PatternTransitionController > 바로 로드
         /// </summary>
         public void OnNewGameClicked()
         {
             if (_isTransitioning) return;
             _isTransitioning = true;
 
+            StartSceneTransition(newGameSceneIndex);
+        }
+
+        /// <summary>
+        /// Btn_Continue → 인스펙터 OnClick 연결
+        /// 저장된 데이터가 있을 경우 해당 Zone으로 씬 전환.
+        /// </summary>
+        public void OnContinueClicked()
+        {
+            if (_isTransitioning) return;
+
+            if (!SaveManager.HasSaveData())
+            {
+                Debug.Log("[TitleController] 저장된 데이터가 없습니다. Continue 불가.");
+                return;
+            }
+
+            _isTransitioning = true;
+
+            // 저장된 데이터에서 마지막 Zone 인덱스 로드
+            SaveData data = SaveManager.Load();
+            if (data == null)
+            {
+                _isTransitioning = false;
+                return;
+            }
+
+            SaveManager.SetContinueZone(data.lastZoneIndex);
+            StartSceneTransition(continueSceneIndex);
+        }
+
+        /// <summary>
+        /// 출구 트랜지션 후 씬을 로드합니다.
+        /// 우선순위: FadeInObj(역재생) > Shader PatternTransition > 즉시 로드
+        /// </summary>
+        private void StartSceneTransition(int sceneIndex)
+        {
+            // 1순위: FadeInObjController 출구 전환 (60프레임 역재생)
+            if (useFadeExit && fadeExit != null)
+            {
+                fadeExit.PlayExit(() =>
+                {
+                    if (useSceneTransition && _transition != null)
+                        DontDestroyOnLoad(_transition.gameObject);
+
+                    SceneManager.sceneLoaded += OnSceneLoaded;
+                    SceneManager.LoadScene(sceneIndex);
+                });
+            }
+            // 2순위: Shader PatternTransition 출구 전환
+            else if (useSceneTransition && _transition != null)
+            {
+                _transition.PlayIn(() =>
+                {
+                    DontDestroyOnLoad(_transition.gameObject);
+
+                    SceneManager.sceneLoaded += OnSceneLoaded;
+                    SceneManager.LoadScene(sceneIndex);
+                });
+            }
+            // 3순위: 바로 로드
+            else
+            {
+                SceneManager.LoadScene(sceneIndex);
+            }
+        }
+
+        /// <summary>
+        /// Btn_Continue → 인스펙터 OnClick 연결
+        /// 저장된 Zone 데이터를 불러와 이어서 플레이합니다.
+        /// </summary>
+        public void OnContinueClicked()
+        {
+            if (_isTransitioning) return;
+            if (!SaveManager.HasSaveData()) return;
+
+            _isTransitioning = true;
+
+            // 저장된 Zone 인덱스를 씬 간 전달용으로 설정
+            SaveData data = SaveManager.Load();
+            if (data == null)
+            {
+                _isTransitioning = false;
+                return;
+            }
+            SaveManager.SetContinueZone(data.lastZoneIndex);
+
             if (useSceneTransition && _transition != null)
             {
                 _transition.PlayIn(() =>
                 {
-                    // 트랜지션 컨트롤러를 씬 전환 후에도 살려둠
                     DontDestroyOnLoad(_transition.gameObject);
-
-                    // 씬 로드 완료 후 PlayOut
                     SceneManager.sceneLoaded += OnSceneLoaded;
                     SceneManager.LoadScene(newGameSceneIndex);
                 });
