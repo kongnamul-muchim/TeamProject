@@ -10,6 +10,7 @@ Shader "Custom/FractalNoiseTransition"
 {
     Properties
     {
+        [HideInInspector] _MainTex ("Main Texture", 2D) = "white" {}
         _Progress ("Progress", Range(0, 1)) = 0.0
         _Speed ("Animation Speed", Float) = 0.1
         _Pixelation ("Pixelation", Vector) = (2.0, 2.0, 0, 0)
@@ -39,6 +40,10 @@ Shader "Custom/FractalNoiseTransition"
                 float4 _Color;
                 float _Seed;
             CBUFFER_END
+
+            // RawImage/Canvas 호환성을 위한 _MainTex 선언 (실제로는 사용하지 않음)
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
 
             // FBM 회전 행렬 (Godot: mat2(vec2(0.80,-0.60), vec2(0.60,0.80)))
             static const float2x2 _FbmRot = float2x2(0.80, 0.60, -0.60, 0.80);
