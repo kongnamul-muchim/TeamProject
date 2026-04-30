@@ -201,7 +201,9 @@ public class ZoneChanger : MonoBehaviour
 
     /// <summary>
     /// 트리거 위치에 투명 벽 GameObject를 자동 생성합니다.
-    /// 렌더러가 없는 BoxCollider만 포함하여 시각적으로 보이지 않습니다.
+    /// 렌더러가 없는 콜라이더만 포함하여 시각적으로 보이지 않습니다.
+    /// 트리거에 부착된 콜라이더 타입(2D/3D)을 자동 감지하여
+    /// 동일한 타입의 콜라이더로 벽을 생성합니다.
     /// </summary>
     private void CreateInvisibleWall()
     {
@@ -215,29 +217,38 @@ public class ZoneChanger : MonoBehaviour
 
         // 투명 벽 GameObject 생성
         _autoCreatedWall = new GameObject($"InvisibleWall_{name}");
-        _autoCreatedWall.transform.SetParent(transform.parent); // 트리거와 같은 부모
+
+        // 부모가 있으면 같은 부모에, 없으면 루트에 생성
+        if (transform.parent != null)
+        {
+            _autoCreatedWall.transform.SetParent(transform.parent);
+        }
 
         // 트리거 위치 + 오프셋에 배치
         Vector3 wallPosition = transform.position + wallOffset;
         wallPosition.z = transform.position.z;
         _autoCreatedWall.transform.position = wallPosition;
 
-        // 3D BoxCollider 추가 (3D 프로젝트용)
-        var boxCollider3D = _autoCreatedWall.AddComponent<BoxCollider>();
-        boxCollider3D.size = new Vector3(wallSize.x, wallSize.y, 1f);
-        boxCollider3D.isTrigger = false; // 물리적 충돌
+        // 트리거의 콜라이더 타입을 자동 감지하여 동일한 타입으로 생성
+        bool is2D = GetComponent<Collider2D>() != null;
 
-        // 2D BoxCollider 추가 (2D 프로젝트용)
-        var boxCollider2D = _autoCreatedWall.AddComponent<BoxCollider2D>();
-        boxCollider2D.size = wallSize;
-        boxCollider2D.isTrigger = false; // 물리적 충돌
-
-        // 3D 콜라이더와 2D 콜라이더가 충돌하지 않도록
-        // 둘 중 하나만 필요하면 인스펙터에서 제거 가능
-        // 기본적으로 둘 다 생성하여 2D/3D 프로젝트 모두 지원
+        if (is2D)
+        {
+            // 2D 프로젝트: BoxCollider2D 사용
+            var collider2D = _autoCreatedWall.AddComponent<BoxCollider2D>();
+            collider2D.size = wallSize;
+            collider2D.isTrigger = false;
+        }
+        else
+        {
+            // 3D 프로젝트: BoxCollider 사용
+            var collider3D = _autoCreatedWall.AddComponent<BoxCollider>();
+            collider3D.size = new Vector3(wallSize.x, wallSize.y, 1f);
+            collider3D.isTrigger = false;
+        }
 
         Debug.Log($"[ZoneChanger] 투명 벽 자동 생성: {_autoCreatedWall.name} " +
-            $"위치={wallPosition}, 크기={wallSize}");
+            $"위치={wallPosition}, 크기={wallSize}, 타입={(is2D ? "2D" : "3D")}");
     }
 
     /// <summary>
