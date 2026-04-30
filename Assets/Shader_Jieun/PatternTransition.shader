@@ -6,8 +6,9 @@
 // PatternTransitionController와 함께 사용.
 // _Progress: 0 = 투명, 0.5 = 완전 덮임, 1.0 = 다시 투명
 //
-// _TransitionImage가 설정되지 않으면 _Color(단색)로 채움.
-// _TransitionImage가 설정되면 해당 텍스처로 채움 (_Color는 틴트 역할).
+// _TransitionImage가 None이면 _Color(단색)로 채움.
+// _TransitionImage가 설정되면 텍스처 × _Color(틴트)로 채움.
+//   - 이미지 그대로 보려면 _Color를 흰색(255,255,255)으로 설정
 
 Shader "Custom/FractalNoiseTransition"
 {
@@ -43,14 +44,13 @@ Shader "Custom/FractalNoiseTransition"
                 float _Zoom;
                 float4 _Color;
                 float _Seed;
-                float4 _TransitionImage_TexelSize;
             CBUFFER_END
 
             // RawImage/Canvas 호환성
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
 
-            // 트랜지션 이미지
+            // 트랜지션 이미지 (None이면 Unity 기본 흰색 텍스처 사용)
             TEXTURE2D(_TransitionImage);
             SAMPLER(sampler_TransitionImage);
 
@@ -122,32 +122,25 @@ Shader "Custom/FractalNoiseTransition"
 
                 x *= max(0.0, min(-abs(_Progress * 4.0 - uv.x - uv.y - 1.0) + 1.0, 1.0) * 2.0);
 
+                // 항상 텍스처 샘플링 (None이면 Unity 기본 흰색 반환)
+                // 텍스처 × _Color = 최종 색상
+                //   - 텍스처 없음: 흰색(1,1,1,1) × 검은색(0,0,0,1) = 검은색
+                //   - 텍스처 있음 + 흰색 틴트: 텍스처 원본 색상
+                //   - 텍스처 있음 + 색상 틴트: 텍스처 × 색상
+                float4 fillColor = SAMPLE_TEXTURE2D(_TransitionImage, sampler_TransitionImage, uv) * _Color;
+
                 if (x < bgThreshold)
                 {
                     return float4(0.0, 0.0, 0.0, 0.0);
                 }
                 else if (x < clrThreshold)
                 {
-                    // 전환 영역: 텍스처 또는 색상으로 보간
                     float blendFactor = round((x - bgThreshold) / (clrThreshold - bgThreshold));
-
-                    // _TransitionImage가 설정되어 있으면 텍스처 사용, 아니면 _Color 사용
-                    float4 fillColor = _Color;
-                    if (_TransitionImage_TexelSize.z > 0)
-                    {
-                        fillColor = SAMPLE_TEXTURE2D(_TransitionImage, sampler_TransitionImage, uv) * _Color;
-                    }
-
                     return lerp(float4(0.0, 0.0, 0.0, 0.0), fillColor, blendFactor);
                 }
                 else
                 {
-                    // 완전 덮임 영역
-                    if (_TransitionImage_TexelSize.z > 0)
-                    {
-                        return SAMPLE_TEXTURE2D(_TransitionImage, sampler_TransitionImage, uv) * _Color;
-                    }
-                    return _Color;
+                    return fillColor;
                 }
             }
 
