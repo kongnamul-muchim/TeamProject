@@ -225,14 +225,16 @@ public class ZoneChanger : MonoBehaviour
         Vector3 wallPosition = transform.position + wallOffset;
         _autoCreatedWall.transform.position = wallPosition;
 
-        // 벽 크기 결정: wallSize가 0이면 트리거 콜라이더 크기 자동 사용
+        // 벽 크기 결정: wallSize의 각 축이 0이면 트리거 콜라이더 크기로 대체
+        // (이전 Vector2 직렬화 데이터에서 Z=0으로 로드되는 문제 방지)
         Vector3 finalSize = wallSize;
-        if (finalSize == Vector3.zero)
-        {
-            finalSize = GetTriggerColliderSize();
-            // 최소 크기 보장 (너무 작으면 통과 가능)
-            finalSize = Vector3.Max(finalSize, new Vector3(2f, 10f, 2f));
-        }
+        Vector3 triggerSize = GetTriggerColliderSize();
+        // 최소 크기 보장 (너무 작으면 통과 가능)
+        triggerSize = Vector3.Max(triggerSize, new Vector3(2f, 10f, 2f));
+
+        if (finalSize.x <= 0) finalSize.x = triggerSize.x;
+        if (finalSize.y <= 0) finalSize.y = triggerSize.y;
+        if (finalSize.z <= 0) finalSize.z = triggerSize.z;
 
         // 3D BoxCollider - 부모에 직접 추가
         var collider3D = _autoCreatedWall.AddComponent<BoxCollider>();
