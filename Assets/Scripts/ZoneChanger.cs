@@ -398,6 +398,9 @@ public class ZoneChanger : MonoBehaviour
                 {
                     Debug.Log($"[ZoneChanger] 활성화: {zone.name}");
                     zone.SetActive(true);
+
+                    // 자식 중 BoundaryWall 태그를 가진 오브젝트 자동 활성화
+                    ActivateBoundaryWallsInZone(zone.transform);
                 }
             }
             changed = true;
@@ -673,5 +676,24 @@ public class ZoneChanger : MonoBehaviour
         Debug.Log($"[ZoneChanger] 왼쪽 경계 벽 자동 생성: {_autoCreatedLeftBoundaryWall.name} " +
             $"위치={boundaryPosition}, 크기={finalSize} " +
             $"(Zone 시작점 추락 방지)");
+    }
+
+    /// <summary>
+    /// Zone 오브젝트의 자식들 중 Tag가 "BoundaryWall"인 오브젝트를 자동으로 활성화합니다.
+    /// 수동으로 배치한 벽을 Inspector에 연결하지 않아도 자동으로 인식됩니다.
+    /// </summary>
+    private void ActivateBoundaryWallsInZone(Transform zoneTransform)
+    {
+        if (zoneTransform == null) return;
+
+        // 직계 자식만 검색 (너무 깊게 들어가면 다른 Collider도 걸릴 수 있음)
+        foreach (Transform child in zoneTransform)
+        {
+            if (child.CompareTag("BoundaryWall"))
+            {
+                child.gameObject.SetActive(true);
+                Debug.Log($"[ZoneChanger] 경계 벽 자동 활성화 (태그): {child.name}");
+            }
+        }
     }
 }
