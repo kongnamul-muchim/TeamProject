@@ -85,6 +85,13 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("수동으로 만든 왼쪽 경계 벽 오브젝트들 (자동 생성과 함께 사용 가능)")]
     public GameObject[] leftBoundaryWalls;
 
+    [Header("Zone별 벽 관리 (폴드 방식)")]
+    [Tooltip("Wall_01 ~ Wall_05 등이 들어있는 부모 컨테이너 (빈 오브젝트)")]
+    public GameObject wallContainer;
+
+    [Tooltip("이 Zone이 활성화될 때 켤 벽 이름 (예: Wall_01). 비워두면 사용 안 함")]
+    public string activeWallName = "";
+
     [Header("DI - 칼라이동 추적 (미할당 시 자동 탐색)")]
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
@@ -441,6 +448,12 @@ public class ZoneChanger : MonoBehaviour
                 }
             }
         }
+
+        // ── Zone별 벽 관리: 컨테이너에서 activeWallName만 활성화, 나머지는 비활성화 ──
+        if (wallContainer != null && !string.IsNullOrEmpty(activeWallName))
+        {
+            ActivateSingleWallInContainer();
+        }
     }
 
     /// <summary>
@@ -696,6 +709,36 @@ public class ZoneChanger : MonoBehaviour
                 child.gameObject.SetActive(true);
                 Debug.Log($"[ZoneChanger] 경계 벽 자동 활성화 (이름): {child.name}");
             }
+        }
+    }
+
+    /// <summary>
+    /// wallContainer의 자식들 중 activeWallName과 이름이 일치하는 벽만 활성화하고,
+    /// 나머지 벽들은 모두 비활성화합니다.
+    /// </summary>
+    private void ActivateSingleWallInContainer()
+    {
+        if (wallContainer == null) return;
+
+        bool foundActiveWall = false;
+
+        foreach (Transform child in wallContainer.transform)
+        {
+            if (child.name == activeWallName)
+            {
+                child.gameObject.SetActive(true);
+                foundActiveWall = true;
+                Debug.Log($"[ZoneChanger] Zone 벽 활성화: {child.name}");
+            }
+            else
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
+
+        if (!foundActiveWall)
+        {
+            Debug.LogWarning($"[ZoneChanger] wallContainer에서 '{activeWallName}'을 찾을 수 없습니다.");
         }
     }
 }
