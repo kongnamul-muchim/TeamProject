@@ -61,10 +61,10 @@ public class ZoneChanger : MonoBehaviour
 
     [Header("투명 벽 (돌아갈 수 없게 차단)")]
     [Tooltip("트리거 발동 시 투명 벽을 자동 생성할지 여부")]
-    public bool createInvisibleWall = false;
+    public bool createInvisibleWall = true;
 
-    [Tooltip("자동 생성할 투명 벽의 크기 (X=너비, Y=높이)")]
-    public Vector2 wallSize = new Vector2(2f, 10f);
+    [Tooltip("자동 생성할 투명 벽의 크기 (X=너비, Y=높이, Z=깊이). 0이면 트리거 콜라이더 크기 자동 사용")]
+    public Vector3 wallSize = new Vector3(0f, 0f, 0f);
 
     [Tooltip("트리거 위치로부터 벽의 오프셋 (벽을 트리거 뒤에 배치하려면 음수 X 사용)")]
     public Vector3 wallOffset = Vector3.zero;
@@ -204,10 +204,8 @@ public class ZoneChanger : MonoBehaviour
     /// <summary>
     /// 트리거 위치에 투명 벽 GameObject를 자동 생성합니다.
     /// 렌더러가 없는 콜라이더만 포함하여 시각적으로 보이지 않습니다.
-    /// 트리거에 부착된 콜라이더 타입(2D/3D)을 자동 감지하여
-    /// 동일한 타입의 콜라이더로 벽을 생성합니다.
-    /// 
-    /// 중요: 벽은 항상 씬 루트에 생성되어 Zone 비활성화에 영향받지 않습니다.
+    /// 2D와 3D 물리 모두 지원하기 위해 두 콜라이더를 모두 추가합니다.
+    /// 벽은 항상 씬 루트에 생성되어 Zone 비활성화에 영향받지 않습니다.
     /// </summary>
     private void CreateInvisibleWall()
     {
@@ -219,35 +217,62 @@ public class ZoneChanger : MonoBehaviour
             return;
         }
 
-        // 투명 벽 GameObject 생성 (항상 씬 루트에 생성 → Zone 비활성화에 영향받지 않음)
+        // 투명 벽 GameObject 생성 (항상 씬 루트에 → Zone 비활성화와 무관하게 유지)
         _autoCreatedWall = new GameObject($"InvisibleWall_{name}");
-        // 씬 루트에 배치 (부모 설정 안 함 → Zone 비활성화와 무관하게 유지)
 
         // 트리거 위치 + 오프셋에 배치
         Vector3 wallPosition = transform.position + wallOffset;
-        wallPosition.z = transform.position.z;
         _autoCreatedWall.transform.position = wallPosition;
 
-        // 트리거의 콜라이더 타입을 자동 감지하여 동일한 타입으로 생성
-        bool is2D = GetComponent<Collider2D>() != null;
+        // 벽 크기 결정: wallSize가 0이면 트리거 콜라이더 크기 자동 사용
+        Vector3 finalSize = wallSize;
+        if (finalSize == Vector3.zero)
+        {
+            finalSize = GetTriggerColliderSize();
+            // 최소 크기 보장 (너무 작으면 통과 가능)
+            finalSize = Vector3.Max(finalSize, new Vector3(2f, 10f, 2f));
+        }
 
-        if (is2D)
-        {
-            // 2D 프로젝트: BoxCollider2D 사용
-            var collider2D = _autoCreatedWall.AddComponent<BoxCollider2D>();
-            collider2D.size = wallSize;
-            collider2D.isTrigger = false;
-        }
-        else
-        {
-            // 3D 프로젝트: BoxCollider 사용
-            var collider3D = _autoCreatedWall.AddComponent<BoxCollider>();
-            collider3D.size = new Vector3(wallSize.x, wallSize.y, 1f);
-            collider3D.isTrigger = false;
-        }
+        // 3D BoxCollider 추가 (3D 물리용)
+        var collider3D = _autoCreatedWall.AddComponent<BoxCollider>();
+        collider3D.size = finalSize;
+        collider3D.isTrigger = false;
+
+        // 2D BoxCollider 추가 (2D 물리용)
+        var collider2D = _autoCreatedWall.AddComponent<BoxCollider2D>();
+        collider2D.size = new Vector2(finalSize.x, finalSize.y);
+        collider2D.usedByComposite = false;
+        collider2D.isTrigger = false;
 
         Debug.Log($"[ZoneChanger] 투명 벽 자동 생성: {_autoCreatedWall.name} " +
-            $"위치={wallPosition}, 크기={wallSize}, 타입={(is2D ? "2D" : "3D")}");
+            $"위치={wallPosition}, 크기={finalSize} " +
+            $"(3D BoxCollider + 2D BoxCollider 모두 추가)");
+    }
+
+    /// <summary>
+    /// 트리거에 부착된 콜라이더의 크기를 반환합니다.
+    /// 3D BoxCollider, 2D BoxCollider2D 순서로 확인합니다.
+    /// </summary>
+    private Vector3 GetTriggerColliderSize()
+    {
+        // 3D BoxCollider 확인
+        var box3D = GetComponent<BoxCollider>();
+        if (box3D != null)
+        {
+            return Vector3.Scale(box3D.size, transform.lossyScale);
+        }
+
+        // 2D BoxCollider2D 확인
+        var box2D = GetComponent<BoxCollider2D>();
+        if (box2D != null)
+        {
+            Vector2 size2D = box2D.size;
+            Vector3 scale = transform.lossyScale;
+            return new Vector3(size2D.x * scale.x, size2D.y * scale.y, 2f);
+        }
+
+        // 기본값
+        return new Vector3(2f, 10f, 2f);
     }
 
     /// <summary>
