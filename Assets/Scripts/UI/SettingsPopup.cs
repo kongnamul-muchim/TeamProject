@@ -1,4 +1,5 @@
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Transition;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,12 +8,23 @@ namespace HideAndInk.Scripts.UI
     /// <summary>
     /// 일시정지 팝업 내 설정
     /// Btn_GoTitle / Toggle / Slider → 인스펙터에서 직접 연결
+    /// 
+    /// 타이틀 복귀:
+    /// - titleSceneBuildIndex (우선) / titleSceneName (fallback)
+    /// - PatternTransitionController.Instance 가 있으면 트랜지션 재생 후 로드
+    /// - 없으면 즉시 로드
     /// </summary>
     public sealed class SettingsPopup : MonoBehaviour
     {
         [Header("타이틀 화면")]
-        [Tooltip("타이틀 씬 이름 (인스펙터에서 설정)")]
-        [SerializeField] private string titleSceneName = "Title";
+        [Tooltip("타이틀 씬 Build Index (기본 0, 우선 사용)")]
+        [SerializeField] private int titleSceneBuildIndex = 0;
+
+        [Tooltip("타이틀 씬 이름 (Build Index 무효 시 fallback)")]
+        [SerializeField] private string titleSceneName = "0.TitleScene";
+
+        [Tooltip("타이틀 복귀 시 PatternTransition 사용")]
+        [SerializeField] private bool useSceneTransition = true;
 
         private AudioManager _audio;
 
@@ -28,13 +40,55 @@ namespace HideAndInk.Scripts.UI
         {
             Time.timeScale = 1f;
 
-            if (string.IsNullOrEmpty(titleSceneName))
+            // PatternTransitionController가 있으면 트랜지션 재생
+            var transition = PatternTransitionController.Instance;
+            if (useSceneTransition && transition != null)
             {
-                Debug.LogError("[SettingsPopup] titleSceneName이 설정되지 않았습니다.");
+                transition.PlayIn(() =>
+                {
+                    DontDestroyOnLoad(transition.gameObject);
+
+                    SceneManager.sceneLoaded += OnTitleSceneLoaded;
+                    LoadTitleScene();
+                });
+            }
+            else
+            {
+                LoadTitleScene();
+            }
+        }
+
+        private void LoadTitleScene()
+        {
+            // Build Index 우선
+            if (titleSceneBuildIndex >= 0 && titleSceneBuildIndex < SceneManager.sceneCountInBuildSettings)
+            {
+                SceneManager.LoadScene(titleSceneBuildIndex);
                 return;
             }
 
-            SceneManager.LoadScene(titleSceneName);
+            // fallback: 씬 이름
+            if (!string.IsNullOrEmpty(titleSceneName))
+            {
+                SceneManager.LoadScene(titleSceneName);
+                return;
+            }
+
+            Debug.LogError("[SettingsPopup] 타이틀 씬을 로드할 방법이 없습니다. Build Index 또는 Scene Name을 설정하세요.");
+        }
+
+        private void OnTitleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            SceneManager.sceneLoaded -= OnTitleSceneLoaded;
+
+            var transition = PatternTransitionController.Instance;
+            if (transition != null)
+                transition.PlayOut();
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnTitleSceneLoaded;
         }
 
         // =====================================================
