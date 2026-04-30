@@ -129,10 +129,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Siyeon1.ChichiMovementController
   stateMachine: {fileID: 4627533463234035377}
   duduTransform: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+  rb: {fileID: 5345241367204086980}
   walkSpeed: 2.5
   guideMoveSpeed: 2
   chargeApproachSpeed: 3.5
   chargeStopDistance: 0.12
+  lockY: 1
+  lockZ: 0
 --- !u!114 &8403246396701951367
 MonoBehaviour:
   m_ObjectHideFlags: 0

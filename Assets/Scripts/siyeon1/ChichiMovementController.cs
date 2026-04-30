@@ -29,7 +29,7 @@ namespace HideAndInk.Siyeon1
         [Tooltip("Y축(높이) 고정. true면 초기 Y값을 유지하여 땅에 붙어있음")]
         [SerializeField] private bool lockY = true;
         [Tooltip("Z축(깊이) 고정. true면 초기 Z값을 유지")]
-        [SerializeField] private bool lockZ = true;
+        [SerializeField] private bool lockZ = false;
 
         private float initialY;
         private float initialZ;
