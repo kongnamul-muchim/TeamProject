@@ -158,10 +158,11 @@ Shader "HideAndInk/GroundBlend"
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
 
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+            // This is used during shadow map generation to differentiate between directional and punctual light shadow maps
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 
-            float3 _LightDirection;
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 
             struct Attributes
             {
@@ -174,12 +175,18 @@ Shader "HideAndInk/GroundBlend"
                 float4 positionCS : SV_POSITION;
             };
 
-            Varyings ShadowPassVertex(Attributes input)
+            float4 GetShadowPositionHClip(Attributes input)
             {
-                Varyings output;
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
-                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
+
+                #if _CASTING_PUNCTUAL_LIGHT_SHADOW
+                    float3 lightDirectionWS = normalize(_LightPosition - positionWS);
+                #else
+                    float3 lightDirectionWS = _LightDirection;
+                #endif
+
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, lightDirectionWS));
 
                 #if UNITY_REVERSED_Z
                     positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
@@ -187,7 +194,13 @@ Shader "HideAndInk/GroundBlend"
                     positionCS.z = max(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
                 #endif
 
-                output.positionCS = positionCS;
+                return positionCS;
+            }
+
+            Varyings ShadowPassVertex(Attributes input)
+            {
+                Varyings output;
+                output.positionCS = GetShadowPositionHClip(input);
                 return output;
             }
 
