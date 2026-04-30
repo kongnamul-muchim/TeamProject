@@ -161,8 +161,11 @@ namespace HideAndInk.Siyeon1
                 return;
             }
 
+            ChichiState prev = currentState;
             currentState = nextState;
             StateChanged?.Invoke(currentState);
+
+            Debug.Log($"[ChichiStateMachine] {prev} → {nextState} (dist={Vector3.Distance(transform.position, duduTransform != null ? duduTransform.position : transform.position):F2})");
         }
     }
 }
