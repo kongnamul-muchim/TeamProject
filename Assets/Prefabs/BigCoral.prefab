@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 240648921051087189}
   - component: {fileID: 1829655607018587156}
   - component: {fileID: 1288115150539651303}
+  - component: {fileID: -1010100768623316846}
   m_Layer: 7
   m_Name: BigCoral
   m_TagString: Camouflageable
@@ -127,3 +128,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageTarget
   camouflageColor: {r: 0.7176471, g: 0.18431373, b: 0.18823531, a: 1}
+--- !u!114 &-1010100768623316846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6859561360556943950}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 387f08faa73b883468ca13fc2b301ff7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.ObjectHP
+  maxHP: 2
+  damagedSprite: {fileID: 21300000, guid: d7f650616ef6a1e4481185ce16406127, type: 3}
+  destroyedSprite: {fileID: 21300000, guid: 98c349825852a524494529f3413d8db9, type: 3}

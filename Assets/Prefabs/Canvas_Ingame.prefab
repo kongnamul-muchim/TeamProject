@@ -153,11 +153,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7453f4e0c6e47c7885f4a8e14d0dd27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerLives: {fileID: -3425529942321639934, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+  playerLives: {fileID: 0}
   heartImages:
   - {fileID: 5507669561148981021}
   - {fileID: 7392127870181856726}
   - {fileID: 7776575921340529955}
+  blinkDuration: 1
+  blinkFrequency: 10
 --- !u!1 &711663973258860092
 GameObject:
   m_ObjectHideFlags: 0
@@ -2772,7 +2774,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bf2f8e48eb74e64bac8f677366b777f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerInk: {fileID: 3011776440106332315, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+  playerInk: {fileID: 0}
   inkFillImage: {fileID: 8714632146680259593}
 --- !u!1 &7701423337050552528
 GameObject:
@@ -3011,7 +3013,7 @@ RectTransform:
   m_GameObject: {fileID: 8002560091602375977}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8486111147966446146}

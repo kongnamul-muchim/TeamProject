@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4976344111927780951}
   - component: {fileID: 3099247905897022738}
   - component: {fileID: 8998174897570188535}
+  - component: {fileID: -727296826824228484}
   m_Layer: 7
   m_Name: MetalPlate
   m_TagString: Camouflageable
@@ -127,3 +128,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Perception.CamouflageTarget
   camouflageColor: {r: 0.77647066, g: 0.5529412, b: 0.1764706, a: 1}
+--- !u!114 &-727296826824228484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5780932958341349982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 387f08faa73b883468ca13fc2b301ff7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.ObjectHP
+  maxHP: 2
+  damagedSprite: {fileID: 21300000, guid: 9f59ed15964109a419c3f2ca306dd7bb, type: 3}
+  destroyedSprite: {fileID: 21300000, guid: ab48f0e22ac151d48b2a70d048dd3051, type: 3}

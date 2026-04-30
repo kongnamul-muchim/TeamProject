@@ -129,8 +129,20 @@ public class ContinueZoneHandler : MonoBehaviour
         {
             if (playerPos != Vector3.zero)
             {
-                player.position = playerPos;
-                Debug.Log($"[ContinueZoneHandler] Player 위치 복원: {playerPos}");
+                // Player는 Rigidbody가 있으므로 Transform 직접 설정 + Rigidbody 동기화
+                Rigidbody rb = player.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.position = playerPos;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    Debug.Log($"[ContinueZoneHandler] Player 위치 복원 (Rigidbody): {playerPos}");
+                }
+                else
+                {
+                    player.position = playerPos;
+                    Debug.Log($"[ContinueZoneHandler] Player 위치 복원 (Transform): {playerPos}");
+                }
             }
             else
             {
@@ -228,8 +240,19 @@ public class ContinueZoneHandler : MonoBehaviour
         {
             if (zc.toZoneNumber == zoneIndex)
             {
-                player.position = zc.transform.position;
-                Debug.Log($"[ContinueZoneHandler] 플레이어를 Zone_{zoneIndex} 시작점으로 이동: {zc.transform.position}");
+                Vector3 targetPos = zc.transform.position;
+                Rigidbody rb = player.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.position = targetPos;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+                else
+                {
+                    player.position = targetPos;
+                }
+                Debug.Log($"[ContinueZoneHandler] 플레이어를 Zone_{zoneIndex} 시작점으로 이동: {targetPos}");
                 return;
             }
         }
