@@ -43,6 +43,7 @@ namespace HideAndInk.Siyeon1
         private bool isApproaching;
         private bool isCharging;
         private float chargeTimer;
+        private bool chargeBreak; // 위협/중단 시 충전 로직 완전 차단, X키 재입력 시 해제
         private IDuduInkReceiver inkReceiver;
         private IDuduStateProvider stateProvider;
         private IDuduContactChargeSession contactChargeSession;
@@ -149,6 +150,9 @@ namespace HideAndInk.Siyeon1
                 return true;
             }
 
+            // 사용자가 X를 직접 누름 → chargeBreak 해제
+            chargeBreak = false;
+
             ChargeStatus = "충전 요청";
             ChargeRequested?.Invoke();
 
@@ -178,6 +182,12 @@ namespace HideAndInk.Siyeon1
 
         private bool CanBeginChargeRequest()
         {
+            if (chargeBreak)
+            {
+                ChargeStatus = "충전 차단: X키를 다시 눌러 충전 재시작";
+                return false;
+            }
+
             if (duduTransform == null || inkTank == null || !inkTank.CanSpendCharge)
             {
                 ChargeStatus = "충전 불가: 치치 탱크/두두 위치 확인";
@@ -298,6 +308,7 @@ namespace HideAndInk.Siyeon1
                 if (interrupted)
                 {
                     ChargeStatus = "충전 중단";
+                    chargeBreak = true; // X키 재입력 전까지 충전 차단
                     ChargeInterrupted?.Invoke();
                 }
 
