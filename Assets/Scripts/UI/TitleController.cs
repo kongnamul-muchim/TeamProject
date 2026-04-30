@@ -140,12 +140,17 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// Btn_NewGame → 인스펙터 OnClick 연결
+        /// 세이브 데이터를 초기화하고 새 게임을 시작합니다.
         /// 우선순위: FadeInObjController 출구 > PatternTransitionController > 바로 로드
         /// </summary>
         public void OnNewGameClicked()
         {
             if (_isTransitioning) return;
             _isTransitioning = true;
+
+            // 저장 데이터 초기화
+            SaveManager.DeleteSave();
+            SaveManager.ClearContinueZone();
 
             StartSceneTransition(newGameSceneIndex);
         }
