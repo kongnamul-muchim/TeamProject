@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using HideAndInk.Core.Player;
+using HideAndInk.Scripts.Save;
 
 namespace HideAndInk.Player
 {
@@ -46,6 +47,9 @@ namespace HideAndInk.Player
 
         private void Awake()
         {
+            // CharacterRegistry에 자신 등록 (Find/태그 하드코딩 제거)
+            CharacterRegistry.RegisterPlayer(transform);
+
             _rigidbody = GetComponent<Rigidbody>();
 
             // Rigidbody 설정

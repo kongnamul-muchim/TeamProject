@@ -13,10 +13,15 @@ using UnityEngine;
 /// - 저장된 Zone 활성화, 나머지 비활성화
 /// - 저장된 Player/치치 위치로 복원
 ///
+/// Player/치치 Transform 참조 우선순위:
+///   1. Inspector에서 playerTransform/squidTransform 직접 할당
+///   2. CharacterRegistry.Player / CharacterRegistry.Squid
+///   3. 없으면 로그 출력 후 스킵
+///
 /// 사용법:
 /// 1. 이 스크립트를 게임 씬의 아무 GameObject에 부착
 /// 2. (선택) zoneContainer에 Zone 부모 Transform 연결
-/// 3. (선택) playerTransform / squidTransform 할당 (미할당 시 태그/이름으로 자동 탐색)
+/// 3. (선택) playerTransform / squidTransform 할당 (미할당 시 Registry 자동 사용)
 /// </summary>
 public class ContinueZoneHandler : MonoBehaviour
 {
@@ -24,71 +29,55 @@ public class ContinueZoneHandler : MonoBehaviour
     [Tooltip("모든 Zone 오브젝트를 담는 부모 Transform (미할당 시 씬 전체 탐색)")]
     [SerializeField] private Transform zoneContainer;
 
-    [Header("위치 참조")]
-    [Tooltip("Player Transform (미할당 시 태그 'Player'로 자동 탐색)")]
+    [Header("위치 참조 (선택사항 - 미할당 시 Registry 자동 사용)")]
+    [Tooltip("Player Transform (미할당 시 CharacterRegistry.Player 사용)")]
     [SerializeField] private Transform playerTransform;
 
-    [Tooltip("치치 Transform (미할당 시 이름 'Squid' 또는 '치치'로 탐색)")]
+    [Tooltip("치치 Transform (미할당 시 CharacterRegistry.Squid 사용)")]
     [SerializeField] private Transform squidTransform;
 
     private void Start()
     {
-        // ============================================================
-        // 모든 Transform 참조를 Start()에서 새로 탐색 (Awake 캐싱 제거)
-        // - Awake()에서 미리 찾아두면 씬 로딩 순서에 따라 잘못된 객체를 잡을 수 있음
-        // - 실제로 사용하는 시점(Start)에 다시 찾아서 정확한 참조 보장
-        // ============================================================
-        ResolveTransforms();
+        // ResolveTransforms는 이미 Registry에 등록되어 있거나 Inspector에 할당되어 있음
+        // (PlayerMovementAdapter.Awake()에서 CharacterRegistry에 자동 등록)
+        DebugLogRegistryStatus();
 
-        // 모든 Zone 오브젝트 찾기
         List<GameObject> allZones = FindAllZoneObjects();
 
         if (SaveManager.IsContinueMode)
-        {
             HandleContinue(allZones);
-        }
         else
-        {
             HandleNewGame(allZones);
-        }
 
         Destroy(this);
     }
 
     /// <summary>
-    /// Player/치치 Transform 참조를 해결합니다.
-    /// Inspector 할당 우선, 미할당 시 태그/이름으로 탐색.
+    /// 현재 참조 가능한 Transform 상태를 로그로 출력합니다.
     /// </summary>
-    private void ResolveTransforms()
+    private void DebugLogRegistryStatus()
     {
-        if (playerTransform == null)
-        {
-            var go = GameObject.FindGameObjectWithTag("Player");
-            if (go != null)
-            {
-                playerTransform = go.transform;
-                Debug.Log($"[ContinueZoneHandler] Player Transform 탐색 완료: {go.name} at {go.transform.position}");
-            }
-            else
-            {
-                Debug.LogError("[ContinueZoneHandler] 'Player' 태그를 가진 GameObject를 찾을 수 없습니다!");
-            }
-        }
+        Transform player = playerTransform != null ? playerTransform : CharacterRegistry.Player;
+        Transform squid = squidTransform != null ? squidTransform : CharacterRegistry.Squid;
 
-        if (squidTransform == null)
-        {
-            var go = GameObject.Find("Squid") ?? GameObject.Find("치치");
-            if (go != null)
-            {
-                squidTransform = go.transform;
-                Debug.Log($"[ContinueZoneHandler] 치치 Transform 탐색 완료: {go.name} at {go.transform.position}");
-            }
-        }
+        Debug.Log($"[ContinueZoneHandler] Player 참조: {(player != null ? $"{player.name} at {player.position}" : "없음")}");
+        Debug.Log($"[ContinueZoneHandler] 치치 참조: {(squid != null ? $"{squid.name} at {squid.position}" : "없음")}");
     }
 
     /// <summary>
-    /// 새 게임: Zone_1 활성화, 나머지 비활성화.
+    /// 현재 사용 가능한 Player Transform 반환.
     /// </summary>
+    private Transform GetPlayer() => playerTransform != null ? playerTransform : CharacterRegistry.Player;
+
+    /// <summary>
+    /// 현재 사용 가능한 치치 Transform 반환.
+    /// </summary>
+    private Transform GetSquid() => squidTransform != null ? squidTransform : CharacterRegistry.Squid;
+
+    // =====================================================
+    // 새 게임
+    // =====================================================
+
     private void HandleNewGame(List<GameObject> allZones)
     {
         int targetZone = 1;
@@ -98,13 +87,10 @@ public class ContinueZoneHandler : MonoBehaviour
         TeleportPlayerToZone(targetZone);
     }
 
-    /// <summary>
-    /// 이어하기: 저장된 Zone 활성화 + Player/치치 위치 복원.
-    /// 
-    /// 위치 복원 우선순위:
-    /// 1. 저장된 위치가 (0,0,0)이 아니면 → 그 위치로 복원 (신규 세이브)
-    /// 2. 저장된 위치가 (0,0,0)이면 → ZoneChanger 위치로 fallback (구버전 세이브)
-    /// </summary>
+    // =====================================================
+    // 이어하기
+    // =====================================================
+
     private void HandleContinue(List<GameObject> allZones)
     {
         int targetZone = SaveManager.PendingZoneIndex;
@@ -117,42 +103,43 @@ public class ContinueZoneHandler : MonoBehaviour
 
         ActivateZoneOnly(allZones, targetZone);
 
+        Transform player = GetPlayer();
+        Transform squid = GetSquid();
+
         // ---- Player 위치 복원 ----
-        if (playerTransform != null)
+        if (player != null)
         {
-            // 저장된 위치가 유효하면 그 위치로
             if (playerPos != Vector3.zero)
             {
-                playerTransform.position = playerPos;
+                player.position = playerPos;
                 Debug.Log($"[ContinueZoneHandler] Player 위치 복원: {playerPos}");
             }
             else
             {
-                // (0,0,0)이면 ZoneChanger 위치로 fallback (구버전 세이브 대응)
-                Debug.Log($"[ContinueZoneHandler] 저장된 Player 위치가 없음 → Zone_{targetZone} ZoneChanger 위치로 이동");
+                Debug.Log($"[ContinueZoneHandler] 저장된 Player 위치 없음 → ZoneChanger 위치로 fallback");
                 TeleportPlayerToZone(targetZone);
             }
         }
 
         // ---- 치치 위치 복원 ----
-        if (squidTransform != null)
+        if (squid != null)
         {
             if (squidPos != Vector3.zero)
             {
-                squidTransform.position = squidPos;
+                squid.position = squidPos;
                 Debug.Log($"[ContinueZoneHandler] 치치 위치 복원: {squidPos}");
             }
             else
             {
-                // 치치도 ZoneChanger 위치로 fallback
                 TeleportSquidToZone(targetZone);
             }
         }
     }
 
-    /// <summary>
-    /// 모든 Zone 중 targetZone 번호와 일치하는 것만 활성화합니다.
-    /// </summary>
+    // =====================================================
+    // Zone 활성화
+    // =====================================================
+
     private void ActivateZoneOnly(List<GameObject> allZones, int targetZone)
     {
         foreach (var zone in allZones)
@@ -164,9 +151,10 @@ public class ContinueZoneHandler : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 씬에서 "Zone_{number}_*" 패턴의 모든 오브젝트를 찾습니다.
-    /// </summary>
+    // =====================================================
+    // Zone 오브젝트 탐색
+    // =====================================================
+
     private List<GameObject> FindAllZoneObjects()
     {
         List<GameObject> results = new List<GameObject>();
@@ -177,7 +165,6 @@ public class ContinueZoneHandler : MonoBehaviour
         }
         else
         {
-            // 씬 전체 탐색
             foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
             {
                 if (go == null || go.hideFlags != HideFlags.None) continue;
@@ -187,7 +174,6 @@ public class ContinueZoneHandler : MonoBehaviour
             }
         }
 
-        // 중복 제거
         HashSet<int> seen = new HashSet<int>();
         results.RemoveAll(go => !seen.Add(go.GetInstanceID()));
 
@@ -203,9 +189,6 @@ public class ContinueZoneHandler : MonoBehaviour
             SearchInChildren(child, results);
     }
 
-    /// <summary>
-    /// "Zone_{number}_..." 형식의 이름에서 number를 추출합니다.
-    /// </summary>
     private int ExtractZoneNumber(string zoneName)
     {
         string[] parts = zoneName.Trim().Split('_');
@@ -214,19 +197,20 @@ public class ContinueZoneHandler : MonoBehaviour
         return -1;
     }
 
-    /// <summary>
-    /// 플레이어를 해당 Zone의 ZoneChanger 위치로 이동시킵니다.
-    /// (새 게임 시작 / 구버전 세이브 fallback 시 사용)
-    /// </summary>
+    // =====================================================
+    // 텔레포트
+    // =====================================================
+
     private void TeleportPlayerToZone(int zoneIndex)
     {
-        if (playerTransform == null) return;
+        Transform player = GetPlayer();
+        if (player == null) return;
 
         foreach (var zc in FindObjectsByType<ZoneChanger>(FindObjectsSortMode.None))
         {
             if (zc.toZoneNumber == zoneIndex)
             {
-                playerTransform.position = zc.transform.position;
+                player.position = zc.transform.position;
                 Debug.Log($"[ContinueZoneHandler] 플레이어를 Zone_{zoneIndex} 시작점으로 이동: {zc.transform.position}");
                 return;
             }
@@ -235,23 +219,21 @@ public class ContinueZoneHandler : MonoBehaviour
         Debug.LogWarning($"[ContinueZoneHandler] Zone_{zoneIndex} 의 ZoneChanger를 찾을 수 없습니다.");
     }
 
-    /// <summary>
-    /// 치치를 해당 Zone의 ZoneChanger 위치로 이동시킵니다.
-    /// </summary>
     private void TeleportSquidToZone(int zoneIndex)
     {
-        if (squidTransform == null) return;
+        Transform squid = GetSquid();
+        if (squid == null) return;
 
         foreach (var zc in FindObjectsByType<ZoneChanger>(FindObjectsSortMode.None))
         {
             if (zc.toZoneNumber == zoneIndex)
             {
-                squidTransform.position = zc.transform.position;
+                squid.position = zc.transform.position;
                 Debug.Log($"[ContinueZoneHandler] 치치를 Zone_{zoneIndex} 시작점으로 이동: {zc.transform.position}");
                 return;
             }
         }
 
-        Debug.Log($"[ContinueZoneHandler] Zone_{zoneIndex} 의 ZoneChanger를 찾을 수 없어 치치 위치 유지");
+        Debug.Log($"[ContinueZoneHandler] Zone_{zoneIndex} 의 ZoneChanger 없음 → 치치 위치 유지");
     }
 }
