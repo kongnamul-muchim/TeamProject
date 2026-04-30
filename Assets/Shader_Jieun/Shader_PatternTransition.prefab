@@ -142,6 +142,12 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   _progressProperty: _Progress
+  _seedProperty: _Seed
+  _speed: 0.1
+  _pixelation: {x: 2, y: 2}
+  _zoom: 2
+  _color: {r: 1, g: 1, b: 1, a: 1}
+  _transitionImage: {fileID: 2800000, guid: 55b41c75a8297824a884d468e15be9fc, type: 3}
 --- !u!1 &9111719706361090091
 GameObject:
   m_ObjectHideFlags: 0
