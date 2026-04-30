@@ -15,26 +15,9 @@ namespace HideAndInk.Siyeon1
     {
         Idle,
         Walk,
-        Guide,
         ApproachCharge,
         Charging,
         ChargeInterrupted,
         InspectIgnored
-    }
-
-    public enum SuspicionLevel
-    {
-        Safe,
-        Caution,
-        Danger,
-        Critical,
-        Dead
-    }
-
-    public interface ISuspicionSource
-    {
-        float DangerPercent { get; }
-        float ObservationTimer { get; }
-        bool IsTargetVisible { get; }
     }
 }

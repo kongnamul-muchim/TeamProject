@@ -6,10 +6,20 @@ namespace HideAndInk.Siyeon1
     [DisallowMultipleComponent]
     public sealed class ChichiInkTank : MonoBehaviour
     {
+        [Header("Tank Capacity")]
+        [Tooltip("탱크 최대 잉크량")]
         [SerializeField] private float tankMaxInk = 300f;
+        [Tooltip("탱크 현재 잉크량")]
         [SerializeField] private float tankCurrentInk = 300f;
+
+        [Header("Charge Per Use")]
+        [Tooltip("충전 1회당 사용할 잉크량")]
         [SerializeField] private float chargeAmountPerUse = 50f;
+
+        [Header("Section Uses")]
+        [Tooltip("한 구간당 최대 충전 횟수")]
         [SerializeField] private int chargeUsesPerSection = 3;
+        [Tooltip("남은 충전 횟수")]
         [SerializeField] private int remainingChargeUses = 3;
 
         public float TankMaxInk => tankMaxInk;

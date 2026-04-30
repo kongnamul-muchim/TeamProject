@@ -24,7 +24,7 @@ namespace HideAndInk.Siyeon1
 
         public DuduState CurrentState => GetCurrentState();
         public bool IsMoving => false;
-        public bool IsSmokeActive => playerInk != null && playerInk.IsUsingSmoke;
+        public bool IsSmokeActive => playerInk != null && playerInk.IsDashing;
         public float CurrentInk => playerInk != null ? playerInk.CurrentInk : 0f;
         public float MaxInk => playerInk != null ? playerInk.MaxInk : 0f;
         public bool CanReceiveInk => playerInk != null && playerInk.CanReceiveContactCharge() && CurrentState == DuduState.Normal;

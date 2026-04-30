@@ -3,6 +3,7 @@
     "rootNamespace": "HideAndInk",
     "references": [
         "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"
     ],

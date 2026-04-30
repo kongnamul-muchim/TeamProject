@@ -11,6 +11,11 @@ namespace HideAndInk.Core.Player
     /// </summary>
     public class PlayerLives : MonoBehaviour
     {
+        /// <summary>
+        /// 씬의 유일한 PlayerLives 인스턴스 (FindObjectOfType 회피)
+        /// </summary>
+        public static PlayerLives Instance { get; private set; }
+
         [Header("목숨 설정")]
         [Tooltip("최대 목숨 개수")]
         [SerializeField] private int maxLives = 3;
@@ -38,9 +43,14 @@ namespace HideAndInk.Core.Player
         public event System.Action OnPlayerDied;              // 목숨 0 도달
         public event System.Action OnDamageTaken;             // 피격 당했을 때 (UI 플래시 등)
 
+        private void Awake()
+        {
+            Instance = this;
+            _currentLives = maxLives;
+        }
+
         private void Start()
         {
-            _currentLives = maxLives;
             OnLifeChanged?.Invoke(_currentLives);
         }
 

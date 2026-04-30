@@ -13,6 +13,8 @@ namespace HideAndInk.Player.Visual
         [Header("연결 컴포넌트 (자동 할당)")]
         [Tooltip("플레이어 이동 컨트롤러")]
         [SerializeField] private PlayerMovementAdapter movementAdapter;
+        [Tooltip("PlayerInk 참조 (대시 애니메이션 연동)")]
+        [SerializeField] private PlayerInk playerInk;
         private Animator _animator;
         private SpriteRenderer _spriteRenderer;
         private Material _material;
@@ -29,10 +31,8 @@ namespace HideAndInk.Player.Visual
         [SerializeField] private string moveYParam = "MoveY";
         [Tooltip("이동 중 애니메이션 파라미터명")]
         [SerializeField] private string isMovingParam = "isMoving";
-        [Tooltip("탈출 중 애니메이션 파라미터명")]
-        [SerializeField] private string isEscapingParam = "isEscaping";
-
-        private bool _debugIsEscaping = false;
+        [Tooltip("대시 중 애니메이션 파라미터명 (isEscaping 활용)")]
+        [SerializeField] private string isDashingParam = "isEscaping";
 
         private void Awake()
         {
@@ -58,6 +58,30 @@ namespace HideAndInk.Player.Visual
             {
                 movementAdapter = GetComponentInParent<PlayerMovementAdapter>() ?? GetComponent<PlayerMovementAdapter>();
             }
+
+            if (playerInk == null)
+            {
+                playerInk = GetComponentInParent<PlayerInk>() ?? GetComponent<PlayerInk>();
+            }
+        }
+
+        private void Start()
+        {
+            // 대시 이벤트 구독
+            if (playerInk != null)
+            {
+                playerInk.OnDashStarted += OnDashStarted;
+                playerInk.OnDashEnded += OnDashEnded;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (playerInk != null)
+            {
+                playerInk.OnDashStarted -= OnDashStarted;
+                playerInk.OnDashEnded -= OnDashEnded;
+            }
         }
 
         private void Update()
@@ -71,20 +95,30 @@ namespace HideAndInk.Player.Visual
 
             // 2. 애니메이터 파라미터 업데이트
             UpdateAnimatorParameters(velocity, isMoving, direction);
-
-            // 3. 도망 모드 디버그 테스트 (Space Key)
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                _debugIsEscaping = !_debugIsEscaping;
-                _animator.SetBool(isEscapingParam, _debugIsEscaping);
-                Debug.Log($"[PlayerVisualBridge] Escape Mode: {_debugIsEscaping}");
-            }
         }
 
         private void LateUpdate()
         {
-            // 4. 마스크 시트 동기화 로직
+            // 3. 마스크 시트 동기화 로직
             SyncMaskWithMainSprite();
+        }
+
+        /// <summary>
+        /// 대시 시작 시 애니메이션 전환
+        /// </summary>
+        private void OnDashStarted(float duration, float speedBoost)
+        {
+            if (_animator != null)
+                _animator.SetBool(isDashingParam, true);
+        }
+
+        /// <summary>
+        /// 대시 종료 시 애니메이션 복귀
+        /// </summary>
+        private void OnDashEnded()
+        {
+            if (_animator != null)
+                _animator.SetBool(isDashingParam, false);
         }
 
         /// <summary>

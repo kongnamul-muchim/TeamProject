@@ -50,6 +50,11 @@ namespace HideAndInk.Core.Interfaces
         float SpeedMultiplier { get; set; }
 
         /// <summary>
+        /// 속도 추가 보정 (대시 등 외부 효과, 기본 속도에 더해짐)
+        /// </summary>
+        float SpeedBoost { get; set; }
+
+        /// <summary>
         /// 상태 업데이트 (매 프레임 호출)
         /// </summary>
         /// <param name="deltaTime">경과 시간</param>
