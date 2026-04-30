@@ -1,20 +1,26 @@
-Shader "Custom/PatternTransition"
+// Fractal Noise Scene Transition (Unity URP Conversion)
+// Original: https://godotshaders.com/shader/fractal-noise-scene-transition/
+// Copyright Gerardo Montaño 2025 - MIT License
+//
+// Godot 캔버스 아이템 셰이더를 Unity URP로 변환.
+// PatternTransitionController와 함께 사용.
+// _Progress: 0 = 투명, 0.5 = 완전 덮임, 1.0 = 다시 투명
+
+Shader "Custom/FractalNoiseTransition"
 {
     Properties
     {
-        _MainTex ("Screen Texture", 2D) = "white" {} 
-        _TransitionTex ("Transition Mask (R)", 2D) = "white" {} 
-        _TileTex ("Pattern Tile (RGBA)", 2D) = "white" {} 
-        
         _Progress ("Progress", Range(0, 1)) = 0.0
-        _Width ("Transition Width", Range(0, 1)) = 0.5
-        _TilePixelSize ("Tile Size (Pixels)", Float) = 32.0
-        _TileGrownScale ("Max Scale", Range(0, 16)) = 2.0
+        _Speed ("Animation Speed", Float) = 0.1
+        _Pixelation ("Pixelation", Vector) = (2.0, 2.0, 0, 0)
+        _Zoom ("Zoom", Float) = 2.0
+        _Color ("Transition Color", Color) = (0.0, 0.0, 0.0, 1.0)
+        _Seed ("Seed", Float) = 0.0
     }
 
     SubShader
     {
-        Tags { "RenderType"="Transparent" "Queue"="Transparent" }
+        Tags { "RenderType"="Transparent" "Queue"="Transparent" "PreviewType"="Plane" }
         LOD 100
         Blend SrcAlpha OneMinusSrcAlpha
 
@@ -24,6 +30,18 @@ Shader "Custom/PatternTransition"
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            CBUFFER_START(UnityPerMaterial)
+                float _Progress;
+                float _Speed;
+                float2 _Pixelation;
+                float _Zoom;
+                float4 _Color;
+                float _Seed;
+            CBUFFER_END
+
+            // FBM 회전 행렬 (Godot: mat2(vec2(0.80,-0.60), vec2(0.60,0.80)))
+            static const float2x2 _FbmRot = float2x2(0.80, 0.60, -0.60, 0.80);
 
             struct Attributes
             {
@@ -35,55 +53,97 @@ Shader "Custom/PatternTransition"
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float4 screenPos : TEXCOORD1;
             };
 
-            sampler2D _MainTex;
-            sampler2D _TransitionTex;
-            sampler2D _TileTex;
+            // --- 노이즈 함수들 ---
 
-            float _Progress;
-            float _Width;
-            float _TilePixelSize;
-            float _TileGrownScale;
+            float rand(float2 n)
+            {
+                return frac(sin(dot(n, float2(12.9898 + _Seed, 4.1414 - _Seed)))
+                            * (43758.5453 + _Seed * 1000.0));
+            }
 
-            Varyings vert (Attributes input)
+            float noise(float2 p)
+            {
+                float2 ip = floor(p);
+                float2 u = frac(p);
+                u = u * u * (3.0 - 2.0 * u);
+
+                float res = lerp(
+                    lerp(rand(ip), rand(ip + float2(1.0, 0.0)), u.x),
+                    lerp(rand(ip + float2(0.0, 1.0)), rand(ip + float2(1.0, 1.0)), u.x),
+                    u.y);
+
+                return res * res;
+            }
+
+            float fbm(float2 p)
+            {
+                float iTime = _Time.y * _Speed - _Seed;
+                float f = 0.0;
+
+                f += 0.500000 * noise(p + iTime);  p = mul(_FbmRot, p) * 2.02;
+                f += 0.031250 * noise(p);           p = mul(_FbmRot, p) * 2.01;
+                f += 0.250000 * noise(p);           p = mul(_FbmRot, p) * 2.03;
+                f += 0.125000 * noise(p);           p = mul(_FbmRot, p) * 2.01;
+                f += 0.062500 * noise(p);           p = mul(_FbmRot, p) * 2.04;
+                f += 0.015625 * noise(p + sin(iTime));
+
+                return f / 0.96875;
+            }
+
+            float pattern(float2 p)
+            {
+                return fbm(p + fbm(p + fbm(p)));
+            }
+
+            // --- 컬러맵 ---
+
+            float4 colormap(float x, float2 uv)
+            {
+                // _Progress에 따라 대각선 마스크 계산
+                // progress 0→0.5: 화면이 덮임, 0.5→1.0: 화면이 걷힘
+                float bgThreshold = abs(1.0 - _Progress * 2.0) - 0.5;
+                float clrThreshold = min(1.0, abs(-4.0 + _Progress * 8.0)) * 0.48;
+
+                x *= max(0.0, min(-abs(_Progress * 4.0 - uv.x - uv.y - 1.0) + 1.0, 1.0) * 2.0);
+
+                if (x < bgThreshold)
+                {
+                    return float4(0.0, 0.0, 0.0, 0.0);
+                }
+                else if (x < clrThreshold)
+                {
+                    return lerp(
+                        float4(0.0, 0.0, 0.0, 0.0),
+                        _Color,
+                        round((x - bgThreshold) / (clrThreshold - bgThreshold))
+                    );
+                }
+                else
+                {
+                    return _Color;
+                }
+            }
+
+            // --- 버텍스/프래그먼트 ---
+
+            Varyings vert(Attributes input)
             {
                 Varyings output;
                 output.positionHCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = input.uv;
-                output.screenPos = ComputeScreenPos(output.positionHCS);
                 return output;
             }
 
-            float4 frag (Varyings i) : SV_Target
+            float4 frag(Varyings i) : SV_Target
             {
-                // 1. 타일 UV 계산 (fract -> frac로 수정)
-                float2 pixelPos = i.screenPos.xy / i.screenPos.w * _ScreenParams.xy;
-                float2 tile_uv = frac(pixelPos / _TilePixelSize);
-                
-                // 2. 트랜지션 로직
-                float part = _Progress * (1.0 + 2.0 * _Width) - _Width;
-                float transition = tex2D(_TransitionTex, i.uv).r;
-                
-                float window = saturate(_Width + (part - transition) / _Width);
-                
-                // 3. 타일 크기 조절
-                tile_uv = tile_uv * 2.0 - 1.0;
-                tile_uv /= (window * _TileGrownScale + 0.0001);
-                tile_uv = (tile_uv + 1.0) * 0.5;
+                // 픽셀화: 화면 해상도 / 픽셀화 크기로 그리드 스냅
+                float2 modifier = _ScreenParams.xy / _Pixelation;
+                float2 uv = floor(i.uv * modifier) / modifier;
 
-                // 4. 결과 출력
-                float4 tileColor = tex2D(_TileTex, tile_uv);
-                
-                // 타일 경계 밖 처리 (frac 특성상 반복되는 것을 방지)
-                if(tile_uv.x < 0.0 || tile_uv.x > 1.0 || tile_uv.y < 0.0 || tile_uv.y > 1.0) {
-                    tileColor.a = 0;
-                }
-
-                // 배경 투명 처리: 타일 패턴만 보이도록 alpha 계산
-                float alpha = tileColor.a * window;
-                return float4(tileColor.rgb, alpha);
+                float shade = pattern(uv * _Zoom);
+                return colormap(shade, uv);
             }
             ENDHLSL
         }
