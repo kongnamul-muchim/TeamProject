@@ -72,12 +72,26 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("수동으로 만든 투명 벽 오브젝트들 (자동 생성과 함께 사용 가능)")]
     public GameObject[] invisibleWalls;
 
-    [Header("DI - 카메라 추적 (미할당 시 자동 탐색)")]
+    [Header("왼쪽 경계 벽 (Zone 시작점 추락 방지)")]
+    [Tooltip("새 Zone으로 전환 후, 시작점 왼쪽 경계에 투명 벽을 자동 생성할지 여부")]
+    public bool createLeftBoundaryWall = true;
+
+    [Tooltip("왼쪽 경계 벽의 크기 (X=너비, Y=높이). 0이면 기본값(2, 20) 사용")]
+    public Vector2 leftBoundaryWallSize = new Vector2(2f, 20f);
+
+    [Tooltip("시작점(왼쪽 끝)으로부터 벽을 배치할 오프셋. 음수면 왼쪽, 양수면 오른쪽")]
+    public float leftBoundaryOffset = -5f;
+
+    [Tooltip("수동으로 만든 왼쪽 경계 벽 오브젝트들 (자동 생성과 함께 사용 가능)")]
+    public GameObject[] leftBoundaryWalls;
+
+    [Header("DI - 칼라이동 추적 (미할당 시 자동 탐색)")]
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
     private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
+    private GameObject _autoCreatedLeftBoundaryWall;
 
     private void Start()
     {
@@ -405,6 +419,25 @@ public class ZoneChanger : MonoBehaviour
         {
             Debug.LogWarning($"[ZoneChanger] '{name}': 전환할 구역이 설정되지 않았습니다!");
         }
+
+        // ── 왼쪽 경계 벽 생성: 새 Zone의 시작점 왼쪽에 투명 벽 생성 (추락 방지) ──
+        if (createLeftBoundaryWall)
+        {
+            CreateLeftBoundaryWall();
+        }
+
+        // 수동으로 연결된 왼쪽 경계 벽도 함께 활성화
+        if (leftBoundaryWalls != null)
+        {
+            foreach (var wall in leftBoundaryWalls)
+            {
+                if (wall != null)
+                {
+                    wall.SetActive(true);
+                    Debug.Log($"[ZoneChanger] 왼쪽 경계 벽 활성화 (수동): {wall.name}");
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -556,5 +589,89 @@ public class ZoneChanger : MonoBehaviour
         {
             SearchInChildren(child, prefix, found, added);
         }
+    }
+
+    /// <summary>
+    /// 새 Zone의 왼쪽 경계(시작점)에 투명 벽을 생성합니다.
+    /// 플레이어가 Zone 경계를 넘어 그라운드 밑으로 추락하는 것을 방지합니다.
+    /// 벽은 씬 루트에 생성되어 Zone 비활성화와 무관하게 유지됩니다.
+    /// </summary>
+    private void CreateLeftBoundaryWall()
+    {
+        // 이미 생성된 벽이 있으면 중복 생성 방지
+        if (_autoCreatedLeftBoundaryWall != null)
+        {
+            _autoCreatedLeftBoundaryWall.SetActive(true);
+            Debug.Log($"[ZoneChanger] 기존 왼쪽 경계 벽 재활성화: {_autoCreatedLeftBoundaryWall.name}");
+            return;
+        }
+
+        // 새 Zone의 시작점(왼쪽 끝) 위치 계산
+        Vector3 boundaryPosition = Vector3.zero;
+        bool foundPosition = false;
+
+        // activateZones의 첫 번째 활성화된 오브젝트를 기준으로 왼쪽 경계 찾기
+        if (activateZones != null && activateZones.Length > 0)
+        {
+            GameObject firstZone = activateZones[0];
+            if (firstZone != null)
+            {
+                // Zone 오브젝트의 왼쪽 경계 (Renderer/SpriteRenderer 기준)
+                SpriteRenderer sr = firstZone.GetComponentInChildren<SpriteRenderer>();
+                if (sr != null)
+                {
+                    float leftEdge = sr.bounds.min.x;
+                    boundaryPosition = new Vector3(leftEdge + leftBoundaryOffset, firstZone.transform.position.y, 0f);
+                    foundPosition = true;
+                }
+                else
+                {
+                    // Renderer가 없으면 오브젝트 위치 기준
+                    boundaryPosition = firstZone.transform.position + new Vector3(leftBoundaryOffset, 0f, 0f);
+                    foundPosition = true;
+                }
+            }
+        }
+
+        // activateZones가 없으면 현재 칼라이동 위치나 트리거 위치 기준
+        if (!foundPosition)
+        {
+            if (enableCameraMove)
+            {
+                boundaryPosition = moveCameraTo + new Vector3(leftBoundaryOffset, 0f, 0f);
+            }
+            else
+            {
+                boundaryPosition = transform.position + new Vector3(leftBoundaryOffset, 0f, 0f);
+            }
+        }
+
+        // 투명 벽 생성 (씬 루트에)
+        _autoCreatedLeftBoundaryWall = new GameObject($"LeftBoundaryWall_{name}");
+        _autoCreatedLeftBoundaryWall.transform.position = boundaryPosition;
+
+        // 벽 크기 설정
+        Vector2 finalSize = leftBoundaryWallSize;
+        if (finalSize.x <= 0) finalSize.x = 2f;
+        if (finalSize.y <= 0) finalSize.y = 20f;
+
+        // 3D BoxCollider
+        var collider3D = _autoCreatedLeftBoundaryWall.AddComponent<BoxCollider>();
+        collider3D.size = new Vector3(finalSize.x, finalSize.y, 2f);
+        collider3D.isTrigger = false;
+
+        // 2D BoxCollider
+        var child2D = new GameObject("Collider2D");
+        child2D.transform.SetParent(_autoCreatedLeftBoundaryWall.transform);
+        child2D.transform.localPosition = Vector3.zero;
+        child2D.transform.localRotation = Quaternion.identity;
+        child2D.transform.localScale = Vector3.one;
+        var collider2D = child2D.AddComponent<BoxCollider2D>();
+        collider2D.size = finalSize;
+        collider2D.isTrigger = false;
+
+        Debug.Log($"[ZoneChanger] 왼쪽 경계 벽 자동 생성: {_autoCreatedLeftBoundaryWall.name} " +
+            $"위치={boundaryPosition}, 크기={finalSize} " +
+            $"(Zone 시작점 추락 방지)");
     }
 }
