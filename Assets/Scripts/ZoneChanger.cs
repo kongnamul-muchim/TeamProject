@@ -98,10 +98,31 @@ public class ZoneChanger : MonoBehaviour
             cameraFollow = FindObjectOfType<CameraFollow>();
         }
 
+        // 게임 시작 시 현재 활성 Zone의 Ground 동기화
+        // (deactivateZones[0]이 활성화되어 있으면 fromZoneNumber가 현재 활성 Zone)
+        if (fromZoneNumber >= 0 && deactivateZones != null && deactivateZones.Length > 0)
+        {
+            bool isCurrentZoneActive = false;
+            foreach (var zone in deactivateZones)
+            {
+                if (zone != null && zone.activeSelf)
+                {
+                    isCurrentZoneActive = true;
+                    break;
+                }
+            }
+
+            if (isCurrentZoneActive)
+            {
+                SyncGroundObjects(fromZoneNumber);
+                Debug.Log($"[ZoneChanger] '{name}' 초기 Ground 동기화: Zone_{fromZoneNumber} (Ground_{fromZoneNumber:D2} 활성화)");
+            }
+        }
+
         Debug.Log($"[ZoneChanger] '{name}' 초기화: " +
             $"비활성화={fromZoneNumber}({(deactivateZones != null ? deactivateZones.Length : 0)}개), " +
             $"활성화={toZoneNumber}({(activateZones != null ? activateZones.Length : 0)}개), " +
-            $"카메라이동={enableCameraMove}, " +
+            $"칼라이동={enableCameraMove}, " +
             $"투명벽={createInvisibleWall}, " +
             $"위치={transform.position}");
     }
