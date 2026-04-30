@@ -33,8 +33,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Progress: 1
-    - _Seed: 0.20816365
+    - _Progress: 0
+    - _Seed: 0.027506117
     - _SoftEdge: 0.1
     - _Speed: 0.1
     - _Zoom: 2
