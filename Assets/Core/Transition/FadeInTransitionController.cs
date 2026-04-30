@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace HideAndInk.Core.Transition
 {
@@ -59,7 +60,8 @@ namespace HideAndInk.Core.Transition
         }
 
         /// <summary>
-        /// 프리팹을 인스턴스화하고 초기 상태를 설정합니다.
+        /// 프리팹을 인스턴스화하고 Canvas를 동적으로 생성하여 초기 상태를 설정합니다.
+        /// FadeInObj 프리팹에 Canvas가 없어도 정상 동작합니다.
         /// </summary>
         private void InitializeFadeInObject()
         {
@@ -69,8 +71,35 @@ namespace HideAndInk.Core.Transition
                 return;
             }
 
-            _fadeInObject = Instantiate(fadeInPrefab, transform);
+            // Canvas 생성 (ScreenSpaceOverlay, 최상단)
+            GameObject canvasGO = new GameObject("FadeInCanvas");
+            canvasGO.transform.SetParent(transform, false);
+            Canvas canvas = canvasGO.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 9999;
+            canvasGO.AddComponent<GraphicRaycaster>();
+
+            // CanvasScaler 추가 (화면 비율 대응)
+            var scaler = canvasGO.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            // FadeInObj를 Canvas의 자식으로 생성
+            _fadeInObject = Instantiate(fadeInPrefab, canvasGO.transform, false);
             _fadeInObject.SetActive(false);
+
+            // RectTransform을 전체 화면으로 스트레치
+            var rectTransform = _fadeInObject.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchorMin = Vector2.zero;
+                rectTransform.anchorMax = Vector2.one;
+                rectTransform.offsetMin = Vector2.zero;
+                rectTransform.offsetMax = Vector2.zero;
+                rectTransform.localScale = Vector3.one;
+            }
+
             _animator = _fadeInObject.GetComponent<Animator>();
 
             if (_animator == null)
