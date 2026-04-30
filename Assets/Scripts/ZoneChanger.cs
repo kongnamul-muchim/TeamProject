@@ -156,13 +156,32 @@ public class ZoneChanger : MonoBehaviour
     {
         _alreadyTriggered = true;
 
-        if (useTransition && PatternTransitionController.Instance != null)
+        if (useTransition && FadeInTransitionController.Instance != null)
         {
-            // 카메라 추적 일시정지
+            // 칼라이동 추적 일시정지
             if (enableCameraMove && cameraFollow != null)
             {
                 cameraFollow.Pause();
             }
+
+            // 트랜지션 인 → 투명 벽 생성 → 구역 전환 + 칼라이동 → 트랜지션 아웃
+            // 주의: 투명 벽을 ChangeZone()보다 먼저 생성해야
+            //       Zone 비활성화 시 벽이 같이 사라지는 문제를 방지할 수 있음
+            FadeInTransitionController.Instance.PlayIn(() =>
+            {
+                ActivateInvisibleWalls();
+                ChangeZone();
+                MoveCamera();
+
+                // 칼라이동 완료 후 추적 재개
+                if (enableCameraMove && cameraFollow != null)
+                {
+                    cameraFollow.Resume(snapToTargetAfterMove);
+                }
+
+                FadeInTransitionController.Instance.PlayOut();
+            });
+        }
 
             // 트랜지션 인 → 투명 벽 생성 → 구역 전환 + 카메라 이동 → 트랜지션 아웃
             // 주의: 투명 벽을 ChangeZone()보다 먼저 생성해야

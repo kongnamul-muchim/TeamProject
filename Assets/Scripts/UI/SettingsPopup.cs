@@ -1,4 +1,5 @@
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Transition;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -34,7 +35,17 @@ namespace HideAndInk.Scripts.UI
                 return;
             }
 
-            SceneManager.LoadScene(titleSceneName);
+            if (FadeInTransitionController.Instance != null)
+            {
+                FadeInTransitionController.Instance.PlayIn(() =>
+                {
+                    SceneManager.LoadScene(titleSceneName);
+                });
+            }
+            else
+            {
+                SceneManager.LoadScene(titleSceneName);
+            }
         }
 
         // =====================================================
