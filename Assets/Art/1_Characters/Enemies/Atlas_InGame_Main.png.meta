@@ -1033,6 +1033,94 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: UI_Panel_Title
+      rect:
+        serializedVersion: 2
+        x: 543
+        y: 3387
+        width: 590
+        height: 440
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2329deac308415f48a8f84c7df246156
+      internalID: 435276612
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Btn_Setting
+      rect:
+        serializedVersion: 2
+        x: 1186
+        y: 3559
+        width: 258
+        height: 258
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 00c125e528dc69b45a2bdbad466cdbe0
+      internalID: 132223959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Spr_GameOver
+      rect:
+        serializedVersion: 2
+        x: 578
+        y: 0
+        width: 446
+        height: 406
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 99663c1b78e877544a6b0e1dfa67c28d
+      internalID: 779429065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UI_Panel_Setting
+      rect:
+        serializedVersion: 2
+        x: 1366
+        y: 3096
+        width: 682
+        height: 365
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9ead6759d6063bd4390e2b22725dd1ed
+      internalID: 1299517544
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -1075,6 +1163,7 @@ TextureImporter:
       Spr_Ch3_BossChase_1: 176760188
       Spr_Ch3_BossPatrol_0: 1968233934
       Spr_Ch3_BossPatrol_1: 1017121817
+      Spr_GameOver: 779429065
       Spr_Sidekick_Idle_Back: 1001830362
       Spr_Sidekick_Idle_Front: -371718041
       Spr_Sidekick_Idle_Left: 465974173
@@ -1084,10 +1173,13 @@ TextureImporter:
       UI_Btn_FXOff: -110114076
       UI_Btn_FXOn: -256924087
       UI_Btn_Pause: -732030350
+      UI_Btn_Setting: 132223959
       UI_InkBar: -1329591593
       UI_InkGauge: -1175481672
       UI_InkGauge_Mask: 2074321983
       UI_Panel_PausePopup: 2061759366
+      UI_Panel_Setting: 1299517544
+      UI_Panel_Title: 435276612
       UI_SliderBg: -1347713463
       UI_SliderHandle: -725192677
       UI_Slider_Fill: -232849997
