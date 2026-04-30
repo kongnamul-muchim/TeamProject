@@ -352,6 +352,12 @@ public class ZoneChanger : MonoBehaviour
             changed = true;
         }
 
+        // ── Ground 동기화: 현재 Zone에 해당하는 Ground만 활성화, 나머지는 비활성화 ──
+        if (toZoneNumber >= 0)
+        {
+            SyncGroundObjects(toZoneNumber);
+        }
+
         if (changed)
         {
             string fromName = fromZoneNumber >= 0 ? $"Zone_{fromZoneNumber}" : "?";
@@ -362,6 +368,68 @@ public class ZoneChanger : MonoBehaviour
         {
             Debug.LogWarning($"[ZoneChanger] '{name}': 전환할 구역이 설정되지 않았습니다!");
         }
+    }
+
+    /// <summary>
+    /// 씬 내 모든 Ground 오브젝트를 찾아, 현재 활성 Zone 번호에 해당하는 것만 활성화하고
+    /// 나머지는 비활성화합니다.
+    /// </summary>
+    private static void SyncGroundObjects(int activeZoneNumber)
+    {
+        GameObject[] allGrounds = FindAllGroundObjects();
+        foreach (var ground in allGrounds)
+        {
+            int groundNumber = ExtractGroundNumber(ground.name);
+            if (groundNumber < 0) continue;
+
+            bool shouldBeActive = (groundNumber == activeZoneNumber);
+            if (ground.activeSelf != shouldBeActive)
+            {
+                ground.SetActive(shouldBeActive);
+                Debug.Log($"[ZoneChanger] Ground 동기화: {ground.name} = {shouldBeActive}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ground_01 ~ Ground_06 형식의 이름에서 번호를 추출합니다.
+    /// </summary>
+    private static int ExtractGroundNumber(string name)
+    {
+        const string prefix = "Ground_";
+        if (!name.Trim().StartsWith(prefix)) return -1;
+
+        string numberStr = name.Trim().Substring(prefix.Length);
+        if (int.TryParse(numberStr, out int number))
+        {
+            return number;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// 씬 내 모든 Ground 오브젝트(Ground_*)를 찾습니다. 비활성 오브젝트도 포함합니다.
+    /// </summary>
+    static GameObject[] FindAllGroundObjects()
+    {
+        List<GameObject> grounds = new List<GameObject>();
+        HashSet<int> added = new HashSet<int>();
+
+        foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+        {
+            if (go == null) continue;
+            if (go.hideFlags != HideFlags.None) continue;
+            if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+            if (added.Contains(go.GetInstanceID())) continue;
+
+            if (go.name.Trim().StartsWith("Ground_"))
+            {
+                grounds.Add(go);
+                added.Add(go.GetInstanceID());
+            }
+        }
+
+        return grounds.ToArray();
     }
 
     /// <summary>
