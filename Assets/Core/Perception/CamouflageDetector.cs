@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Enemy.Boss.Gimmicks;
 
 namespace HideAndInk.Core.Perception
 {
@@ -81,11 +82,17 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의태 가능한 오브젝트인지 확인
+        /// 의태 가능한 오브젝트인지 확인 (파괴된 오브젝트 제외)
         /// </summary>
         private bool IsCamouflageable(GameObject obj)
         {
-            return obj.CompareTag(CAMOUFLAGEABLE_TAG);
+            if (!obj.CompareTag(CAMOUFLAGEABLE_TAG)) return false;
+
+            // ObjectHP: 파괴된 오브젝트는 의태 불가
+            var hp = obj.GetComponent<ObjectHP>();
+            if (hp != null && hp.IsDestroyed) return false;
+
+            return true;
         }
     }
 }

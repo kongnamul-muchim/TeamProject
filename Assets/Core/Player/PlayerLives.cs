@@ -11,6 +11,11 @@ namespace HideAndInk.Core.Player
     /// </summary>
     public class PlayerLives : MonoBehaviour
     {
+        /// <summary>
+        /// 씬의 유일한 PlayerLives 인스턴스 (FindObjectOfType 회피)
+        /// </summary>
+        public static PlayerLives Instance { get; private set; }
+
         [Header("목숨 설정")]
         [Tooltip("최대 목숨 개수")]
         [SerializeField] private int maxLives = 3;
@@ -18,10 +23,15 @@ namespace HideAndInk.Core.Player
         [Tooltip("피격 후 무적 시간 (초)")]
         [SerializeField] private float invincibilityDuration = 1.5f;
 
+        [Header("무적 깜빡임")]
+        [SerializeField, Tooltip("깜빡임 주파수 (무적 시)")] private float blinkFrequency = 10f;
+        [SerializeField, Tooltip("깜빡임 대상 오브젝트 (Visual)")] private GameObject blinkTarget;
+
         // 상태
         private int _currentLives;
         private float _invincibilityTimer;
         private bool _isInvincible;
+        private bool _blinkTargetWasActive;
 
         // 프로퍼티
         public int CurrentLives => _currentLives;
@@ -33,9 +43,14 @@ namespace HideAndInk.Core.Player
         public event System.Action OnPlayerDied;              // 목숨 0 도달
         public event System.Action OnDamageTaken;             // 피격 당했을 때 (UI 플래시 등)
 
+        private void Awake()
+        {
+            Instance = this;
+            _currentLives = maxLives;
+        }
+
         private void Start()
         {
-            _currentLives = maxLives;
             OnLifeChanged?.Invoke(_currentLives);
         }
 
@@ -44,14 +59,37 @@ namespace HideAndInk.Core.Player
             if (_isInvincible)
             {
                 _invincibilityTimer -= Time.deltaTime;
+
+                // 깜빡임: Visual 오브젝트 켰다/껐다 반복 (Animator와 충돌 없음)
+                if (blinkTarget != null)
+                {
+                    float wave = Mathf.Sin(Time.time * blinkFrequency * Mathf.PI * 2);
+                    blinkTarget.SetActive(wave > 0f);
+                }
+
                 if (_invincibilityTimer <= 0f)
                 {
                     _isInvincible = false;
+                    if (blinkTarget != null)
+                        blinkTarget.SetActive(true); // 복원
 #if UNITY_EDITOR
                     Debug.Log("[PlayerLives] Invincibility ended.");
 #endif
                 }
             }
+        }
+
+        /// <summary>
+        /// 외부에서 강제로 무적 시간 설정 (백상아리 강제 이탈 등)
+        /// </summary>
+        public void SetInvincible(float duration)
+        {
+            _isInvincible = true;
+            _invincibilityTimer = duration;
+
+            // 현재 blinkTarget의 활성 상태 저장 (나중에 복원용)
+            if (blinkTarget != null)
+                _blinkTargetWasActive = blinkTarget.activeSelf;
         }
 
         /// <summary>

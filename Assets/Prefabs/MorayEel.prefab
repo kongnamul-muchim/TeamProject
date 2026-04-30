@@ -209,8 +209,9 @@ MonoBehaviour:
   chaseSuspicionDecayMultiplier: 0.5
   chargeIndicatorLength: 12
   chargeIndicatorWidth: 1.5
+  targetIndicatorPrefab: {fileID: 0}
   bossSprite: {fileID: 682140847608222067}
-  sandPitPrefab: {fileID: 11400000, guid: 30ba88e5611bad74fa2f3aba77413bc2, type: 3}
+  sandPitPrefab: {fileID: 0}
   chargeDirector: {fileID: 3089951662521229775}
   knockbackForce: 12
   defaultFacingLeft: 1
@@ -323,4 +324,8 @@ MonoBehaviour:
   chargeDelay: 0.2
   playerPredictionTime: 0.4
   screenEdgeOffset: 2
-  indicatorFloorY: 0
+  viewportEdgeMargin: 0.1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  indicatorFloorY: 0.05

@@ -9,7 +9,7 @@ namespace HideAndInk.Core.Perception
     /// </summary>
     public sealed class BillboardSprite : MonoBehaviour
     {
-        [SerializeField] private UnityEngine.Camera _targetCamera;
+        [SerializeField, Tooltip("대상 카메라")] private UnityEngine.Camera _targetCamera;
 
         private void Awake()
         {

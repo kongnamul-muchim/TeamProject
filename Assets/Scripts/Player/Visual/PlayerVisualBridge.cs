@@ -11,27 +11,41 @@ namespace HideAndInk.Player.Visual
     public sealed class PlayerVisualBridge : MonoBehaviour
     {
         [Header("연결 컴포넌트 (자동 할당)")]
+        [Tooltip("플레이어 이동 컨트롤러")]
         [SerializeField] private PlayerMovementAdapter movementAdapter;
+        [Tooltip("PlayerInk 참조 (대시 애니메이션 연동)")]
+        [SerializeField] private PlayerInk playerInk;
         private Animator _animator;
         private SpriteRenderer _spriteRenderer;
         private Material _material;
 
         [Header("마스크 시트 설정")]
+        [Tooltip("마스크 스프라이트 배열")]
         [SerializeField] private Sprite[] maskSprites; // 마스크 시트 슬라이스 파일들을 여기에 드래그 앤 드롭
         private int _lastSpriteIndex = -1;
 
         [Header("애니메이터 파라미터 이름")]
+        [Tooltip("X 이동 애니메이션 파라미터명")]
         [SerializeField] private string moveXParam = "MoveX";
+        [Tooltip("Y 이동 애니메이션 파라미터명")]
         [SerializeField] private string moveYParam = "MoveY";
+        [Tooltip("이동 중 애니메이션 파라미터명")]
         [SerializeField] private string isMovingParam = "isMoving";
-        [SerializeField] private string isEscapingParam = "isEscaping";
-
-        private bool _debugIsEscaping = false;
+        // 프리팹 시리얼라이즈 오버라이드 방지를 위해 SerializeField 사용 안 함
+        private string isDashingParam = "isEscaping";
 
         private void Awake()
         {
             _animator = GetComponent<Animator>();
-            
+            if (_animator != null)
+            {
+                Debug.Log($"[PlayerVisualBridge] Awake - _animator=OK, gameObject={gameObject.name}, animatorGO={_animator.gameObject.name}, controller={(_animator.runtimeAnimatorController != null ? _animator.runtimeAnimatorController.name : "NULL")}");
+            }
+            else
+            {
+                Debug.LogWarning($"[PlayerVisualBridge] Awake - _animator=NULL, gameObject={gameObject.name}");
+            }
+
             // 'Visual' 자식 오브젝트에서 SpriteRenderer를 먼저 찾습니다. (Scale 0.2 이슈 해결)
             Transform visualTransform = transform.Find("Visual");
             if (visualTransform != null)
@@ -51,6 +65,32 @@ namespace HideAndInk.Player.Visual
             if (movementAdapter == null)
             {
                 movementAdapter = GetComponentInParent<PlayerMovementAdapter>() ?? GetComponent<PlayerMovementAdapter>();
+                Debug.Log($"[PlayerVisualBridge] Awake - movementAdapter={( movementAdapter != null ? "OK" : "NULL" )}");
+            }
+
+            if (playerInk == null)
+            {
+                playerInk = GetComponentInParent<PlayerInk>() ?? GetComponent<PlayerInk>();
+                Debug.Log($"[PlayerVisualBridge] Awake - playerInk={( playerInk != null ? "OK" : "NULL" )} (searched parent then self)");
+            }
+        }
+
+        private void Start()
+        {
+            // 대시 이벤트 구독
+            if (playerInk != null)
+            {
+                playerInk.OnDashStarted += OnDashStarted;
+                playerInk.OnDashEnded += OnDashEnded;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (playerInk != null)
+            {
+                playerInk.OnDashStarted -= OnDashStarted;
+                playerInk.OnDashEnded -= OnDashEnded;
             }
         }
 
@@ -65,20 +105,41 @@ namespace HideAndInk.Player.Visual
 
             // 2. 애니메이터 파라미터 업데이트
             UpdateAnimatorParameters(velocity, isMoving, direction);
-
-            // 3. 도망 모드 디버그 테스트 (Space Key)
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                _debugIsEscaping = !_debugIsEscaping;
-                _animator.SetBool(isEscapingParam, _debugIsEscaping);
-                Debug.Log($"[PlayerVisualBridge] Escape Mode: {_debugIsEscaping}");
-            }
         }
 
         private void LateUpdate()
         {
-            // 4. 마스크 시트 동기화 로직
+            // 3. 마스크 시트 동기화 로직
             SyncMaskWithMainSprite();
+        }
+
+        /// <summary>
+        /// 대시 시작 시 애니메이션 전환
+        /// </summary>
+        private void OnDashStarted(float duration, float speedBoost)
+        {
+            if (_animator != null)
+            {
+                Debug.Log($"[PlayerVisualBridge] OnDashStarted → setting \"{isDashingParam}\"=true on Animator(gameObject={_animator.gameObject.name}, controller={_animator.runtimeAnimatorController?.name})");
+                _animator.SetBool(isDashingParam, true);
+                _animator.SetBool(isMovingParam, true); // 서서 대시해도 isMoving 보장
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerVisualBridge] OnDashStarted but _animator is NULL!");
+            }
+        }
+
+        /// <summary>
+        /// 대시 종료 시 애니메이션 복귀
+        /// </summary>
+        private void OnDashEnded()
+        {
+            if (_animator != null)
+            {
+                Debug.Log($"[PlayerVisualBridge] OnDashEnded → isEscaping=false");
+                _animator.SetBool(isDashingParam, false);
+            }
         }
 
         /// <summary>

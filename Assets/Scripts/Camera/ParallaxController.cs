@@ -38,15 +38,19 @@ namespace HideAndInk.ParallaxSystem
             public Transform target;
 
             [Header("위치 기준 모드")]
+            [Tooltip("앵커 모드 (Camera = 카메라 기준, Viewport = 화면 비율 기준)")]
             public AnchorMode anchorMode = AnchorMode.CameraAnchored;
 
             [Header("X축 보간 비율 (0=최대원경, 1=고정)")]
             [Range(0f, 1f)]
+            [Tooltip("패럴랙스 이동 속도 계수")]
             public float rate = 0.3f;
 
             [Header("Y축 설정")]
+            [Tooltip("Y축 패럴랙스 적용 여부")]
             public bool applyY;
             [Range(0f, 1f)]
+            [Tooltip("Y축 패럴랙스 속도 계수")]
             public float yRate = 0.2f;
 
             // 런타임 전용
@@ -64,6 +68,7 @@ namespace HideAndInk.ParallaxSystem
 
         [Header("전역 속도 배율 (0=정지, 1=정상, 2=2배속)")]
         [Range(0f, 5f)]
+        [Tooltip("전역 속도 배율")]
         [SerializeField] private float globalSpeedMultiplier = 1f;
 
         // ── 내부 상태 ──

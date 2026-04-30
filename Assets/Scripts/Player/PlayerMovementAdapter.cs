@@ -14,17 +14,30 @@ namespace HideAndInk.Player
     public sealed class PlayerMovementAdapter : MonoBehaviour
     {
         [Header("이동 속도 설정")]
+        [Tooltip("수평 이동 속도")]
         [SerializeField] private float horizontalSpeed = 5.0f;
+        [Tooltip("수직 이동 속도")]
         [SerializeField] private float verticalSpeed = 4.0f;
+        [Tooltip("이동 가속도")]
         [SerializeField] private float acceleration = 10.0f;
+        [Tooltip("이동 마찰 계수")]
         [SerializeField] private float friction = 0.9f;
 
         [Header("입력 설정")]
+        [Tooltip("수평 입력 축 이름")]
         [SerializeField] private string horizontalAxis = "Horizontal";
+        [Tooltip("수직 입력 축 이름")]
         [SerializeField] private string verticalAxis = "Vertical";
 
         [Header("로거 (DI)")]
+        [Tooltip("이동 로거 참조")]
         [SerializeField] private MovementLogger movementLogger;
+
+        [Header("대시 연동")]
+        [Tooltip("PlayerInk 참조 (대시 속도/무적 연동)")]
+        [SerializeField] private PlayerInk playerInk;
+        [Tooltip("PlayerLives 참조 (대시 무적 연동)")]
+        [SerializeField] private PlayerLives playerLives;
 
         private IPlayerMovement _playerMovement;
         private Rigidbody _rigidbody;
@@ -54,12 +67,38 @@ namespace HideAndInk.Player
             {
                 _playerMovement = new PlayerMovement(config);
             }
+
+            // PlayerInk 자동 탐색 (같은 오브젝트)
+            if (playerInk == null)
+                playerInk = GetComponent<PlayerInk>();
+            if (playerLives == null)
+                playerLives = GetComponent<PlayerLives>();
         }
 
         private void Start()
         {
             // 로거 초기화 (MovementLogger가 파일 I/O 담당)
             movementLogger?.Initialize();
+
+            // 대시 이벤트 구독
+            if (playerInk != null)
+            {
+                playerInk.OnDashStarted += OnDashStarted;
+                playerInk.OnDashEnded += OnDashEnded;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // MovementLogger 리소스 해제는 MovementLogger 자체에서 관리
+            (movementLogger as System.IDisposable)?.Dispose();
+
+            // 대시 이벤트 구독 해제
+            if (playerInk != null)
+            {
+                playerInk.OnDashStarted -= OnDashStarted;
+                playerInk.OnDashEnded -= OnDashEnded;
+            }
         }
 
         private void Update()
@@ -94,6 +133,30 @@ namespace HideAndInk.Player
             // 이동 좌표 로그 기록 (MovementLogger에 위임)
             Vector3 pos = transform.position;
             movementLogger?.Log($"Pos: ({pos.x:F3}, {pos.y:F3}, {pos.z:F3}) | Velocity: ({velocity.x:F3}, {velocity.y:F3}) | Input: ({_moveInput.x:F3}, {_moveInput.y:F3})");
+        }
+
+        /// <summary>
+        /// 대시 시작 이벤트 핸들러
+        /// </summary>
+        private void OnDashStarted(float duration, float speedBoost)
+        {
+            // 속도 추가 보정 적용
+            if (_playerMovement != null)
+                _playerMovement.SpeedBoost = speedBoost;
+
+            // 무적 설정
+            if (playerLives != null)
+                playerLives.SetInvincible(duration);
+        }
+
+        /// <summary>
+        /// 대시 종료 이벤트 핸들러
+        /// </summary>
+        private void OnDashEnded()
+        {
+            // 속도 추가 보정 제거
+            if (_playerMovement != null)
+                _playerMovement.SpeedBoost = 0f;
         }
 
         /// <summary>
@@ -154,12 +217,7 @@ namespace HideAndInk.Player
         }
 
         // 충돌 감지용 레이어
+        [Tooltip("벽 레이어 마스크")]
         [SerializeField] private LayerMask wallLayer;
-
-        private void OnDestroy()
-        {
-            // MovementLogger 리소스 해제는 MovementLogger 자체에서 관리
-            (movementLogger as System.IDisposable)?.Dispose();
-        }
     }
 }

@@ -10,13 +10,17 @@ namespace HideAndInk.ParallaxSystem
     public sealed class BackgroundAutoFit : MonoBehaviour
     {
         [Header("DI - 기준 카메라 (미할당 시 Camera.main 사용)")]
+        [Tooltip("대상 카메라")]
         [SerializeField] private Camera targetCamera;
 
         [Header("피팅 모드")]
+        [Tooltip("화면 맞춤 모드")]
         [SerializeField] private FitMode fitMode = FitMode.Fill;
 
         [Header("여백 오프셋 (비율)")]
+        [Tooltip("가로 여백")]
         [SerializeField] private float paddingX;
+        [Tooltip("세로 여백")]
         [SerializeField] private float paddingY;
 
         private SpriteRenderer _spriteRenderer;

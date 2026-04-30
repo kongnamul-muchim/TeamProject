@@ -158,6 +158,9 @@ MonoBehaviour:
   followZ: 1
   zDepthFactor: 0.3
   zBaseOffset: -10
+  enableXSway: 1
+  swayAmplitude: 0.15
+  swayFrequency: 0.5
 --- !u!1 &5903600637855583843
 GameObject:
   m_ObjectHideFlags: 0
@@ -176,6 +179,8 @@ GameObject:
   - component: {fileID: 2622753924600596128}
   - component: {fileID: 7529962840568549111}
   - component: {fileID: -3425529942321639934}
+  - component: {fileID: 3011776440106332315}
+  - component: {fileID: -1755150068248407618}
   m_Layer: 6
   m_Name: Player_Micho
   m_TagString: Player
@@ -226,7 +231,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 112
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!65 &1773651626226977474
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -282,15 +287,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80d0376535bbeb64597e9e28b5952341, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Player.PlayerMovementAdapter
-  horizontalSpeed: -5
-  verticalSpeed: -4
-  acceleration: 10
+  horizontalSpeed: 3
+  verticalSpeed: 2
+  acceleration: 5
   friction: 0.9
   horizontalAxis: Horizontal
   verticalAxis: Vertical
+  playerInk: {fileID: 3011776440106332315}
+  playerLives: {fileID: -3425529942321639934}
   wallLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
 --- !u!114 &7168234213576925758
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -359,6 +366,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Player.Visual.PlayerVisualBridge
   movementAdapter: {fileID: 6183797669293676706}
+  playerInk: {fileID: 3011776440106332315}
   maskSprites:
   - {fileID: 429118432, guid: 8e5f37a58cbf6dc418a24f40bd1eb63f, type: 3}
   - {fileID: -409400765, guid: 8e5f37a58cbf6dc418a24f40bd1eb63f, type: 3}
@@ -379,7 +387,7 @@ MonoBehaviour:
   moveXParam: MoveX
   moveYParam: MoveY
   isMovingParam: isMoving
-  isEscapingParam: isEscaping
+  isDashingParam: isDashing
 --- !u!114 &7529962840568549111
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -409,6 +417,46 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Player.PlayerLives
   maxLives: 3
   invincibilityDuration: 1.5
+  blinkFrequency: 10
+  blinkTarget: {fileID: 8977722265186421912}
+--- !u!114 &3011776440106332315
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5903600637855583843}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c411daad22112b4686df196a19c8387, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::PlayerInk
+  currentInk: 100
+  maxInk: 100
+  passiveRechargeDuration: 10
+  dashDuration: 1.5
+  dashSpeedBoost: 3
+  smokeEffect: {fileID: 2114560984396814035, guid: d5b205df6d3027843908281dc68b9016, type: 3}
+  isUnderThreat: 0
+  isUsingBossMimic: 0
+  isContactCharging: 0
+--- !u!114 &-1755150068248407618
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5903600637855583843}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbcf8c0082d4da04eb4c2b38b128f50b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Siyeon1.DuduDevelopChargeAdapter
+  playerInk: {fileID: 3011776440106332315}
+  camouflageStateProvider: {fileID: 7168234213576925758}
+  blockPassiveRecharge: 1
+  isFleeing: 0
+  isDead: 0
 --- !u!1 &8977722265186421912
 GameObject:
   m_ObjectHideFlags: 0

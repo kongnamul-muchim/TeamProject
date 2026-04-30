@@ -19,41 +19,59 @@ namespace HideAndInk.Core.Enemy.Boss
         public override EnemyType Type => EnemyType.Boss;
 
         [Header("보스 설정")]
+        [Tooltip("시야 감지 센서 (원뿔형)")]
         [SerializeField] private ConeVisionSensor visionSensor;
+        [Tooltip("보스 전용 의심도 시스템")]
         [SerializeField] private BossSuspicionSystem suspicionSystem;
+        [Tooltip("시야 원뿔 시각화 렌더러")]
         [SerializeField] private VisionConeRenderer visionConeRenderer;
         [Tooltip("시야 없이 거리만으로 Chase 진입하는 거리 (m). 0 이하이면 비활성화")]
         [SerializeField] private float proximityChaseDistance = 10f;
 
         [Header("상태별 속도")]
+        [Tooltip("정찰 상태 이동 속도")]
         [SerializeField] private float patrolSpeed = 2f;
+        [Tooltip("추적 상태 이동 속도")]
         [SerializeField] private float chaseSpeed = 5f;
+        [Tooltip("수색 상태 이동 속도")]
         [SerializeField] private float searchSpeed = 3f;
+        [Tooltip("수색 상태 탐색 거리")]
         [SerializeField] private float searchDistance = 3f;
+        [Tooltip("수색 상태 지속 시간")]
         [SerializeField] private float searchDuration = 5f;
 
         [Header("기믹 설정")]
+        [Tooltip("보스 기믹 에셋 (ScriptableObject)")]
         [SerializeField] private ScriptableObject gimmickAsset;
+        [Tooltip("커스텀 기믹 컴포넌트")]
         [SerializeField] private MonoBehaviour customGimmick;
 
         [Header("의심도 설정")]
+        [Tooltip("추적 중 의심도 감소 배율")]
         [SerializeField] private float chaseSuspicionDecayMultiplier = 0.5f;
 
         [Header("돌진 인디케이터")]
+        [Tooltip("돌진 인디케이터 길이")]
         [SerializeField] private float chargeIndicatorLength = 12f;
+        [Tooltip("돌진 인디케이터 너비")]
         [SerializeField] private float chargeIndicatorWidth = 1.5f;
+        [Tooltip("타겟 인디케이터 프리팹")]
+        [SerializeField] private GameObject targetIndicatorPrefab;
 
         [Header("스프라이트 (Animator-safe flipX)")]
         [Tooltip("Animator가 붙은 SpriteRenderer. flipX로 좌우 반전")]
         [SerializeField] private SpriteRenderer bossSprite;
 
         [Header("가자미 구덩이 (SandPit)")]
+        [Tooltip("가자미 구덩이(SandPit) 프리팹")]
         [SerializeField] private SandPit sandPitPrefab;
 
         [Header("곰치 돌진 디렉터")]
+        [Tooltip("곰치 돌진 디렉터")]
         [SerializeField] private MorayChargeDirector chargeDirector;
 
         [Header("데미지")]
+        [Tooltip("넉백 힘")]
         [SerializeField] private float knockbackForce = 12f;
 
         private EnemyAIStateMachine _stateMachine;
@@ -203,6 +221,39 @@ namespace HideAndInk.Core.Enemy.Boss
                     chargeDirector.OnMovementStop += OnMorayMovementStop;
                 }
             }
+
+            if (_activeGimmick is DashChargeGimmick dash && suspicionSystem != null)
+            {
+                // 의심도 시스템 모듈 제거 (자체 의심도 상승 사용)
+                suspicionSystem.SetSuspicionModule(null);
+
+                // DashCharge: ChaseBehavior 정지 (기믹이 직접 Chase 제어)
+                _chaseBehavior?.SetPaused(true);
+
+                // 의심도 100% → Patrol→Chase 전환
+                suspicionSystem.OnDetected += () =>
+                {
+                    if (_stateMachine != null && _stateMachine.CurrentState != EnemyAIState.Chase)
+                        _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                };
+
+                // Player 사망 시 의심도 리셋 → Patrol 복귀
+                var playerLives = _playerTransform != null
+                    ? _playerTransform.GetComponent<PlayerLives>()
+                    : FindObjectOfType<PlayerLives>();
+                if (playerLives != null)
+                {
+                    playerLives.OnPlayerDied += () =>
+                    {
+                        suspicionSystem.ForceSetSuspicion(0f);
+                        suspicionSystem.ResetDetected();
+                        if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
+                        {
+                            _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
+                        }
+                    };
+                }
+            }
         }
 
         private void ConnectGimmickCallbacks()
@@ -277,8 +328,67 @@ namespace HideAndInk.Core.Enemy.Boss
                     break;
 
                 case DashChargeGimmick dash:
-                    dash.OnSpeedOverride = (s) => _movement.Speed = s;
-                    dash.OnDashCompleted = () => _stateMachine?.TryTransitionTo(EnemyAIState.Patrol);
+                    dash.OnSpeedOverride = (s) =>
+                    {
+                        _movement.Speed = s;
+                        if (_movement is EnemyMovement em)
+                            em.SetMaxSpeed(Mathf.Max(s, 1f));
+                    };
+                    dash.OnMovementStop = () => _movement.Stop();
+                    dash.OnMoveTo = (t) => _movement.MoveTo(t);
+                    dash.OnIncreaseSuspicion = (rate, dt) =>
+                    {
+                        if (suspicionSystem != null)
+                            suspicionSystem.AddSuspicion(rate, dt);
+                    };
+                    dash.OnPlayerHit = () =>
+                    {
+                        if (_playerLives != null && !_playerLives.IsInvincible)
+                            _playerLives.TakeDamage();
+                    };
+                    dash.OnObstacleDamaged = (obj) =>
+                    {
+                        // HP 2→1: 오브젝트 손상, Player가 안에 있었으면 강제 해제 + 무적
+                        bool wasPlayerInside = false;
+                        if (_camouflageAdapter != null)
+                        {
+                            wasPlayerInside = _camouflageAdapter.ForceCancelCamouflage(obj);
+                        }
+                        if (wasPlayerInside && _playerLives != null)
+                        {
+                            _playerLives.SetInvincible(0.5f);
+                        }
+                        Debug.Log("[DashChargeGimmick] 오브젝트 손상 (HP 2→1): " + obj.name
+                            + (wasPlayerInside ? " (Player 강제 해제됨)" : ""), obj);
+                    };
+                    dash.OnObstacleDestroyed = (obj) =>
+                    {
+                        // HP 1→0: 오브젝트 파괴, Player가 안에 있었으면 데미지
+                        bool wasPlayerInside = _camouflageAdapter != null &&
+                            _camouflageAdapter.CurrentTarget == obj;
+                        if (wasPlayerInside && _playerLives != null && !_playerLives.IsInvincible)
+                        {
+                            _playerLives.TakeDamage();
+                        }
+                        Debug.Log("[DashChargeGimmick] 오브젝트 파괴 (HP 1→0): " + obj.name
+                            + (wasPlayerInside ? " (Player 데미지)" : ""), obj);
+                    };
+                    dash.OnLockOnTarget = (targetObj) =>
+                    {
+                        if (targetIndicatorPrefab != null)
+                        {
+                            // 타겟 오브젝트 위에 인디케이터 생성
+                            Vector3 pos = targetObj.transform.position;
+                            pos.y += 2f; // 머리 위
+                            GameObject indicator = Instantiate(targetIndicatorPrefab, pos, Quaternion.identity);
+                            indicator.transform.SetParent(targetObj.transform); // 타겟 따라다님
+                            Destroy(indicator, 0.8f); // indicatorDuration과 동일
+                        }
+                    };
+                    dash.OnObstacleHit = (obj) =>
+                    {
+                        Debug.Log("[DashChargeGimmick] 오브젝트 파괴 (legacy): " + obj.name, obj);
+                    };
                     break;
             }
         }
@@ -290,13 +400,12 @@ namespace HideAndInk.Core.Enemy.Boss
         private void InitializeBehaviors()
         {
             _patrolBehavior = new PatrolBehavior(this, _movement, _activeGimmick);
-            _chaseBehavior = new ChaseBehavior(this, _movement, _playerTransform, predictionTime: 0.5f);
+            _chaseBehavior = new ChaseBehavior(this, _movement, _playerTransform, predictionTime: 0.5f, loseDistance: 100f);
             _searchBehavior = new SearchBehavior(this, _movement, _activeGimmick, searchDuration, searchDistance);
 
             if (_isGroundBoundsScanned)
             {
                 _patrolBehavior.SetGroundBounds(_groundBounds);
-                _chaseBehavior.SetGroundBounds(_groundBounds);
                 _searchBehavior.SetGroundBounds(_groundBounds);
             }
         }
@@ -359,6 +468,14 @@ namespace HideAndInk.Core.Enemy.Boss
             _playerAware?.SetPlayerTransform(_playerTransform);
             _playerAware?.SetCamouflageState(IsPlayerCamouflaging());
             _playerAware?.SetPlayerVisible(canSeePlayer);
+
+            // DashChargeGimmick: Player 의태 타겟 정보 전달
+            if (_activeGimmick is DashChargeGimmick dashGimmick)
+            {
+                dashGimmick.SetCamouflageTarget(
+                    IsPlayerCamouflaging() ? _camouflageAdapter?.CurrentTarget : null
+                );
+            }
             if (_playerAware != null && suspicionSystem != null)
             {
                 _playerAware.SetSuspicionLevel(Mathf.Clamp01(suspicionSystem.CurrentValue / 100f));
@@ -455,7 +572,8 @@ namespace HideAndInk.Core.Enemy.Boss
             if (suspicionSystem == null) return;
 
             // Ambush: 시야각은 순수 시각 표시용 — 의심도에 영향 없음
-            if (_activeGimmick is AmbushGimmick) return;
+            // DashCharge: 자체 의심도 시스템 사용 (단계별 가속)
+            if (_activeGimmick is AmbushGimmick || _activeGimmick is DashChargeGimmick) return;
 
             if (canSeePlayer && !IsPlayerCamouflaging() && visionSensor != null && visionSensor.RaisesSuspicion)
             {
@@ -493,6 +611,7 @@ namespace HideAndInk.Core.Enemy.Boss
             float suspicionValue = suspicionSystem.CurrentValue;
             bool isAmbushGimmick = _activeGimmick is AmbushGimmick;
             bool isRelentlessGimmick = _activeGimmick is RelentlessChaseGimmick;
+            bool isDashChargeGimmick = _activeGimmick is DashChargeGimmick;
             float ambushDropThreshold = isAmbushGimmick ? ((AmbushGimmick)_activeGimmick).SuspicionDropThreshold : 0f;
 
             switch (currentState)
@@ -507,6 +626,10 @@ namespace HideAndInk.Core.Enemy.Boss
                         // Ambush: 시야각 무시, 오직 근접 거리로만 Chase 진입
                         if (_ambushProximityCooldown <= 0f && IsPlayerCloseEnough())
                             _stateMachine.TryTransitionTo(EnemyAIState.Chase);
+                    }
+                    else if (_activeGimmick is DashChargeGimmick)
+                    {
+                        // DashCharge: 오직 의심도 100%(OnDetected)로만 Chase 진입
                     }
                     else if (canSeePlayer || IsPlayerCloseEnough())
                     {
@@ -533,6 +656,11 @@ namespace HideAndInk.Core.Enemy.Boss
                             if (dist > 40f)
                                 chargeDirector.ForceInterrupt();
                         }
+                    }
+                    else if (isDashChargeGimmick)
+                    {
+                        // DashCharge Chase: 절대 Patrol/Search로 전환되지 않음
+                        // (Player 사망 시 OnPlayerDied 핸들러로만 Patrol 복귀)
                     }
                     else
                     {
@@ -586,9 +714,10 @@ namespace HideAndInk.Core.Enemy.Boss
                     if (suspicionSystem != null)
                     {
                         bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
-                        if (isRelentless)
+                        bool isDashCharge = _activeGimmick is DashChargeGimmick;
+                        if (isRelentless || isDashCharge)
                         {
-                            // Moray Patrol: 배회 + 의심도 자동 상승
+                            // Moray / DashCharge: 자체 의심도 시스템 사용
                             suspicionSystem.SetVisionIncreaseSpeed(0f);
                             suspicionSystem.SetSuspicionDecayMultiplier(1f);
                             suspicionSystem.SetAutoDecayEnabled(false);
@@ -606,15 +735,17 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     // 애니메이션: Patrol
                     if (_animator != null) _animator.SetBool("IsChase", false);
+                    PlayerInk.Instance?.SetThreat(false);
                     break;
                 case EnemyAIState.Chase:
                     _movement.Speed = chaseSpeed;
                     if (suspicionSystem != null)
                     {
                         bool isRelentless = _activeGimmick is RelentlessChaseGimmick;
-                        if (isRelentless)
+                        bool isDashCharge = _activeGimmick is DashChargeGimmick;
+                        if (isRelentless || isDashCharge)
                         {
-                            // Moray Chase: 방해 금지
+                            // Moray / DashCharge Chase: 방해 금지
                             suspicionSystem.SetVisionIncreaseSpeed(0f);
                             suspicionSystem.SetSuspicionDecayMultiplier(0f);
                             suspicionSystem.SetAutoDecayEnabled(false);
@@ -628,6 +759,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
                     // 애니메이션: Chase
                     if (_animator != null) _animator.SetBool("IsChase", true);
+                    PlayerInk.Instance?.SetThreat(true);
                     break;
                 case EnemyAIState.Search:
                     _movement.Speed = searchSpeed;
@@ -636,6 +768,7 @@ namespace HideAndInk.Core.Enemy.Boss
                         suspicionSystem.SetVisionIncreaseSpeed(15f);
                         suspicionSystem.SetSuspicionDecayMultiplier(1f);
                     }
+                    PlayerInk.Instance?.SetThreat(false);
                     break;
             }
 
@@ -700,6 +833,19 @@ namespace HideAndInk.Core.Enemy.Boss
                         Vector3 newPos = transform.position;
                         newPos.x += _movement.Velocity.x * deltaTime;
                         newPos.z += _movement.Velocity.z * deltaTime;
+
+                        // ★ Safety Net: GroundBounds 이탈 시 강제 정지
+                        if (_isGroundBoundsScanned)
+                        {
+                            float clampedX = _groundBounds.ClampX(newPos.x);
+                            float clampedZ = _groundBounds.ClampZ(newPos.z);
+                            if (Mathf.Abs(newPos.x - clampedX) > 0.01f || Mathf.Abs(newPos.z - clampedZ) > 0.01f)
+                            {
+                                _movement.Stop();
+                                return;
+                            }
+                        }
+
                         transform.position = newPos;
                     }
                 }
@@ -709,7 +855,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 base.UpdateMovement(deltaTime);
             }
 
-            if (_isGroundBoundsScanned)
+            // Patrol/Search일 때만 GroundBounds Clamping 유지
+            // Chase 중에는 IsGroundAhead() + IsPositionOnGround() 물리 체크가 이동 제한
+            if (_isGroundBoundsScanned && _stateMachine != null && !_stateMachine.IsChase)
             {
                 Vector3 clamped = _groundBounds.ClampXZ(transform.position);
                 clamped.y = transform.position.y;
@@ -943,32 +1091,42 @@ namespace HideAndInk.Core.Enemy.Boss
                 _playerRigidbody = _playerTransform.GetComponent<Rigidbody>();
         }
 
-        private void OnCollisionEnter(Collision collision)
+        /// <summary>
+        /// Collider isTrigger=true 사용 (물리적 밀림 방지)
+        /// OnTriggerEnter로 Player 피격 감지
+        /// </summary>
+        private void OnTriggerEnter(Collider other)
         {
-            if (!collision.gameObject.CompareTag("Player")) return;
+            if (!other.CompareTag("Player")) return;
             if (_playerLives == null || _playerLives.IsInvincible) return;
             if (!CanBossDamagePlayer()) return;
 
             _playerLives.TakeDamage();
-            ApplyKnockback();
         }
 
         private bool CanBossDamagePlayer()
         {
-            if (_stateMachine != null && _stateMachine.CurrentState == EnemyAIState.Chase)
-                return true;
+            if (_stateMachine == null) return false;
 
             if (_activeGimmick != null)
             {
-                // Ambush는 HasMovementOverride로 판정
-                if (_activeGimmick is AmbushGimmick ambush && ambush.HasMovementOverride) return true;
-                // Moray는 Director가 OnPlayerHit으로 처리 (OverlapBox 기반)
-                // 여기서는 Collision 기반 물리 충돌만 처리
-                if (_activeGimmick is RelentlessChaseGimmick) return false;
-                // 그 외 기믹은 IGimmickCombatCycle.IsCharging으로 판정
-                if (_combatCycle != null && _combatCycle.IsCharging) return true;
+                // Ambush (가자미): Chase 상태(돌진)에서만 피격
+                if (_activeGimmick is AmbushGimmick)
+                    return _stateMachine.CurrentState == EnemyAIState.Chase;
+
+                // RelentlessChase (곰치): Director가 OverlapBox로 직접 처리
+                if (_activeGimmick is RelentlessChaseGimmick)
+                    return false;
+
+                // Swordfish (청새치): Charging 위상에서만 피격
+                // DashCharge (백상아리): 자체 OverlapSphere + IsCharging에서만
+                // → IGimmickCombatCycle.IsCharging으로 통일 판정
+                if (_combatCycle != null)
+                    return _combatCycle.IsCharging;
             }
-            return false;
+
+            // 기믹 없으면 Chase 상태에서 일반 피격
+            return _stateMachine.CurrentState == EnemyAIState.Chase;
         }
 
         private void ApplyKnockback()
@@ -1019,9 +1177,56 @@ namespace HideAndInk.Core.Enemy.Boss
                 suspicionSystem?.ForceSetSuspicion(relentless.PostChaseSuspicion);
                 suspicionSystem?.ResetDetected(); // 재발각 가능
                 _isMorayCharging = false;         // 의심도 증가 재개
+
+                // ★ Y 보정 + GroundBounds 재진입 (Charge 후 땅에 박히거나 Ground 밖에 있는 경우 방지)
+                RestorePositionAfterCharge();
+
                 if (_stateMachine != null && _stateMachine.CurrentState != EnemyAIState.Patrol)
                     _stateMachine.TryTransitionTo(EnemyAIState.Patrol);
             }
+        }
+
+        /// <summary>
+        /// Moray Charge 종료 후 위치 보정:
+        /// 1. XZ를 GroundBounds 내로 클램핑
+        /// 2. 현재 위치에서 Ground Y를 Raycast로 탐색 후 적용
+        /// </summary>
+        private void RestorePositionAfterCharge()
+        {
+            if (_movement == null) return;
+            _movement.Stop();
+
+            Vector3 pos = transform.position;
+
+            // 1단계: XZ → GroundBounds 내로 클램핑
+            if (_isGroundBoundsScanned)
+            {
+                pos.x = _groundBounds.ClampX(pos.x);
+                pos.z = _groundBounds.ClampZ(pos.z);
+            }
+
+            // 2단계: Y → Ground 높이로 보정 (Raycast)
+            if (groundLayer.value != 0)
+            {
+                float checkHeight = pos.y + 10f;
+                if (Physics.Raycast(new Vector3(pos.x, checkHeight, pos.z), Vector3.down,
+                    out RaycastHit hit, 20f, groundLayer))
+                {
+                    pos.y = hit.point.y + 0.05f;
+                }
+                else
+                {
+                    // 아래쪽 실패 시 위쪽도 체크
+                    float checkLow = pos.y - 0.1f;
+                    if (checkLow > -100f && Physics.Raycast(new Vector3(pos.x, checkLow, pos.z), Vector3.up,
+                        out hit, 20f, groundLayer))
+                    {
+                        pos.y = hit.point.y + 0.05f;
+                    }
+                }
+            }
+
+            transform.position = pos;
         }
 
         /// <summary>곰치 렌더러/콜라이더 전환 (돌진 중에만 보임)</summary>
@@ -1067,7 +1272,7 @@ namespace HideAndInk.Core.Enemy.Boss
         #region SandPit (가자미 구덩이)
 
         /// <summary>
-        /// 가자미가 떠난 자리에 SandPit 클러스터 생성 (GroundBounds 내로 클램프)
+        /// SandPit 클러스터 생성 (AmbushGimmick에서 Player 중심 위치 전달, GroundBounds 내로 클램프)
         /// </summary>
         private void SpawnSandPitCluster(Vector3 center)
         {
@@ -1075,34 +1280,48 @@ namespace HideAndInk.Core.Enemy.Boss
 
             bool hasBounds = _groundBounds.MinX != _groundBounds.MaxX || _groundBounds.MinZ != _groundBounds.MaxZ;
 
-            // 메인 Pit (GroundBounds 클램프)
+            // 바닥 높이 찾기 (보스가 공중에 있을 수 있으므로 Raycast로 지면 고정)
+            float groundY = transform.position.y;
+            int floorLayer = groundLayer.value > 0
+                ? groundLayer.value
+                : (1 << LayerMask.NameToLayer("Default"));
+            if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down,
+                out RaycastHit floorHit, 5f, floorLayer))
+            {
+                groundY = floorHit.point.y;
+            }
+
+            // Z-fighting 방지: 바닥과 약간 이격 (0.05)
+            groundY += 0.05f;
+
+            // 메인 Pit (GroundBounds 클램프 + 지면 높이 + 프리팹 기본 회전 유지)
             Vector3 clampedCenter = center;
-            clampedCenter.y = transform.position.y;
+            clampedCenter.y = groundY;
             if (hasBounds)
             {
                 clampedCenter.x = _groundBounds.ClampX(clampedCenter.x);
                 clampedCenter.z = _groundBounds.ClampZ(clampedCenter.z);
             }
-            SandPit mainPit = Instantiate(sandPitPrefab, clampedCenter, Quaternion.identity);
+            SandPit mainPit = Instantiate(sandPitPrefab, clampedCenter, sandPitPrefab.transform.rotation);
             SubscribeSandPit(mainPit);
 
             if (!(_activeGimmick is AmbushGimmick ambush)) return;
 
-            // 주변 랜덤 추가 Pit (각각 GroundBounds 클램프)
+            // 주변 랜덤 추가 Pit (각각 GroundBounds 클램프 + 지면 높이 + 프리팹 기본 회전)
             int extraCount = Random.Range(ambush.PitClusterCount.x, ambush.PitClusterCount.y + 1);
             for (int i = 0; i < extraCount; i++)
             {
                 Vector3 offset = Random.insideUnitSphere * ambush.PitClusterRadius;
                 offset.y = 0f;
                 Vector3 pitPos = center + offset;
-                pitPos.y = transform.position.y;
+                pitPos.y = groundY;
                 if (hasBounds)
                 {
                     pitPos.x = _groundBounds.ClampX(pitPos.x);
                     pitPos.z = _groundBounds.ClampZ(pitPos.z);
                 }
 
-                SandPit extra = Instantiate(sandPitPrefab, pitPos, Quaternion.identity);
+                SandPit extra = Instantiate(sandPitPrefab, pitPos, sandPitPrefab.transform.rotation);
                 SubscribeSandPit(extra);
             }
         }

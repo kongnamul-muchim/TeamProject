@@ -15,18 +15,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public GimmickType Type => GimmickType.Ambush;
 
         [Header("매복 설정")]
-        [SerializeField] private float ambushDistance = 6f;
-        [SerializeField] private float ambushMinDistance = 3f;
+        [SerializeField, Tooltip("매복 거리")] private float ambushDistance = 6f;
+        [SerializeField, Tooltip("매복 최소 거리")] private float ambushMinDistance = 3f;
 
         [Header("의심도 설정")]
         [SerializeField, Tooltip("Pit로만 상승한 의심도가 이 값 아래로 떨어지면 Search→Patrol 복귀")]
         private float suspicionDropThreshold = 20f;
 
         [Header("돌진 설정")]
-        [SerializeField] private float dashSpeed = 18f;
-        [SerializeField] private float dashDuration = 0.8f;
-        [SerializeField] private float dashPreDelay = 0.15f;
-        [SerializeField] private float restDuration = 2f;
+        [SerializeField, Tooltip("돌진 속도")] private float dashSpeed = 18f;
+        [SerializeField, Tooltip("돌진 지속 시간")] private float dashDuration = 0.8f;
+        [SerializeField, Tooltip("돌진 전 딜레이")] private float dashPreDelay = 0.15f;
+        [SerializeField, Tooltip("휴식 시간")] private float restDuration = 2f;
         [SerializeField, Tooltip("연속 공격 가능 횟수 (0 = 무제한)")]
         private int maxConsecutiveAttacks = 3;
 
@@ -35,8 +35,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private float patrolMoveSpeed = 4f;
 
         [Header("구덩이(Pit) 설정")]
-        [SerializeField, Tooltip("Pit 생성 간격 (이동 거리 m)")]
-        private float pitSpawnInterval = 3f;
+        [SerializeField, Tooltip("Pit 생성 간격 (초)")]
+        private float pitSpawnInterval = 2.5f;
         [SerializeField, Tooltip("Pit 생성 시 주변 랜덤 범위")]
         private float pitClusterRadius = 3f;
         [SerializeField, Tooltip("Pit 생성 시 추가 Pit 개수 (2~4)")]
@@ -48,14 +48,20 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField, Tooltip("Pit 슬로우 지속 시간 (초)")]
         private float pitSlowDuration = 3f;
 
+        [Header("Player 중심 Pit 생성")]
+        [SerializeField, Tooltip("Player 중심 최소 생성 반경"), Range(1f, 10f)]
+        private float pitSpawnRadiusMin = 3f;
+        [SerializeField, Tooltip("Player 중심 최대 생성 반경"), Range(1f, 10f)]
+        private float pitSpawnRadiusMax = 6f;
+        [SerializeField, Tooltip("Player 진행 방향(+X)으로 Pit 쏠림 계수 (클수록 앞쪽에 집중)"), Range(0f, 5f)]
+        private float pitForwardBias = 1.5f;
+
         [Header("근접 감지 설정")]
         [SerializeField, Tooltip("이 거리 이내로 Player가 접근하면 즉시 Chase 돌입 (의태 시 면역)")]
         private float proximityChaseDistance = 12f;
 
         private Transform _bossTransform;
         private Transform _playerTransform;
-        private GroundBounds _groundBounds;
-        private bool _hasGroundBounds;
 
         // 상태
         private bool _isDashing;
@@ -69,8 +75,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _isPlayerCamouflaged;
 
         // Pit 관련
-        private Vector3 _lastPitSpawnPos;
-        private float _movementSinceLastPit;
+        private float _pitSpawnTimer;
         private List<Vector3> _visitedPositions = new List<Vector3>();
         private const int MaxVisitedPositions = 30;
 
@@ -117,8 +122,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _bossTransform = bossTransform;
             _isDashing = false;
             _isDashPreDelay = false;
-            _movementSinceLastPit = 0f;
-            _lastPitSpawnPos = bossTransform.position;
+            _pitSpawnTimer = 0f; // 즉시 첫 Pit 생성
             _visitedPositions.Clear();
             CachePlayerTransform();
         }
@@ -151,19 +155,16 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 return;
             }
 
-            // 이동 거리 누적 → 일정 거리마다 Pit 생성
-            float moved = Vector3.Distance(_bossTransform.position, _lastPitSpawnPos);
-            _movementSinceLastPit += moved;
-            _lastPitSpawnPos = _bossTransform.position;
-
-            if (_movementSinceLastPit >= pitSpawnInterval)
+            // 시간 기반 Pit 생성 (Player 주변에 집중)
+            _pitSpawnTimer += deltaTime;
+            if (_pitSpawnTimer >= pitSpawnInterval)
             {
-                _movementSinceLastPit = 0f;
-                OnSpawnPit?.Invoke(_bossTransform.position);
-                AddVisitedPosition(_bossTransform.position);
+                _pitSpawnTimer = 0f;
+                OnSpawnPit?.Invoke(GetPitSpawnPositionAroundPlayer());
+                AddVisitedPosition(_playerTransform.position);
             }
 
-            // Patrol 목표 갱신 (주기적: 과도한 이동 → pit 과다 생성 방지)
+            // Patrol 목표 갱신 (주기적)
             _patrolTimer -= deltaTime;
             if (_patrolTimer <= 0f)
             {
@@ -174,6 +175,24 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                     OnDashMoveTo?.Invoke(_ambushTarget);
                 }
             }
+        }
+
+        /// <summary>
+        /// Player 주변에 진행 방향(+X) 쏠림을 적용한 Pit 생성 위치 반환
+        /// </summary>
+        private Vector3 GetPitSpawnPositionAroundPlayer()
+        {
+            // Player 주변 링 형태로 랜덤 위치
+            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float radius = Random.Range(pitSpawnRadiusMin, pitSpawnRadiusMax);
+            Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+
+            // 진행 방향(+X)으로 쏠림 — Player가 오른쪽으로 진행하는 구조
+            offset.x += pitForwardBias;
+
+            Vector3 spawnPos = _playerTransform.position + offset;
+            spawnPos.y = _bossTransform.position.y;
+            return spawnPos;
         }
 
         public void OnPatrolExit()
@@ -370,7 +389,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         }
 
         /// <summary>
-        /// 의태 중 무작위 방황: GroundBounds 내 랜덤 지점으로 이동
+        /// 의태 중 무작위 방황: Player 주변 랜덤 지점으로 이동
         /// </summary>
         private void UpdateRandomWander()
         {
@@ -378,18 +397,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             if (_randomWanderTimer <= 0f || _randomWanderTarget == Vector3.zero)
             {
-                // 새 무작위 목표 선정
-                if (_hasGroundBounds)
-                {
-                    float x = Random.Range(_groundBounds.MinX + 1f, _groundBounds.MaxX - 1f);
-                    float z = Random.Range(_groundBounds.MinZ + 1f, _groundBounds.MaxZ - 1f);
-                    _randomWanderTarget = new Vector3(x, _bossTransform.position.y, z);
-                }
-                else
-                {
-                    _randomWanderTarget = _bossTransform.position + new Vector3(
-                        Random.Range(-5f, 5f), 0f, Random.Range(-5f, 5f));
-                }
+                // Player 주변 5~10m 범위 랜덤 위치
+                Vector3 center = _playerTransform != null
+                    ? _playerTransform.position
+                    : _bossTransform.position;
+                float radius = Random.Range(5f, 10f);
+                Vector2 offset = Random.insideUnitCircle * radius;
+                _randomWanderTarget = new Vector3(
+                    center.x + offset.x,
+                    _bossTransform.position.y,
+                    center.z + offset.y
+                );
                 _randomWanderTimer = Random.Range(2f, 5f); // 2~5초마다 새 목표
             }
 
@@ -445,8 +463,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         public void SetGroundBounds(GroundBounds bounds)
         {
-            _groundBounds = bounds;
-            _hasGroundBounds = true;
+            // 더 이상 사용하지 않음 (Player 중심 동적 범위로 대체)
         }
 
         public Vector3? GetPatrolTarget(Vector3 currentPos, GroundBounds bounds)
@@ -454,23 +471,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             if (_ambushTarget == Vector3.zero) return null;
             Vector3 target = _ambushTarget;
             target.y = currentPos.y;
-            return ClampToBounds(target, bounds);
+            return target;
         }
 
         public Vector3? GetSearchTarget(Vector3 currentPos, Vector3 lastKnownPos, GroundBounds bounds)
         {
             // Search: 매복 지점 복귀 (Patrol과 동일)
             return GetPatrolTarget(currentPos, bounds);
-        }
-
-        private Vector3 ClampToBounds(Vector3 pos, GroundBounds bounds)
-        {
-            if (bounds.MinX != bounds.MaxX || bounds.MinZ != bounds.MaxZ)
-            {
-                pos.x = bounds.ClampX(pos.x);
-                pos.z = bounds.ClampZ(pos.z);
-            }
-            return pos;
         }
 
         #endregion

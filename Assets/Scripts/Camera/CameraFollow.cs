@@ -9,24 +9,35 @@ namespace HideAndInk.CameraSystem
     public sealed class CameraFollow : MonoBehaviour
     {
         [Header("DI - 추적 대상")]
+        [Tooltip("카메라가 추적할 타겟")]
         [SerializeField] private Transform target;
 
         [Header("추적 설정")]
+        [Tooltip("카메라 추적 속도")]
         [SerializeField] private float smoothSpeed = 5f;
+        [Tooltip("카메라 위치 오프셋")]
         [SerializeField] private Vector3 offset = new Vector3(0f, 0f, -10f);
 
         [Header("이동 축 제한")]
+        [Tooltip("X축 추적 활성화")]
         [SerializeField] private bool followX = true;
+        [Tooltip("Y축 추적 활성화")]
         [SerializeField] private bool followY = true;
 
         [Header("Z축 깊이 추적")]
+        [Tooltip("Z축 깊이 추적 활성화")]
         [SerializeField] private bool followZ;
+        [Tooltip("Z축 깊이 추적 계수")]
         [SerializeField] private float zDepthFactor = 0.3f;
+        [Tooltip("Z축 기본 오프셋")]
         [SerializeField] private float zBaseOffset = -10f;
 
         [Header("X축 흔들림 (Sway)")]
+        [Tooltip("X축 흔들림 효과 활성화")]
         [SerializeField] private bool enableXSway = true;
+        [Tooltip("흔들림 진폭")]
         [SerializeField] private float swayAmplitude = 0.15f;
+        [Tooltip("흔들림 진동수")]
         [SerializeField] private float swayFrequency = 0.5f;
 
         private float _originTargetY;

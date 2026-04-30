@@ -1,12 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
-using HideAndInk.Core.Interfaces;
 
 namespace HideAndInk.Core.Perception
 {
     /// <summary>
-    /// 의심도 게이지 UI 표시
-    /// BossSuspicionSystem의 이벤트를 구독하여 UI 업데이트
+    /// 의심도 게이지 UI 표시 (투명도 기반)
+    /// fillImage의 alpha값만으로 의심도를 표현 (0 = 완전 투명, 1 = 완전 불투명)
     /// </summary>
     public class SuspicionMeterUI : MonoBehaviour
     {
@@ -15,29 +14,17 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private BossSuspicionSystem bossSuspicionSystem;
 
         [Header("UI 참조")]
-        [SerializeField] private Image suspicionFillImage;  // 의심도 게이지 바
-        [SerializeField] private UnityEngine.UI.Text suspicionText;        // 텍스트 (0% ~ 100%)
-        [SerializeField] private UnityEngine.UI.Text suspicionLevelText;   // 레벨 텍스트
-
-        [Header("색상 설정")]
-        [SerializeField] private Color safeColor = Color.green;
-        [SerializeField] private Color cautionColor = Color.yellow;
-        [SerializeField] private Color dangerColor = new Color(1f, 0.5f, 0f);
-        [SerializeField] private Color criticalColor = Color.red;
-        [SerializeField] private Color detectedColor = Color.magenta;
+        [Tooltip("의심도 게이지 이미지 (alpha값으로 의심도 표시)")]
+        [SerializeField] private Image suspicionFillImage;
 
         private void OnEnable()
         {
             if (bossSuspicionSystem != null)
             {
-                bossSuspicionSystem.OnLevelChanged += OnLevelChanged;
-                bossSuspicionSystem.OnDetected += OnDetected;
                 bossSuspicionSystem.OnValueChanged += OnValueChanged;
             }
             else if (SuspicionUIManager.Instance != null)
             {
-                SuspicionUIManager.Instance.OnLevelChanged += OnLevelChanged;
-                SuspicionUIManager.Instance.OnDetected += OnDetected;
                 SuspicionUIManager.Instance.OnValueChanged += OnValueChanged;
             }
         }
@@ -46,76 +33,28 @@ namespace HideAndInk.Core.Perception
         {
             if (bossSuspicionSystem != null)
             {
-                bossSuspicionSystem.OnLevelChanged -= OnLevelChanged;
-                bossSuspicionSystem.OnDetected -= OnDetected;
                 bossSuspicionSystem.OnValueChanged -= OnValueChanged;
             }
             else if (SuspicionUIManager.Instance != null)
             {
-                SuspicionUIManager.Instance.OnLevelChanged -= OnLevelChanged;
-                SuspicionUIManager.Instance.OnDetected -= OnDetected;
                 SuspicionUIManager.Instance.OnValueChanged -= OnValueChanged;
             }
         }
 
         private void OnValueChanged(float value)
         {
-            // 게이지 바 업데이트
-            if (suspicionFillImage != null)
-            {
-                suspicionFillImage.fillAmount = value / 100f;
-            }
+            if (suspicionFillImage == null) return;
 
-            // 텍스트 업데이트
-            if (suspicionText != null)
-            {
-                suspicionText.text = $"{value:F0}%";
-            }
-        }
-
-        private void OnLevelChanged(SuspicionLevel level)
-        {
-            if (suspicionLevelText != null)
-            {
-                suspicionLevelText.text = level.ToString();
-                suspicionLevelText.color = GetColorForLevel(level);
-            }
-
-            if (suspicionFillImage != null)
-            {
-                suspicionFillImage.color = GetColorForLevel(level);
-            }
-        }
-
-        private void OnDetected()
-        {
-            if (suspicionLevelText != null)
-            {
-                suspicionLevelText.text = "DETECTED!";
-                suspicionLevelText.color = detectedColor;
-            }
-        }
-
-        private void OnClear()
-        {
-            if (suspicionLevelText != null)
-            {
-                suspicionLevelText.text = "Safe";
-                suspicionLevelText.color = safeColor;
-            }
-        }
-
-        private Color GetColorForLevel(SuspicionLevel level)
-        {
-            return level switch
-            {
-                SuspicionLevel.Safe => safeColor,
-                SuspicionLevel.Caution => cautionColor,
-                SuspicionLevel.Danger => dangerColor,
-                SuspicionLevel.Critical => criticalColor,
-                SuspicionLevel.Detected => detectedColor,
-                _ => Color.white
-            };
+            // 의심도에 따라 alpha값만 조절 (0~100 -> 0~200/255)
+            // 최대 알파 200 (255 기준)으로 설정
+            // 색상은 스프라이트 원본 유지
+            float alpha = Mathf.Clamp(value / 100f, 0f, 200f / 255f);
+            suspicionFillImage.color = new Color(
+                suspicionFillImage.color.r,
+                suspicionFillImage.color.g,
+                suspicionFillImage.color.b,
+                alpha
+            );
         }
     }
 }

@@ -19,10 +19,6 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         private readonly float _predictionTime;     // 예측 시간 (초)
         private readonly float _loseDistance;       // 추적 실패 거리
 
-        // Ground 경계 (Controller에서 전달)
-        private GroundBounds _groundBounds;
-        private bool _hasGroundBounds;
-
         // 상태
         private Vector3 _lastKnownPlayerPosition;
         private Vector3 _lastPlayerVelocity;
@@ -55,15 +51,6 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             _playerTransform = playerTransform;
             _predictionTime = predictionTime;
             _loseDistance = loseDistance;
-        }
-
-        /// <summary>
-        /// Ground 경계 설정 (Controller에서 호출)
-        /// </summary>
-        public void SetGroundBounds(GroundBounds bounds)
-        {
-            _groundBounds = bounds;
-            _hasGroundBounds = true;
         }
 
         /// <summary>
@@ -128,12 +115,6 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             Vector3 predictedPosition = currentPlayerPos + (_lastPlayerVelocity * _predictionTime);
             predictedPosition.y = _enemy.Position.y; // Y축 고정
 
-            // Ground 범위 내로 제한
-            if (_hasGroundBounds)
-            {
-                predictedPosition = _groundBounds.ClampXZ(predictedPosition);
-            }
-
             // 목표 지점이 Ground 위에 있는지 검증
             _isTargetValid = _movement.IsPositionOnGround(predictedPosition);
 
@@ -147,11 +128,6 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
                 // Ground 위에 없으면 Player 현재 위치로 직접 추적
                 Vector3 directTarget = currentPlayerPos;
                 directTarget.y = _enemy.Position.y;
-
-                if (_hasGroundBounds)
-                {
-                    directTarget = _groundBounds.ClampXZ(directTarget);
-                }
 
                 _currentChaseTarget = directTarget;
                 _movement.MoveTo(_currentChaseTarget);

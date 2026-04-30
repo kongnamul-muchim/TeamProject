@@ -74,7 +74,7 @@ namespace HideAndInk.Core.Perception
         private Material _floorMaterial;
         private bool _isFloorInitialized = false;
         private bool _needsMeshRebuild = true; // 메쉬 재생성 플래그
-        [SerializeField] private SuspicionFloorVisibilityMode floorVisibilityMode = SuspicionFloorVisibilityMode.ChaseOnly;
+        [SerializeField, Tooltip("의심도 바닥 표시 모드")] private SuspicionFloorVisibilityMode floorVisibilityMode = SuspicionFloorVisibilityMode.ChaseOnly;
         private bool _isFloorVisible = true;
 
         // 의심도 모듈 (기믹별 계산 로직)
