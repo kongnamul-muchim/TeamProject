@@ -31,13 +31,21 @@ namespace HideAndInk.Player.Visual
         [SerializeField] private string moveYParam = "MoveY";
         [Tooltip("이동 중 애니메이션 파라미터명")]
         [SerializeField] private string isMovingParam = "isMoving";
-        [Tooltip("대시 중 애니메이션 파라미터명 (isEscaping 활용)")]
-        [SerializeField] private string isDashingParam = "isEscaping";
+        // 프리팹 시리얼라이즈 오버라이드 방지를 위해 SerializeField 사용 안 함
+        private string isDashingParam = "isEscaping";
 
         private void Awake()
         {
             _animator = GetComponent<Animator>();
-            
+            if (_animator != null)
+            {
+                Debug.Log($"[PlayerVisualBridge] Awake - _animator=OK, gameObject={gameObject.name}, animatorGO={_animator.gameObject.name}, controller={(_animator.runtimeAnimatorController != null ? _animator.runtimeAnimatorController.name : "NULL")}");
+            }
+            else
+            {
+                Debug.LogWarning($"[PlayerVisualBridge] Awake - _animator=NULL, gameObject={gameObject.name}");
+            }
+
             // 'Visual' 자식 오브젝트에서 SpriteRenderer를 먼저 찾습니다. (Scale 0.2 이슈 해결)
             Transform visualTransform = transform.Find("Visual");
             if (visualTransform != null)
@@ -57,11 +65,13 @@ namespace HideAndInk.Player.Visual
             if (movementAdapter == null)
             {
                 movementAdapter = GetComponentInParent<PlayerMovementAdapter>() ?? GetComponent<PlayerMovementAdapter>();
+                Debug.Log($"[PlayerVisualBridge] Awake - movementAdapter={( movementAdapter != null ? "OK" : "NULL" )}");
             }
 
             if (playerInk == null)
             {
                 playerInk = GetComponentInParent<PlayerInk>() ?? GetComponent<PlayerInk>();
+                Debug.Log($"[PlayerVisualBridge] Awake - playerInk={( playerInk != null ? "OK" : "NULL" )} (searched parent then self)");
             }
         }
 
@@ -109,7 +119,15 @@ namespace HideAndInk.Player.Visual
         private void OnDashStarted(float duration, float speedBoost)
         {
             if (_animator != null)
+            {
+                Debug.Log($"[PlayerVisualBridge] OnDashStarted → setting \"{isDashingParam}\"=true on Animator(gameObject={_animator.gameObject.name}, controller={_animator.runtimeAnimatorController?.name})");
                 _animator.SetBool(isDashingParam, true);
+                _animator.SetBool(isMovingParam, true); // 서서 대시해도 isMoving 보장
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerVisualBridge] OnDashStarted but _animator is NULL!");
+            }
         }
 
         /// <summary>
@@ -118,7 +136,10 @@ namespace HideAndInk.Player.Visual
         private void OnDashEnded()
         {
             if (_animator != null)
+            {
+                Debug.Log($"[PlayerVisualBridge] OnDashEnded → isEscaping=false");
                 _animator.SetBool(isDashingParam, false);
+            }
         }
 
         /// <summary>

@@ -12,7 +12,7 @@ namespace HideAndInk.Scripts.UI
     public sealed class PlayerHPUI : MonoBehaviour
     {
         [Header("참조")]
-        [Tooltip("PlayerLives 컴포넌트 (인스펙터에서 할당, null이면 Instance 자동 연결)")]
+        [Tooltip("PlayerLives 컴포넌트 (인스펙터 할당은 참고용, 런타임에는 Instance 우선)")]
         [SerializeField] private PlayerLives playerLives;
 
         [Header("하트 이미지")]
@@ -26,26 +26,54 @@ namespace HideAndInk.Scripts.UI
         [SerializeField] private float blinkFrequency = 10f;
 
         private int _lastLives;
+        private bool _initialized;
 
         private void Awake()
         {
-            // 크로스-프리팹 참조 깨짐 보정
-            if (playerLives == null || playerLives.CurrentLives <= 0)
+            Debug.Log($"[PlayerHPUI] Awake - serialized playerLives={(playerLives != null ? "OK" : "NULL")}, Instance={(PlayerLives.Instance != null ? "OK" : "NULL")}");
+            TryBind();
+        }
+
+        private void Start()
+        {
+            if (!_initialized)
+            {
+                Debug.Log("[PlayerHPUI] Start - retrying");
+                TryBind();
+            }
+
+            if (!_initialized)
+            {
+                Debug.LogError("[PlayerHPUI] PlayerLives not found. (Start retry failed)");
+            }
+            else
+            {
+                Debug.Log($"[PlayerHPUI] Start done - _lastLives={_lastLives}, heartImages.Length={heartImages?.Length}");
+            }
+        }
+
+        private void TryBind()
+        {
+            if (_initialized) return;
+
+            // Always prefer Instance over serialized cross-prefab ref
+            if (PlayerLives.Instance != null)
             {
                 playerLives = PlayerLives.Instance;
+                Debug.Log("[PlayerHPUI] TryBind - using Instance");
             }
 
             if (playerLives == null)
             {
-                Debug.LogError("[PlayerHPUI] PlayerLives를 찾을 수 없습니다.");
+                Debug.Log("[PlayerHPUI] TryBind - playerLives null, deferring");
                 return;
             }
 
             _lastLives = playerLives.CurrentLives;
+            Debug.Log($"[PlayerHPUI] TryBind - CurrentLives={_lastLives}, subscribing OnLifeChanged, heartImages[]={heartImages?.Length}");
             playerLives.OnLifeChanged += OnLifeChanged;
-
-            // Awake 시점에 PlayerLives가 이미 초기화되어 있음
             UpdateHeartsImmediate(_lastLives);
+            _initialized = true;
         }
 
         private void OnDestroy()
@@ -56,36 +84,39 @@ namespace HideAndInk.Scripts.UI
 
         private void OnLifeChanged(int currentLives)
         {
+            Debug.Log($"[PlayerHPUI] OnLifeChanged({currentLives}) - _lastLives={_lastLives}");
             if (currentLives < _lastLives)
             {
-                // 체력 감소 → 사라질 하트 깜빡임
-                int removedIndex = currentLives; // 3→2면 heart[2]가 사라질 차례
+                int removedIndex = currentLives;
+                Debug.Log($"[PlayerHPUI] 하트 감소: {removedIndex}번 깜빡임 시작");
                 StartCoroutine(BlinkAndDisable(removedIndex));
             }
             else
             {
-                // 체력 증가/초기화 (ResetLives 등) → 깜빡임 취소 + 즉시 적용
+                Debug.Log($"[PlayerHPUI] 하트 증가/초기화: UpdateHeartsImmediate({currentLives})");
                 StopAllCoroutines();
                 UpdateHeartsImmediate(currentLives);
             }
             _lastLives = currentLives;
         }
 
-        /// <summary>
-        /// 모든 하트를 currentLives에 맞춰 즉시 설정
-        /// </summary>
         private void UpdateHeartsImmediate(int currentLives)
         {
             for (int i = 0; i < heartImages.Length; i++)
             {
                 if (heartImages[i] != null)
+                {
+                    bool newState = i < currentLives;
+                    Debug.Log($"[PlayerHPUI] heart[{i}].enabled = {newState} (현재: {heartImages[i].enabled})");
                     heartImages[i].enabled = i < currentLives;
+                }
+                else
+                {
+                    Debug.LogWarning($"[PlayerHPUI] heart[{i}] is NULL!");
+                }
             }
         }
 
-        /// <summary>
-        /// 지정된 하트를 blinkDuration 동안 깜빡인 후 비활성화
-        /// </summary>
         private IEnumerator BlinkAndDisable(int heartIndex)
         {
             if (heartIndex < 0 || heartIndex >= heartImages.Length) yield break;
@@ -95,7 +126,6 @@ namespace HideAndInk.Scripts.UI
             float elapsed = 0f;
             while (elapsed < blinkDuration)
             {
-                // Unscaled delta time 사용 (일시정지 중에도 깜빡임)
                 elapsed += Time.unscaledDeltaTime;
                 heart.enabled = Mathf.Sin(elapsed * blinkFrequency * Mathf.PI * 2) > 0f;
                 yield return null;

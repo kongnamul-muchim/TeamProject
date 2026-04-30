@@ -8,32 +8,59 @@ using UnityEngine.UI;
 public sealed class InkGaugeUI : MonoBehaviour
 {
     [Header("참조")]
-    [Tooltip("PlayerInk 컴포넌트 (인스펙터에서 할당, null이면 Instance 자동 연결)")]
+    [Tooltip("PlayerInk 컴포넌트 (인스펙터 할당은 참고용, 런타임에는 Instance 우선)")]
     [SerializeField] private PlayerInk playerInk;
 
     [Header("잉크 게이지")]
     [Tooltip("실제로 fillAmount가 변할 Image (InkGauge_Fill)")]
     [SerializeField] private Image inkFillImage;
 
+    private bool _initialized;
+
     private void Awake()
     {
-        Debug.Log($"[InkGaugeUI] Awake - serialized playerInk={(playerInk != null ? playerInk.GetInstanceID().ToString() : "null")}, PlayerInk.Instance={(PlayerInk.Instance != null ? PlayerInk.Instance.GetInstanceID().ToString() : "null")}");
+        Debug.Log($"[InkGaugeUI] Awake - serialized playerInk={(playerInk != null ? "OK" : "NULL")}, Instance={(PlayerInk.Instance != null ? "OK" : "NULL")}, inkFillImage={(inkFillImage != null ? $"OK(type={inkFillImage.type}, fillMethod={inkFillImage.fillMethod})" : "NULL")}");
+        TryBind();
+    }
 
-        // 크로스-프리팹 참조 깨짐 보정
-        if (playerInk == null || playerInk.GetInstanceID() != PlayerInk.Instance?.GetInstanceID())
+    private void Start()
+    {
+        if (!_initialized)
+        {
+            Debug.Log("[InkGaugeUI] Start - retrying");
+            TryBind();
+        }
+
+        if (!_initialized)
+        {
+            Debug.LogError("[InkGaugeUI] PlayerInk not found. (Start retry failed)");
+        }
+        else
+        {
+            Debug.Log($"[InkGaugeUI] Start done - CurrentInk={playerInk?.CurrentInk}, MaxInk={playerInk?.MaxInk}, fillAmount={inkFillImage?.fillAmount}");
+        }
+    }
+
+    private void TryBind()
+    {
+        if (_initialized) return;
+
+        if (PlayerInk.Instance != null)
         {
             playerInk = PlayerInk.Instance;
+            Debug.Log("[InkGaugeUI] TryBind - using Instance");
         }
 
         if (playerInk == null)
         {
-            Debug.LogError("[InkGaugeUI] PlayerInk를 찾을 수 없습니다.");
+            Debug.Log("[InkGaugeUI] TryBind - playerInk null, deferring");
             return;
         }
 
+        Debug.Log($"[InkGaugeUI] TryBind - CurrentInk={playerInk.CurrentInk}, MaxInk={playerInk.MaxInk}, subscribing OnInkChanged");
         playerInk.OnInkChanged += OnInkChanged;
         UpdateFill(playerInk.CurrentInk, playerInk.MaxInk);
-        Debug.Log($"[InkGaugeUI] Initialized - InstanceID={playerInk.GetInstanceID()}, CurrentInk={playerInk.CurrentInk}, MaxInk={playerInk.MaxInk}");
+        _initialized = true;
     }
 
     private void OnDestroy()
@@ -50,7 +77,13 @@ public sealed class InkGaugeUI : MonoBehaviour
 
     private void UpdateFill(float current, float max)
     {
-        if (inkFillImage == null) return;
-        inkFillImage.fillAmount = max > 0f ? current / max : 0f;
+        if (inkFillImage == null)
+        {
+            Debug.LogWarning("[InkGaugeUI] inkFillImage is NULL!");
+            return;
+        }
+        float amount = max > 0f ? current / max : 0f;
+        Debug.Log($"[InkGaugeUI] UpdateFill - fillAmount={inkFillImage.fillAmount} -> {amount}");
+        inkFillImage.fillAmount = amount;
     }
 }
