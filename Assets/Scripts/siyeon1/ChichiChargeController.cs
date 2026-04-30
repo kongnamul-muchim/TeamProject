@@ -235,7 +235,7 @@ namespace HideAndInk.Siyeon1
             // 점진적 잉크 전달: chargeDuration 동안 chargeAmountPerUse만큼 천천히 회복
             if (chargeDuration > 0f && inkTank.CanSpendCharge)
             {
-                float transferThisFrame = (chargeAmountPerUse / chargeDuration) * Time.deltaTime;
+                float transferThisFrame = (inkTank.ChargeAmountPerUse / chargeDuration) * Time.deltaTime;
                 InkReceiver?.AddInk(transferThisFrame);
             }
 
