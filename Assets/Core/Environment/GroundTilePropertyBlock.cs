@@ -37,28 +37,6 @@ namespace HideAndInk.Core.Environment
         [Tooltip("금속성 (0=비금속, 1=금속)")]
         [SerializeField, Range(0f, 1f)] private float _metallic = 0f;
 
-        [Header("Ground Blend Gradient")]
-        [Tooltip("Ground Blend 셰이더 사용 시: 경계 측 A 색상")]
-        [SerializeField] private Color _colorA = Color.white;
-
-        [Tooltip("Ground Blend 셰이더 사용 시: 경계 측 B 색상")]
-        [SerializeField] private Color _colorB = Color.white;
-
-        [Tooltip("블렌딩 중심점 (월드 좌표)")]
-        [SerializeField] private float _blendCenter = 0f;
-
-        [Tooltip("블렌딩 폭 (값이 클수록 경계가 부드러워짐)")]
-        [SerializeField] private float _blendWidth = 2f;
-
-        [Tooltip("블렌딩 축 (0 = X축, 1 = Z축)")]
-        [SerializeField, Range(0f, 1f)] private float _blendAxis = 0f;
-
-        [Tooltip("노이즈 텍스처 스케일 (경계 흐트림 밀도)")]
-        [SerializeField] private float _noiseScale = 1f;
-
-        [Tooltip("노이즈 강도 (경계를 얼마나 흐트러뜨릴지, 0 = 직선)")]
-        [SerializeField, Range(0f, 1f)] private float _noiseAmount = 0.3f;
-
         private MaterialPropertyBlock _propertyBlock;
         private Renderer _renderer;
 
@@ -114,15 +92,6 @@ namespace HideAndInk.Core.Environment
             _propertyBlock.SetFloat("_Smoothness", _smoothness);
             _propertyBlock.SetFloat("_Metallic", _metallic);
 
-            // ── Ground Blend 속성 적용 ───────────────────────────
-            _propertyBlock.SetColor("_ColorA", _colorA);
-            _propertyBlock.SetColor("_ColorB", _colorB);
-            _propertyBlock.SetFloat("_BlendCenter", _blendCenter);
-            _propertyBlock.SetFloat("_BlendWidth", _blendWidth);
-            _propertyBlock.SetFloat("_BlendAxis", _blendAxis);
-            _propertyBlock.SetFloat("_NoiseScale", _noiseScale);
-            _propertyBlock.SetFloat("_NoiseAmount", _noiseAmount);
-
             // Renderer에 PropertyBlock 적용
             _renderer.SetPropertyBlock(_propertyBlock);
         }
@@ -154,50 +123,6 @@ namespace HideAndInk.Core.Environment
         public void SetMetallic(float metallic)
         {
             _metallic = Mathf.Clamp01(metallic);
-            ApplyProperties();
-        }
-
-        // ─── 런타임 Blend API ──────────────────────────────────
-
-        /// <summary>런타임에 ColorA를 변경합니다.</summary>
-        public void SetColorA(Color color)
-        {
-            _colorA = color;
-            ApplyProperties();
-        }
-
-        /// <summary>런타임에 ColorB를 변경합니다.</summary>
-        public void SetColorB(Color color)
-        {
-            _colorB = color;
-            ApplyProperties();
-        }
-
-        /// <summary>런타임에 Blend Center를 변경합니다.</summary>
-        public void SetBlendCenter(float center)
-        {
-            _blendCenter = center;
-            ApplyProperties();
-        }
-
-        /// <summary>런타임에 Blend Width를 변경합니다.</summary>
-        public void SetBlendWidth(float width)
-        {
-            _blendWidth = Mathf.Max(0.001f, width);
-            ApplyProperties();
-        }
-
-        /// <summary>런타임에 Blend Axis를 변경합니다. (0=X, 1=Z)</summary>
-        public void SetBlendAxis(float axis)
-        {
-            _blendAxis = Mathf.Clamp01(axis);
-            ApplyProperties();
-        }
-
-        /// <summary>런타임에 Noise Amount를 변경합니다.</summary>
-        public void SetNoiseAmount(float amount)
-        {
-            _noiseAmount = Mathf.Clamp01(amount);
             ApplyProperties();
         }
 
