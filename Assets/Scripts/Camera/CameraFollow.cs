@@ -31,6 +31,10 @@ namespace HideAndInk.CameraSystem
 
         private float _originTargetY;
         private float _swayTimer;
+        private bool _paused;
+
+        /// <summary>카메라 추적이 일시정지 중인지 여부</summary>
+        public bool IsPaused => _paused;
 
         private void Start()
         {
@@ -40,7 +44,7 @@ namespace HideAndInk.CameraSystem
 
         private void LateUpdate()
         {
-            if (target == null) return;
+            if (_paused || target == null) return;
 
             Vector3 targetPos = target.position + offset;
 
@@ -68,6 +72,41 @@ namespace HideAndInk.CameraSystem
         {
             target = newTarget;
             _originTargetY = target != null ? target.position.y : 0f;
+        }
+
+        /// <summary>
+        /// 카메라 추적을 일시정지합니다. 트랜지션 중 카메라 수동 이동 시 사용.
+        /// </summary>
+        public void Pause()
+        {
+            _paused = true;
+        }
+
+        /// <summary>
+        /// 카메라 추적을 재개합니다. 타겟의 현재 위치로 즉시 이동 후 추적 재개.
+        /// </summary>
+        /// <param name="snapToTarget">재개 시 타겟 위치로 즉시 이동할지 여부</param>
+        public void Resume(bool snapToTarget = true)
+        {
+            _paused = false;
+
+            if (snapToTarget && target != null)
+            {
+                // 타겟 위치로 즉시 스냅 (Lerp 지연 없이)
+                Vector3 targetPos = target.position + offset;
+
+                if (!followX) targetPos.x = transform.position.x;
+                if (!followY) targetPos.y = transform.position.y;
+
+                if (followZ)
+                {
+                    float deltaY = target.position.y - _originTargetY;
+                    targetPos.z = zBaseOffset + deltaY * zDepthFactor;
+                }
+
+                transform.position = targetPos;
+                _originTargetY = target.position.y;
+            }
         }
     }
 }

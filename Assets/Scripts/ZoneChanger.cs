@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using HideAndInk.Core.Transition;
+using HideAndInk.CameraSystem;
 
 /// <summary>
 /// 구역 전환 트리거: 플레이어가 닿으면 현재 구역을 끄고 다음 구역을 켭니다.
@@ -19,6 +20,10 @@ using HideAndInk.Core.Transition;
 /// 3. 트랜지션 효과:
 ///    useTransition = true → 패턴 트랜지션 효과와 함께 구역 전환
 ///    useTransition = false → 즉시 구역 전환 (트랜지션 없음)
+/// 
+/// 4. 카메라 이동:
+///    moveCameraTo를 설정하면 트랜지션 중 화면이 덮인 사이에 카메라를 이동합니다.
+///    CameraFollow가 있으면 추적을 잠시 멈추고 이동 후 재개합니다.
 /// </summary>
 public class ZoneChanger : MonoBehaviour
 {
@@ -40,6 +45,20 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("패턴 트랜지션 효과 사용 여부")]
     public bool useTransition = true;
 
+    [Header("카메라 이동")]
+    [Tooltip("트랜지션 중 카메라를 이동할 목적지 좌표 (체크하면 이동함)")]
+    public bool enableCameraMove = false;
+
+    [Tooltip("카메라가 이동할 목적지 좌표")]
+    public Vector3 moveCameraTo = Vector3.zero;
+
+    [Tooltip("카메라 이동 완료 후 CameraFollow의 타겟 위치로 스냅할지 여부")]
+    public bool snapToTargetAfterMove = true;
+
+    [Header("DI - 카메라 추적 (미할당 시 자동 탐색)")]
+    [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
+    [SerializeField] private CameraFollow cameraFollow;
+
     private bool _alreadyTriggered = false;
 
     private void Start()
@@ -55,13 +74,20 @@ public class ZoneChanger : MonoBehaviour
             activateZones = FindZoneObjects(toZoneNumber);
         }
 
+        // CameraFollow 자동 탐색
+        if (cameraFollow == null)
+        {
+            cameraFollow = FindObjectOfType<CameraFollow>();
+        }
+
         Debug.Log($"[ZoneChanger] '{name}' 초기화: " +
             $"비활성화={fromZoneNumber}({(deactivateZones != null ? deactivateZones.Length : 0)}개), " +
             $"활성화={toZoneNumber}({(activateZones != null ? activateZones.Length : 0)}개), " +
+            $"카메라이동={enableCameraMove}, " +
             $"위치={transform.position}");
     }
 
-// 3D 콜라이더용 트리거
+    // 3D 콜라이더용 트리거
     private void OnTriggerEnter(Collider other)
     {
         Debug.Log($"[ZoneChanger] '{name}' OnTriggerEnter: {other.gameObject.name} (tag={other.gameObject.tag})");
@@ -92,10 +118,24 @@ public class ZoneChanger : MonoBehaviour
 
         if (useTransition && PatternTransitionController.Instance != null)
         {
-            // 트랜지션 인 → 구역 전환 → 트랜지션 아웃
+            // 카메라 추적 일시정지
+            if (enableCameraMove && cameraFollow != null)
+            {
+                cameraFollow.Pause();
+            }
+
+            // 트랜지션 인 → 구역 전환 + 카메라 이동 → 트랜지션 아웃
             PatternTransitionController.Instance.PlayIn(() =>
             {
                 ChangeZone();
+                MoveCamera();
+
+                // 카메라 이동 완료 후 추적 재개
+                if (enableCameraMove && cameraFollow != null)
+                {
+                    cameraFollow.Resume(snapToTargetAfterMove);
+                }
+
                 PatternTransitionController.Instance.PlayOut();
             });
         }
@@ -103,10 +143,54 @@ public class ZoneChanger : MonoBehaviour
         {
             // 트랜지션 없이 즉시 전환
             ChangeZone();
+
+            if (enableCameraMove)
+            {
+                MoveCameraInstant();
+            }
         }
     }
 
-void ChangeZone()
+    /// <summary>
+    /// 카메라를 moveCameraTo 좌표로 즉시 이동합니다.
+    /// 트랜지션 없이 구역 전환 시 사용됩니다.
+    /// </summary>
+    private void MoveCameraInstant()
+    {
+        Camera mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            Vector3 newPos = moveCameraTo;
+            newPos.z = mainCam.transform.position.z;
+            mainCam.transform.position = newPos;
+            Debug.Log($"[ZoneChanger] 카메라 즉시 이동: {newPos}");
+        }
+
+        if (cameraFollow != null)
+        {
+            cameraFollow.Resume(snapToTargetAfterMove);
+        }
+    }
+
+    /// <summary>
+    /// 카메라를 moveCameraTo 좌표로 이동합니다.
+    /// 트랜지션 중 화면이 덮인 상태에서 호출되므로 이동이 보이지 않습니다.
+    /// </summary>
+    private void MoveCamera()
+    {
+        if (!enableCameraMove) return;
+
+        Camera mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            Vector3 newPos = moveCameraTo;
+            newPos.z = mainCam.transform.position.z;
+            mainCam.transform.position = newPos;
+            Debug.Log($"[ZoneChanger] 카메라 이동: {newPos}");
+        }
+    }
+
+    void ChangeZone()
     {
         bool changed = false;
 
