@@ -1,5 +1,10 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/_Recovery/0.unity.meta
 guid: 5996f71770e3b2340b3991de9f67be2c
+========
+guid: 13e5fca3f5103da49850fbb3c2d6c40a
+folderAsset: yes
+>>>>>>>> origin/jieun:Assets/Scenes/Test_Jieun.meta
 DefaultImporter:
   externalObjects: {}
   userData: 

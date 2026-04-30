@@ -1,0 +1,254 @@
+{
+  "$schema": "./commands.schema.json",
+  "schemaVersion": "1.0",
+  "lastUpdated": "2026-04-29",
+  "commands": [
+    {
+      "name": "init",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Initialize weave workspace files and probe GDC integration",
+      "descriptionEn": "Initialize weave workspace files and probe GDC integration",
+      "category": "meta",
+      "args": [],
+      "mdFile": "weave-init.md",
+      "handler": "handleInit",
+      "examples": ["weave command=init"]
+    },
+    {
+      "name": "map",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Analyze codebase structure via GDC and optional Graphify",
+      "descriptionEn": "Analyze codebase structure via GDC and optional Graphify",
+      "category": "analysis",
+      "args": [
+        { "name": "deep", "type": "boolean", "default": false, "description": "Run deeper Graphify analysis when available" }
+      ],
+      "mdFile": "weave-map.md",
+      "handler": "handleMap",
+      "examples": ["weave command=map", "weave command=map deep=true"]
+    },
+    {
+      "name": "interview",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Ask clarifying questions until requirements and structural changes are clear",
+      "descriptionEn": "Ask clarifying questions until requirements and structural changes are clear",
+      "category": "analysis",
+      "args": [
+        { "name": "docsPath", "type": "string", "required": false, "description": "Path to requirements documents" }
+      ],
+      "mdFile": "weave-interview.md",
+      "handler": "handleInterview",
+      "examples": ["weave command=interview", "weave command=interview docsPath=\"docs/\""]
+    },
+    {
+      "name": "prepare",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Create research, spec, and phase plan artifacts from requirements",
+      "descriptionEn": "Create research, spec, and phase plan artifacts from requirements",
+      "category": "planning",
+      "args": [
+        { "name": "docsPath", "type": "string", "required": false, "description": "Path to requirements documents" },
+        { "name": "planName", "type": "string", "required": false, "description": "Plan name in kebab-case" },
+        { "name": "splitPlans", "type": "boolean", "default": true, "description": "Auto-split oversized plans into multiple shard plan files" },
+        { "name": "splitMaxPhases", "type": "number", "default": 3, "min": 2, "max": 8, "description": "Max phases per shard when splitPlans is enabled" },
+        { "name": "splitMaxHours", "type": "number", "default": 10, "min": 4, "max": 40, "description": "Max estimated hours per shard when splitPlans is enabled" }
+      ],
+      "mdFile": "weave-prepare.md",
+      "handler": "handlePrepare",
+      "examples": ["weave command=prepare docsPath=\"docs/\"", "weave command=prepare docsPath=\"docs/\" planName=\"emotion-diary\""]
+    },
+    {
+      "name": "refine-plan",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Apply structured plan-note directives to the active plan",
+      "descriptionEn": "Apply structured plan-note directives to the active plan",
+      "category": "planning",
+      "args": [
+        { "name": "notesPath", "type": "string", "required": false, "description": "Path to structured plan notes" },
+        { "name": "applyNotes", "type": "boolean", "default": true, "description": "Auto-apply plan notes during approve" }
+      ],
+      "mdFile": "weave-refine-plan.md",
+      "handler": "handleRefinePlan",
+      "examples": ["weave command=refine-plan"]
+    },
+    {
+      "name": "approve",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Approve the plan, or finalize a crafted phase when phaseId is provided",
+      "descriptionEn": "Approve the plan, or finalize a crafted phase when phaseId is provided",
+      "category": "planning",
+      "args": [
+        { "name": "phaseId", "type": "string", "required": false, "description": "Phase ID to finalize" },
+        { "name": "planReview", "type": "string", "required": false, "description": "Plan review summary text" },
+        { "name": "applyNotes", "type": "boolean", "default": true, "description": "Auto-apply plan notes during approve" }
+      ],
+      "mdFile": "weave-approve.md",
+      "handler": "handleApprove",
+      "examples": ["weave command=approve", "weave command=approve phaseId=\"P1\""]
+    },
+    {
+      "name": "craft",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Prepare execution context for a phase",
+      "descriptionEn": "Prepare execution context for a phase",
+      "category": "execution",
+      "args": [
+        { "name": "phaseId", "type": "string", "required": false, "description": "Phase ID, auto-selected if omitted" },
+        { "name": "projectType", "type": "string", "required": false, "description": "Project type hint" }
+      ],
+      "mdFile": "weave-craft.md",
+      "handler": "handleCraft",
+      "examples": ["weave command=craft", "weave command=craft phaseId=\"P1\""]
+    },
+    {
+      "name": "build",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Run, resume, stop, list, or inspect autonomous build loops",
+      "descriptionEn": "Run, resume, stop, list, or inspect autonomous build loops",
+      "category": "execution",
+      "args": [
+        { "name": "action", "type": "enum", "values": ["run", "status", "stop", "list", "resume", "sync"], "default": "run", "description": "Build sub-action" },
+        { "name": "phaseIds", "type": "string", "required": false, "description": "Comma-separated phase IDs for run action" },
+        { "name": "buildId", "type": "string", "required": false, "description": "Build ID for status/stop/resume/sync actions" },
+        { "name": "maxRetries", "type": "number", "default": 3, "min": 1, "max": 10, "description": "Maximum retries per task" },
+        { "name": "maxIterations", "type": "number", "default": 1, "min": 1, "max": 20, "description": "Maximum loop iterations before blocking" },
+        { "name": "maxNoProgress", "type": "number", "default": 1, "min": 0, "max": 10, "description": "Maximum repeated no-progress failures before blocking" }
+      ],
+      "mdFile": "weave-build.md",
+      "handler": "handleBuild",
+      "examples": [
+        "weave command=build",
+        "weave command=build action=run phaseIds=\"P1,P2\"",
+        "weave command=build action=status buildId=\"build-20250428-a1b2\"",
+        "weave command=build action=resume buildId=\"build-20250428-a1b2\"",
+        "weave command=build action=list"
+      ]
+    },
+    {
+      "name": "status",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "View plans, active phase, and progress",
+      "descriptionEn": "View plans, active phase, and progress",
+      "category": "management",
+      "args": [],
+      "mdFile": "weave-status.md",
+      "handler": "handleStatus",
+      "examples": ["weave command=status"]
+    },
+    {
+      "name": "worktree",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Manage git worktrees for parallel phase or feature work",
+      "descriptionEn": "Manage git worktrees for parallel phase or feature work",
+      "category": "management",
+      "args": [
+        { "name": "worktreeAction", "type": "enum", "values": ["create", "list", "open", "remove", "merge"], "required": false, "description": "Worktree action" },
+        { "name": "name", "type": "string", "required": false, "description": "Worktree name" },
+        { "name": "fromRef", "type": "string", "required": false, "description": "Base git ref to branch from" },
+        { "name": "deleteBranch", "type": "boolean", "default": false, "description": "Delete branch when removing worktree" }
+      ],
+      "mdFile": "weave-worktree.md",
+      "handler": "handleWorktree",
+      "examples": ["weave command=worktree worktreeAction=list"]
+    },
+    {
+      "name": "verify",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Run build and test verification for the current worktree",
+      "descriptionEn": "Run build and test verification for the current worktree",
+      "category": "management",
+      "args": [
+        { "name": "verifyMode", "type": "enum", "values": ["quick", "full"], "default": "full", "description": "Verification mode" },
+        { "name": "projectType", "type": "string", "required": false, "description": "Project type hint" }
+      ],
+      "mdFile": "weave-verify.md",
+      "handler": "handleVerify",
+      "examples": ["weave command=verify", "weave command=verify verifyMode=quick"]
+    },
+    {
+      "name": "archive",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Archive the verified active change artifact",
+      "descriptionEn": "Archive the verified active change artifact",
+      "category": "management",
+      "args": [],
+      "mdFile": "weave-archive.md",
+      "handler": "handleArchive",
+      "examples": ["weave command=archive"]
+    },
+    {
+      "name": "troubleshoot",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Search global knowledge for solutions or record a new one",
+      "descriptionEn": "Search global knowledge for solutions or record a new one",
+      "category": "knowledge",
+      "args": [
+        { "name": "error", "type": "string", "required": false, "description": "Error message to search solutions for" },
+        { "name": "record", "type": "boolean", "default": false, "description": "Record a new solution instead of searching" },
+        { "name": "solution", "type": "string", "required": false, "description": "Solution to record when record=true" },
+        { "name": "context", "type": "string", "required": false, "description": "Context for the troubleshooting entry" }
+      ],
+      "mdFile": "weave-troubleshoot.md",
+      "handler": "handleTroubleshoot",
+      "examples": [
+        "weave command=troubleshoot error=\"Cannot find module 'xyz'\"",
+        "weave command=troubleshoot record=true solution=\"Restart dev server\""
+      ]
+    },
+    {
+      "name": "repair",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Scan and auto-repair corrupted plan YAML files",
+      "descriptionEn": "Scan and auto-repair corrupted plan YAML files",
+      "category": "knowledge",
+      "args": [],
+      "mdFile": "weave-repair.md",
+      "handler": "handleRepair",
+      "examples": ["weave command=repair"]
+    },
+    {
+      "name": "agents",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Sync generated agent files and initialize runtime configuration",
+      "descriptionEn": "Sync generated agent files and initialize runtime configuration",
+      "category": "configuration",
+      "args": [
+        { "name": "sync", "type": "boolean", "default": false, "description": "Force regenerate agent markdown files from config pool" },
+        { "name": "init", "type": "boolean", "default": false, "description": "Create default maskweaver.config.json with pool template" }
+      ],
+      "mdFile": "weave-agents.md",
+      "handler": "handleAgents",
+      "examples": [
+        "weave command=agents sync=true",
+        "weave command=agents init=true"
+      ]
+    },
+    {
+      "name": "help",
+      "aliases": [],
+      "deprecatedAliases": [],
+      "description": "Show weave workflow help",
+      "descriptionEn": "Show weave workflow help",
+      "category": "meta",
+      "args": [],
+      "mdFile": "weave-help.md",
+      "handler": "getHelpMessage",
+      "examples": ["weave command=help"]
+    }
+  ]
+}
