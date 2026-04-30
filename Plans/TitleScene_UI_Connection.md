@@ -25,11 +25,14 @@
 | FXToggle | `SettingsPopup.SetSfxMute(bool)` | ✅ 연결됨 |
 | FX_Slider | `SettingsPopup.SetSfxVolume(float)` | ✅ 연결됨 |
 
-### FadeInObj
-- TitleController에 `fadeInObj` 필드가 있음
-- `useEntryFadeIn` 토글로 on/off 가능
-- 사용하려면 `Assets/Prefabs/FadeInObj.prefab`을 씬의 Canvas 자식으로 인스턴스화한 후
-  TitleController의 `fadeInObj` 슬롯에 할당
+### 진입 트랜지션 (TitleController.Start → 코루틴)
+- **`useEntryTransition` (권장)**: PatternTransitionController.PlayOut() — 셰이더 기반
+  - 씬 로드 직후 `SetFull()`로 화면을 덮고 → `PlayOut()`으로 걷기
+  - 별도 프리팹 필요 없음, Shader_PatternTransition이 씬에 있으면 자동 동작
+- **`fadeInObj`**: FadeInObj 프리팹 인스턴스 할당 시 Animator 기반 스프라이트 효과
+  - TitleController가 자동으로 활성화 → 애니메이션 재생 → 완료 후 비활성화
+  - `Assets/Prefabs/FadeInObj.prefab`을 씬의 Canvas 자식으로 넣고 슬롯에 할당
+- 둘 다 true면 순차 재생 (PatternTransition → FadeInObj)
 
 ### 씬 전환
 - `useSceneTransition` 토글로 PatternTransitionController 사용 여부 선택 가능
