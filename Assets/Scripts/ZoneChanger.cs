@@ -24,6 +24,10 @@ using HideAndInk.CameraSystem;
 /// 4. 카메라 이동:
 ///    moveCameraTo를 설정하면 트랜지션 중 화면이 덮인 사이에 카메라를 이동합니다.
 ///    CameraFollow가 있으면 추적을 잠시 멈추고 이동 후 재개합니다.
+/// 
+/// 5. 투명 벽 (돌아갈 수 없게 차단):
+///    createInvisibleWall = true → 트리거 위치에 자동으로 투명 벽 생성
+///    invisibleWalls → 수동으로 만든 벽 오브젝트를 연결 (자동 생성 대신/추가로 사용)
 /// </summary>
 public class ZoneChanger : MonoBehaviour
 {
@@ -55,11 +59,25 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("카메라 이동 완료 후 CameraFollow의 타겟 위치로 스냅할지 여부")]
     public bool snapToTargetAfterMove = true;
 
+    [Header("투명 벽 (돌아갈 수 없게 차단)")]
+    [Tooltip("트리거 발동 시 투명 벽을 자동 생성할지 여부")]
+    public bool createInvisibleWall = false;
+
+    [Tooltip("자동 생성할 투명 벽의 크기 (X=너비, Y=높이)")]
+    public Vector2 wallSize = new Vector2(2f, 10f);
+
+    [Tooltip("트리거 위치로부터 벽의 오프셋 (벽을 트리거 뒤에 배치하려면 음수 X 사용)")]
+    public Vector3 wallOffset = Vector3.zero;
+
+    [Tooltip("수동으로 만든 투명 벽 오브젝트들 (자동 생성과 함께 사용 가능)")]
+    public GameObject[] invisibleWalls;
+
     [Header("DI - 카메라 추적 (미할당 시 자동 탐색)")]
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
     private bool _alreadyTriggered = false;
+    private GameObject _autoCreatedWall;
 
     private void Start()
     {
@@ -84,6 +102,7 @@ public class ZoneChanger : MonoBehaviour
             $"비활성화={fromZoneNumber}({(deactivateZones != null ? deactivateZones.Length : 0)}개), " +
             $"활성화={toZoneNumber}({(activateZones != null ? activateZones.Length : 0)}개), " +
             $"카메라이동={enableCameraMove}, " +
+            $"투명벽={createInvisibleWall}, " +
             $"위치={transform.position}");
     }
 
@@ -124,11 +143,12 @@ public class ZoneChanger : MonoBehaviour
                 cameraFollow.Pause();
             }
 
-            // 트랜지션 인 → 구역 전환 + 카메라 이동 → 트랜지션 아웃
+            // 트랜지션 인 → 구역 전환 + 카메라 이동 + 투명 벽 → 트랜지션 아웃
             PatternTransitionController.Instance.PlayIn(() =>
             {
                 ChangeZone();
                 MoveCamera();
+                ActivateInvisibleWalls();
 
                 // 카메라 이동 완료 후 추적 재개
                 if (enableCameraMove && cameraFollow != null)
@@ -143,12 +163,81 @@ public class ZoneChanger : MonoBehaviour
         {
             // 트랜지션 없이 즉시 전환
             ChangeZone();
+            ActivateInvisibleWalls();
 
             if (enableCameraMove)
             {
                 MoveCameraInstant();
             }
         }
+    }
+
+    /// <summary>
+    /// 투명 벽을 활성화합니다.
+    /// createInvisibleWall이 true면 트리거 위치에 자동 생성하고,
+    /// invisibleWalls에 수동 할당된 벽도 함께 활성화합니다.
+    /// </summary>
+    private void ActivateInvisibleWalls()
+    {
+        // 자동 생성 모드: 트리거 위치에 투명 벽 생성
+        if (createInvisibleWall)
+        {
+            CreateInvisibleWall();
+        }
+
+        // 수동 할당된 투명 벽 활성화
+        if (invisibleWalls != null)
+        {
+            foreach (var wall in invisibleWalls)
+            {
+                if (wall != null)
+                {
+                    wall.SetActive(true);
+                    Debug.Log($"[ZoneChanger] 투명 벽 활성화 (수동): {wall.name}");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 트리거 위치에 투명 벽 GameObject를 자동 생성합니다.
+    /// 렌더러가 없는 BoxCollider만 포함하여 시각적으로 보이지 않습니다.
+    /// </summary>
+    private void CreateInvisibleWall()
+    {
+        // 이미 생성된 벽이 있으면 중복 생성 방지
+        if (_autoCreatedWall != null)
+        {
+            _autoCreatedWall.SetActive(true);
+            Debug.Log($"[ZoneChanger] 기존 투명 벽 재활성화: {_autoCreatedWall.name}");
+            return;
+        }
+
+        // 투명 벽 GameObject 생성
+        _autoCreatedWall = new GameObject($"InvisibleWall_{name}");
+        _autoCreatedWall.transform.SetParent(transform.parent); // 트리거와 같은 부모
+
+        // 트리거 위치 + 오프셋에 배치
+        Vector3 wallPosition = transform.position + wallOffset;
+        wallPosition.z = transform.position.z;
+        _autoCreatedWall.transform.position = wallPosition;
+
+        // 3D BoxCollider 추가 (3D 프로젝트용)
+        var boxCollider3D = _autoCreatedWall.AddComponent<BoxCollider>();
+        boxCollider3D.size = new Vector3(wallSize.x, wallSize.y, 1f);
+        boxCollider3D.isTrigger = false; // 물리적 충돌
+
+        // 2D BoxCollider 추가 (2D 프로젝트용)
+        var boxCollider2D = _autoCreatedWall.AddComponent<BoxCollider2D>();
+        boxCollider2D.size = wallSize;
+        boxCollider2D.isTrigger = false; // 물리적 충돌
+
+        // 3D 콜라이더와 2D 콜라이더가 충돌하지 않도록
+        // 둘 중 하나만 필요하면 인스펙터에서 제거 가능
+        // 기본적으로 둘 다 생성하여 2D/3D 프로젝트 모두 지원
+
+        Debug.Log($"[ZoneChanger] 투명 벽 자동 생성: {_autoCreatedWall.name} " +
+            $"위치={wallPosition}, 크기={wallSize}");
     }
 
     /// <summary>
