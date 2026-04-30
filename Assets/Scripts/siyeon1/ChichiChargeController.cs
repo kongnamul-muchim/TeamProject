@@ -75,13 +75,11 @@ namespace HideAndInk.Siyeon1
         {
             // PlayerInk.Instance 싱글톤으로 Player Transform 및 Collider 확보
             // (크로스-프리팹 참조가 깨져서 위치/충돌이 업데이트되지 않는 문제 회피)
+            // 주의: 프리팹에 할당된 참조가 null이 아니어도 깨진 경우가 있으므로 무조건 덮어씀
             if (PlayerInk.Instance != null)
             {
                 duduTransform = PlayerInk.Instance.transform;
-                if (duduContactCollider == null)
-                {
-                    duduContactCollider = PlayerInk.Instance.GetComponent<Collider>();
-                }
+                duduContactCollider = PlayerInk.Instance.GetComponent<Collider>();
             }
 
             if (duduTransform == null)
