@@ -22,15 +22,24 @@ namespace HideAndInk.Siyeon1
         [Tooltip("Walk 상태에서 이 거리 이내면 Idle로 복귀")]
         [SerializeField] private float walkStopDistance = 1.8f;
 
+        [Header("Move Away After Charge")]
+        [Tooltip("충전 완료 후 Player로부터 멀어지는 거리")]
+        [SerializeField] private float moveAwayDistance = 2f;
+        [Tooltip("충전 완료 후 멀어지는 데 걸리는 시간 (초)")]
+        [SerializeField] private float moveAwayDuration = 0.4f;
+
         private ChichiState currentState = ChichiState.Idle;
         private bool predatorInspectIgnored;
         private IDuduStateProvider duduStateProvider;
+        private Vector3 moveAwayTarget;
+        private float moveAwayTimer;
 
         public Transform DuduTransform => duduTransform;
         public ChichiState CurrentState => currentState;
         public float IdleDistance => idleDistance;
         public float WalkStartDistance => walkStartDistance;
         public float WalkStopDistance => walkStopDistance;
+        public Vector3 MoveAwayTarget => moveAwayTarget;
 
         public event Action<ChichiState> StateChanged;
 
@@ -93,6 +102,17 @@ namespace HideAndInk.Siyeon1
         {
             if (predatorInspectIgnored || currentState == ChichiState.ApproachCharge || currentState == ChichiState.Charging)
             {
+                return;
+            }
+
+            // MoveAway: 타이머가 끝나면 Idle로 복귀
+            if (currentState == ChichiState.MoveAway)
+            {
+                moveAwayTimer -= Time.deltaTime;
+                if (moveAwayTimer <= 0f || Vector3.Distance(transform.position, moveAwayTarget) <= 0.1f)
+                {
+                    ChangeState(ChichiState.Idle);
+                }
                 return;
             }
 
@@ -160,7 +180,12 @@ namespace HideAndInk.Siyeon1
         {
             if (currentState == ChichiState.ApproachCharge || currentState == ChichiState.Charging)
             {
-                ChangeState(ChichiState.Idle);
+                // 충전 완료 → Player 반대 방향으로 MoveAway
+                Vector3 awayDir = (transform.position - duduTransform.position).normalized;
+                if (awayDir.magnitude < 0.01f) awayDir = Vector3.left;
+                moveAwayTarget = transform.position + awayDir * moveAwayDistance;
+                moveAwayTimer = moveAwayDuration;
+                ChangeState(ChichiState.MoveAway);
             }
         }
 

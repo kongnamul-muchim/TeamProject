@@ -25,6 +25,10 @@ namespace HideAndInk.Siyeon1
         [Tooltip("충전 접근 시 멈추는 거리")]
         [SerializeField] private float chargeStopDistance = 0.12f;
 
+        [Header("Move Away")]
+        [Tooltip("충전 완료 후 멀어지는 속도")]
+        [SerializeField] private float moveAwaySpeed = 3f;
+
         [Header("Position Lock")]
         [Tooltip("Y축(높이) 고정. true면 초기 Y값을 유지하여 땅에 붙어있음")]
         [SerializeField] private bool lockY = true;
@@ -91,14 +95,32 @@ namespace HideAndInk.Siyeon1
                 stopDist = chargeStopDistance;
                 shouldMove = true;
             }
+            else if (stateMachine.CurrentState == ChichiState.MoveAway)
+            {
+                speed = moveAwaySpeed;
+                stopDist = 0f;
+                shouldMove = true;
+            }
 
-            if (!shouldMove || duduTransform == null)
+            if (!shouldMove)
             {
                 return;
             }
 
             Vector3 current = transform.position;
-            Vector3 targetPos = duduTransform.position;
+            Vector3 targetPos;
+
+            if (stateMachine.CurrentState == ChichiState.MoveAway)
+            {
+                // MoveAway: Player 반대 방향으로 미리 계산된 목표 위치로 이동
+                targetPos = stateMachine.MoveAwayTarget;
+            }
+            else
+            {
+                // Walk / ApproachCharge / Charging: Player 위치로 이동
+                if (duduTransform == null) return;
+                targetPos = duduTransform.position;
+            }
 
             // Y축 고정: 치치가 땅에 박히거나 뜨지 않도록 초기 Y 유지
             if (lockY)

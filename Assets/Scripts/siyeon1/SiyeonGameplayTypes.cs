@@ -18,6 +18,7 @@ namespace HideAndInk.Siyeon1
         ApproachCharge,
         Charging,
         ChargeInterrupted,
-        InspectIgnored
+        InspectIgnored,
+        MoveAway
     }
 }
