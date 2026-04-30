@@ -343,7 +343,7 @@ Transform:
   m_GameObject: {fileID: 52706896}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 44.1, y: 0, z: -977.35}
+  m_LocalPosition: {x: 41.68, y: 0, z: -977.35}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -370,7 +370,7 @@ MonoBehaviour:
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
   createInvisibleWall: 1
-  wallSize: {x: 2, y: 10}
+  wallSize: {x: 2, y: 10, z: 0}
   wallOffset: {x: 0, y: 0, z: 0}
   invisibleWalls: []
   cameraFollow: {fileID: 0}
@@ -1399,8 +1399,8 @@ Transform:
   m_GameObject: {fileID: 228080281}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 81.49923, y: -4.0483, z: -0.87}
-  m_LocalScale: {x: 3.5, y: 3, z: 1.5}
+  m_LocalPosition: {x: 80, y: -4.0483, z: -0.87}
+  m_LocalScale: {x: 8, y: 3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1644966029}
@@ -1566,7 +1566,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &308933278
@@ -1893,7 +1893,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &355740411
@@ -3625,8 +3625,8 @@ Transform:
   m_GameObject: {fileID: 599027864}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 46.569233, y: -4.0483, z: -0.87}
-  m_LocalScale: {x: 3.5, y: 3, z: 1.5}
+  m_LocalPosition: {x: 45.3, y: -4.0483, z: -0.87}
+  m_LocalScale: {x: 8, y: 3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1644966029}
@@ -5230,8 +5230,8 @@ Transform:
   m_GameObject: {fileID: 851033598}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 116.509224, y: -4.0483, z: -0.87}
-  m_LocalScale: {x: 3.5, y: 3, z: 1.5}
+  m_LocalPosition: {x: 115, y: -4.0483, z: -0.87}
+  m_LocalScale: {x: 8, y: 3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1644966029}
@@ -5534,7 +5534,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &881371292
@@ -6575,8 +6575,8 @@ Transform:
   m_GameObject: {fileID: 1103931493}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 186.43924, y: -4.0483, z: -0.87}
-  m_LocalScale: {x: 3.5, y: 3, z: 1.5}
+  m_LocalPosition: {x: 184, y: -4.0483, z: -0.87}
+  m_LocalScale: {x: 8, y: 3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1644966029}
@@ -6838,7 +6838,7 @@ MonoBehaviour:
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
   createInvisibleWall: 1
-  wallSize: {x: 2, y: 10}
+  wallSize: {x: 2, y: 10, z: 0}
   wallOffset: {x: 0, y: 0, z: 0}
   invisibleWalls: []
   cameraFollow: {fileID: 0}
@@ -6872,7 +6872,7 @@ Transform:
   m_GameObject: {fileID: 1153223548}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 183.8, y: 0, z: -978.1853}
+  m_LocalPosition: {x: 179.7, y: 0, z: -978.1853}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7088,8 +7088,8 @@ Transform:
   m_GameObject: {fileID: 1206985791}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 151.48924, y: -4.0483, z: -0.87}
-  m_LocalScale: {x: 3.5, y: 3, z: 1.5}
+  m_LocalPosition: {x: 149, y: -4.0483, z: -0.87}
+  m_LocalScale: {x: 8, y: 3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1644966029}
@@ -7497,7 +7497,7 @@ MonoBehaviour:
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
   createInvisibleWall: 1
-  wallSize: {x: 2, y: 10}
+  wallSize: {x: 2, y: 10, z: 0}
   wallOffset: {x: 0, y: 0, z: 0}
   invisibleWalls: []
   cameraFollow: {fileID: 0}
@@ -7531,7 +7531,7 @@ Transform:
   m_GameObject: {fileID: 1261800401}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 113.93, y: 0, z: -978.1853}
+  m_LocalPosition: {x: 110.9, y: 0, z: -978.1853}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7908,7 +7908,7 @@ MonoBehaviour:
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
   createInvisibleWall: 1
-  wallSize: {x: 2, y: 10}
+  wallSize: {x: 2, y: 10, z: 0}
   wallOffset: {x: 0, y: 0, z: 0}
   invisibleWalls: []
   cameraFollow: {fileID: 0}
@@ -7942,7 +7942,7 @@ Transform:
   m_GameObject: {fileID: 1288973565}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 148.8, y: 0, z: -973.2}
+  m_LocalPosition: {x: 146, y: 0, z: -973.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8328,7 +8328,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &1387968596
@@ -9423,7 +9423,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &1640883130
@@ -9609,7 +9609,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 1.76923, y: -4.0483, z: -0.87}
-  m_LocalScale: {x: 5.5, y: 3, z: 1.5}
+  m_LocalScale: {x: 8, y: 3, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1644966029}
@@ -10628,7 +10628,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &1886888147
@@ -10791,7 +10791,7 @@ MonoBehaviour:
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
   createInvisibleWall: 1
-  wallSize: {x: 2, y: 10}
+  wallSize: {x: 2, y: 10, z: 0}
   wallOffset: {x: 0, y: 0, z: 0}
   invisibleWalls: []
   cameraFollow: {fileID: 0}
@@ -10825,7 +10825,7 @@ Transform:
   m_GameObject: {fileID: 1926326453}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 78.27061, y: 0, z: -978.1853}
+  m_LocalPosition: {x: 76.6, y: 0, z: -978.1853}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -12424,7 +12424,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.CameraSystem.LocalSway
   enableSway: 1
   amplitude: 0.1
-  frequency: 0.5
+  frequency: 0.1
   phaseOffset: 0
   smoothness: 5
 --- !u!212 &2116800908
