@@ -1,9 +1,5 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:Assets/Core/Audio.meta
-guid: 9c179471e77a8314280178fae126590f
-========
 guid: c555cc409e399fd4fb5347cf5049ded8
->>>>>>>> origin/jieun:Assets/Shader_Jieun.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
