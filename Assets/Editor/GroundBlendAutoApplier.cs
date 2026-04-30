@@ -33,8 +33,18 @@ namespace HideAndInk.Editor
             }
             GUI.backgroundColor = Color.white;
 
+            EditorGUILayout.Space(5);
+            GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
+            if (GUILayout.Button("Recalculate BlendCenters (Scale 반영)", GUILayout.Height(40)))
+            {
+                RecalculateBlendCentersFromCurrentScale();
+            }
+            GUI.backgroundColor = Color.white;
+
             EditorGUILayout.Space(10);
             EditorGUILayout.HelpBox(
+                "• 'Apply GroundBlend': 처음 적용할 때 사용\n" +
+                "• 'Recalculate BlendCenters': Scale X를 수정한 후 경계를 재계산할 때 사용\n" +
                 "적용 후 Inspector에서 _ColorA / _ColorB를 미세 조정할 수 있습니다.",
                 MessageType.Info);
         }
@@ -207,6 +217,59 @@ namespace HideAndInk.Editor
                     $"[GroundBlendAutoApplier] Ground_{i:D2} ↔ Ground_{i + 1:D2} " +
                     $"경계: BlendCenter={boundaryCenter:F2}");
             }
+        }
+
+        /// <summary>
+        /// 현재 씬의 Ground_01~06 오브젝트의 Scale/Position을 기준으로
+        /// BlendCenter를 재계산합니다. Scale X를 수정한 후 사용하세요.
+        /// </summary>
+        private static void RecalculateBlendCentersFromCurrentScale()
+        {
+            int updatedCount = 0;
+
+            for (int i = 1; i <= 5; i++)
+            {
+                GameObject current = GameObject.Find($"Ground_{i:D2}");
+                GameObject next = GameObject.Find($"Ground_{i + 1:D2}");
+
+                if (current == null || next == null) continue;
+
+                Renderer currentRenderer = current.GetComponent<Renderer>();
+                Renderer nextRenderer = next.GetComponent<Renderer>();
+
+                if (currentRenderer == null || nextRenderer == null) continue;
+
+                // 현재 Scale/Position 기준으로 경계 중간 지점 재계산
+                float boundaryCenter = (currentRenderer.bounds.max.x + nextRenderer.bounds.min.x) * 0.5f;
+
+                // 현재 Ground (왼쪽)
+                GroundTilePropertyBlock currentPB = current.GetComponent<GroundTilePropertyBlock>();
+                if (currentPB != null)
+                {
+                    Undo.RecordObject(currentPB, "Recalculate BlendCenter");
+                    currentPB.SetBlendCenter(boundaryCenter);
+                    updatedCount++;
+                }
+
+                // 다음 Ground (오른쪽)
+                GroundTilePropertyBlock nextPB = next.GetComponent<GroundTilePropertyBlock>();
+                if (nextPB != null)
+                {
+                    Undo.RecordObject(nextPB, "Recalculate BlendCenter");
+                    nextPB.SetBlendCenter(boundaryCenter);
+                    updatedCount++;
+                }
+
+                Debug.Log(
+                    $"[GroundBlendAutoApplier] Scale 반영 → Ground_{i:D2} ↔ Ground_{i + 1:D2} " +
+                    $"경계: BlendCenter={boundaryCenter:F2}");
+            }
+
+            EditorUtility.DisplayDialog(
+                "재계산 완료",
+                $"총 {updatedCount}개의 GroundTilePropertyBlock BlendCenter가\n" +
+                "현재 Scale/Position 기준으로 재계산되었습니다.",
+                "확인");
         }
     }
 }
