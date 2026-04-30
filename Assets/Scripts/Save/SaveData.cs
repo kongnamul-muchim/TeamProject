@@ -34,6 +34,12 @@ namespace HideAndInk.Scripts.Save
         /// <summary>저장 시간 (UTC)</summary>
         public string saveTime;
 
+        /// <summary>Player 위치를 읽어온 GameObject 이름 (디버깅용)</summary>
+        public string playerSourceName;
+
+        /// <summary>치치 위치를 읽어온 GameObject 이름 (디버깅용)</summary>
+        public string squidSourceName;
+
         public SaveData()
         {
             lastZoneIndex = 0;
@@ -55,6 +61,9 @@ namespace HideAndInk.Scripts.Save
             squidPosZ = squidPos.z;
 
             saveTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+
+            playerSourceName = "";
+            squidSourceName = "";
         }
 
         /// <summary>저장된 Player 위치를 Vector3로 반환</summary>

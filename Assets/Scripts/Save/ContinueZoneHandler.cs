@@ -31,27 +31,15 @@ public class ContinueZoneHandler : MonoBehaviour
     [Tooltip("치치 Transform (미할당 시 이름 'Squid' 또는 '치치'로 탐색)")]
     [SerializeField] private Transform squidTransform;
 
-    private void Awake()
-    {
-        // Player 자동 탐색
-        if (playerTransform == null)
-        {
-            var playerGo = GameObject.FindGameObjectWithTag("Player");
-            if (playerGo != null)
-                playerTransform = playerGo.transform;
-        }
-
-        // 치치 자동 탐색
-        if (squidTransform == null)
-        {
-            var squidGo = GameObject.Find("Squid") ?? GameObject.Find("치치");
-            if (squidGo != null)
-                squidTransform = squidGo.transform;
-        }
-    }
-
     private void Start()
     {
+        // ============================================================
+        // 모든 Transform 참조를 Start()에서 새로 탐색 (Awake 캐싱 제거)
+        // - Awake()에서 미리 찾아두면 씬 로딩 순서에 따라 잘못된 객체를 잡을 수 있음
+        // - 실제로 사용하는 시점(Start)에 다시 찾아서 정확한 참조 보장
+        // ============================================================
+        ResolveTransforms();
+
         // 모든 Zone 오브젝트 찾기
         List<GameObject> allZones = FindAllZoneObjects();
 
@@ -65,6 +53,37 @@ public class ContinueZoneHandler : MonoBehaviour
         }
 
         Destroy(this);
+    }
+
+    /// <summary>
+    /// Player/치치 Transform 참조를 해결합니다.
+    /// Inspector 할당 우선, 미할당 시 태그/이름으로 탐색.
+    /// </summary>
+    private void ResolveTransforms()
+    {
+        if (playerTransform == null)
+        {
+            var go = GameObject.FindGameObjectWithTag("Player");
+            if (go != null)
+            {
+                playerTransform = go.transform;
+                Debug.Log($"[ContinueZoneHandler] Player Transform 탐색 완료: {go.name} at {go.transform.position}");
+            }
+            else
+            {
+                Debug.LogError("[ContinueZoneHandler] 'Player' 태그를 가진 GameObject를 찾을 수 없습니다!");
+            }
+        }
+
+        if (squidTransform == null)
+        {
+            var go = GameObject.Find("Squid") ?? GameObject.Find("치치");
+            if (go != null)
+            {
+                squidTransform = go.transform;
+                Debug.Log($"[ContinueZoneHandler] 치치 Transform 탐색 완료: {go.name} at {go.transform.position}");
+            }
+        }
     }
 
     /// <summary>
