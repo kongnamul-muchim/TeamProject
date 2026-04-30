@@ -502,7 +502,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 162321456}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000000}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.TitleController, HideAndInk
+        m_MethodName: OnNewGameClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &162321456
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -618,6 +630,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 183367247}
+  - component: {fileID: 2000000001}
   m_Layer: 5
   m_Name: Popup_Setting
   m_TagString: Untagged
@@ -651,6 +664,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 183367246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2269d14b00e70b4fa4a5177182988b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  titleSceneName: 0.TitleScene
 --- !u!1 &208584699
 GameObject:
   m_ObjectHideFlags: 0
@@ -1056,7 +1082,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 391543370}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000000}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.TitleController, HideAndInk
+        m_MethodName: OnExitPopupClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &391543370
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1107,6 +1145,7 @@ GameObject:
   - component: {fileID: 410463184}
   - component: {fileID: 410463183}
   - component: {fileID: 410463182}
+  - component: {fileID: 2000000000}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1201,6 +1240,23 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &2000000000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410463181}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b48d6df5a39346558bcf54509693575f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  popupSetting: {fileID: 183367246}
+  fadeInObj: {fileID: 0}
+  useEntryFadeIn: 1
+  useSceneTransition: 1
+  newGameSceneIndex: 1
 --- !u!1 &441534795
 GameObject:
   m_ObjectHideFlags: 0
@@ -1290,7 +1346,19 @@ MonoBehaviour:
   m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000001}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetSfxVolume
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &546495096
 GameObject:
   m_ObjectHideFlags: 0
@@ -2102,7 +2170,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1296542154}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000000}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.TitleController, HideAndInk
+        m_MethodName: OnSettingClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1296542154
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2224,7 +2304,19 @@ MonoBehaviour:
   m_Group: {fileID: 0}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000001}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetSfxMute
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_IsOn: 1
 --- !u!1 &1507694831
 GameObject:
@@ -2501,7 +2593,19 @@ MonoBehaviour:
   m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000001}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetBgmVolume
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &1633956035
 GameObject:
   m_ObjectHideFlags: 0
@@ -2796,7 +2900,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1682228914}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000000}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.TitleController, HideAndInk
+        m_MethodName: OnExitGameClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1682228914
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3147,7 +3263,19 @@ MonoBehaviour:
   m_Group: {fileID: 0}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 2000000001}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetBgmMute
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_IsOn: 1
 --- !u!1 &1865078966
 GameObject:
