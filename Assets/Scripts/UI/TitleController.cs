@@ -174,7 +174,7 @@ namespace HideAndInk.Scripts.UI
                 return;
             }
 
-            SaveManager.SetContinueZone(data.lastZoneIndex);
+            SaveManager.SetContinueZone(data.lastZoneIndex, data.GetPlayerPosition(), data.GetSquidPosition());
             StartSceneTransition(continueSceneIndex);
         }
 

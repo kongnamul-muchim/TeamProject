@@ -14,6 +14,12 @@ namespace HideAndInk.Scripts.Save
         /// <summary>이어하기 시 사용할 Zone 인덱스 (씬 간 전달용)</summary>
         public static int PendingZoneIndex { get; set; } = -1;
 
+        /// <summary>이어하기 시 복원할 Player 위치 (씬 간 전달용)</summary>
+        public static Vector3 PendingPlayerPosition { get; set; } = Vector3.zero;
+
+        /// <summary>이어하기 시 복원할 치치 위치 (씬 간 전달용)</summary>
+        public static Vector3 PendingSquidPosition { get; set; } = Vector3.zero;
+
         /// <summary>이어하기 모드인지 여부</summary>
         public static bool IsContinueMode => PendingZoneIndex >= 0;
 
@@ -56,11 +62,12 @@ namespace HideAndInk.Scripts.Save
         }
 
         /// <summary>
-        /// 특정 Zone 인덱스로 간편 저장합니다.
+        /// 특정 Zone 인덱스로 간편 저장합니다 (위치 기본값).
+        /// ZoneSaveHandler에서 직접 호출 대신 사용 중인 경우 대비.
         /// </summary>
         public static void Save(int zoneIndex, int waypoint = 0)
         {
-            Save(new SaveData(zoneIndex, waypoint));
+            Save(new SaveData(zoneIndex, Vector3.zero, Vector3.zero, waypoint));
         }
 
         /// <summary>
@@ -122,11 +129,23 @@ namespace HideAndInk.Scripts.Save
         }
 
         /// <summary>
+        /// 이어하기 모드를 설정합니다 (위치 포함).
+        /// </summary>
+        public static void SetContinueZone(int zoneIndex, Vector3 playerPos, Vector3 squidPos)
+        {
+            PendingZoneIndex = zoneIndex;
+            PendingPlayerPosition = playerPos;
+            PendingSquidPosition = squidPos;
+        }
+
+        /// <summary>
         /// 이어하기 모드를 초기화합니다.
         /// </summary>
         public static void ClearContinueZone()
         {
             PendingZoneIndex = -1;
+            PendingPlayerPosition = Vector3.zero;
+            PendingSquidPosition = Vector3.zero;
         }
     }
 }
