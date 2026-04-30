@@ -81,6 +81,10 @@ public class ContinueZoneHandler : MonoBehaviour
 
     /// <summary>
     /// 이어하기: 저장된 Zone 활성화 + Player/치치 위치 복원.
+    /// 
+    /// 위치 복원 우선순위:
+    /// 1. 저장된 위치가 (0,0,0)이 아니면 → 그 위치로 복원 (신규 세이브)
+    /// 2. 저장된 위치가 (0,0,0)이면 → ZoneChanger 위치로 fallback (구버전 세이브)
     /// </summary>
     private void HandleContinue(List<GameObject> allZones)
     {
@@ -90,21 +94,40 @@ public class ContinueZoneHandler : MonoBehaviour
         SaveManager.ClearContinueZone();
 
         Debug.Log($"[ContinueZoneHandler] 이어하기 모드: Zone_{targetZone} 활성화");
+        Debug.Log($"[ContinueZoneHandler] 로드된 위치 - Player: {playerPos}, 치치: {squidPos}");
 
         ActivateZoneOnly(allZones, targetZone);
 
-        // Player 위치 복원 (저장된 위치가 있으면 항상 복원)
+        // ---- Player 위치 복원 ----
         if (playerTransform != null)
         {
-            playerTransform.position = playerPos;
-            Debug.Log($"[ContinueZoneHandler] Player 위치 복원: {playerPos}");
+            // 저장된 위치가 유효하면 그 위치로
+            if (playerPos != Vector3.zero)
+            {
+                playerTransform.position = playerPos;
+                Debug.Log($"[ContinueZoneHandler] Player 위치 복원: {playerPos}");
+            }
+            else
+            {
+                // (0,0,0)이면 ZoneChanger 위치로 fallback (구버전 세이브 대응)
+                Debug.Log($"[ContinueZoneHandler] 저장된 Player 위치가 없음 → Zone_{targetZone} ZoneChanger 위치로 이동");
+                TeleportPlayerToZone(targetZone);
+            }
         }
 
-        // 치치 위치 복원
+        // ---- 치치 위치 복원 ----
         if (squidTransform != null)
         {
-            squidTransform.position = squidPos;
-            Debug.Log($"[ContinueZoneHandler] 치치 위치 복원: {squidPos}");
+            if (squidPos != Vector3.zero)
+            {
+                squidTransform.position = squidPos;
+                Debug.Log($"[ContinueZoneHandler] 치치 위치 복원: {squidPos}");
+            }
+            else
+            {
+                // 치치도 ZoneChanger 위치로 fallback
+                TeleportSquidToZone(targetZone);
+            }
         }
     }
 
@@ -174,7 +197,7 @@ public class ContinueZoneHandler : MonoBehaviour
 
     /// <summary>
     /// 플레이어를 해당 Zone의 ZoneChanger 위치로 이동시킵니다.
-    /// (새 게임 시작 시 사용)
+    /// (새 게임 시작 / 구버전 세이브 fallback 시 사용)
     /// </summary>
     private void TeleportPlayerToZone(int zoneIndex)
     {
@@ -191,5 +214,25 @@ public class ContinueZoneHandler : MonoBehaviour
         }
 
         Debug.LogWarning($"[ContinueZoneHandler] Zone_{zoneIndex} 의 ZoneChanger를 찾을 수 없습니다.");
+    }
+
+    /// <summary>
+    /// 치치를 해당 Zone의 ZoneChanger 위치로 이동시킵니다.
+    /// </summary>
+    private void TeleportSquidToZone(int zoneIndex)
+    {
+        if (squidTransform == null) return;
+
+        foreach (var zc in FindObjectsByType<ZoneChanger>(FindObjectsSortMode.None))
+        {
+            if (zc.toZoneNumber == zoneIndex)
+            {
+                squidTransform.position = zc.transform.position;
+                Debug.Log($"[ContinueZoneHandler] 치치를 Zone_{zoneIndex} 시작점으로 이동: {zc.transform.position}");
+                return;
+            }
+        }
+
+        Debug.Log($"[ContinueZoneHandler] Zone_{zoneIndex} 의 ZoneChanger를 찾을 수 없어 치치 위치 유지");
     }
 }
