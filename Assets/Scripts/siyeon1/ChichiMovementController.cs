@@ -10,7 +10,7 @@ namespace HideAndInk.Siyeon1
         [SerializeField] private ChichiStateMachine stateMachine;
         [Tooltip("두두(Player) Transform")]
         [SerializeField] private Transform duduTransform;
-        [Tooltip("Rigidbody (물리 기반 이동)")]
+        [Tooltip("Rigidbody (충돌 감지용)")]
         [SerializeField] private Rigidbody rb;
 
         [Header("Movement Speed")]
@@ -34,12 +34,6 @@ namespace HideAndInk.Siyeon1
         private float initialY;
         private float initialZ;
 
-        // FixedUpdate에서 사용할 이동 캐시
-        private Vector3 moveTarget;
-        private float moveSpeed;
-        private float moveStopDistance;
-        private bool hasMoveTarget;
-
         private void Awake()
         {
             if (rb == null)
@@ -55,67 +49,65 @@ namespace HideAndInk.Siyeon1
         {
             if (stateMachine == null)
             {
-                hasMoveTarget = false;
                 return;
             }
 
-            hasMoveTarget = false;
+            float speed = 0f;
+            float stopDist = 0f;
+            bool shouldMove = false;
 
             if (stateMachine.CurrentState == ChichiState.Walk)
             {
-                SetMoveTarget(duduTransform, walkSpeed, 0f);
+                speed = walkSpeed;
+                stopDist = 0f;
+                shouldMove = true;
             }
             else if (stateMachine.CurrentState == ChichiState.ApproachCharge)
             {
-                SetMoveTarget(duduTransform, chargeApproachSpeed, chargeStopDistance);
+                speed = chargeApproachSpeed;
+                stopDist = chargeStopDistance;
+                shouldMove = true;
             }
             else if (stateMachine.CurrentState == ChichiState.Charging)
             {
-                SetMoveTarget(duduTransform, chargeApproachSpeed, chargeStopDistance);
+                speed = chargeApproachSpeed;
+                stopDist = chargeStopDistance;
+                shouldMove = true;
             }
-        }
 
-        private void FixedUpdate()
-        {
-            if (!hasMoveTarget || rb == null)
+            if (!shouldMove || duduTransform == null)
             {
                 return;
             }
 
-            Vector3 current = rb.position;
-            if (Vector3.Distance(current, moveTarget) <= moveStopDistance)
-            {
-                return;
-            }
-
-            Vector3 next = Vector3.MoveTowards(current, moveTarget, moveSpeed * Time.fixedDeltaTime);
-            rb.MovePosition(next);
-        }
-
-        private void SetMoveTarget(Transform target, float speed, float stopDist)
-        {
-            if (target == null)
-            {
-                return;
-            }
-
-            moveTarget = target.position;
+            Vector3 current = transform.position;
+            Vector3 targetPos = duduTransform.position;
 
             // Y축 고정: 치치가 땅에 박히거나 뜨지 않도록 초기 Y 유지
             if (lockY)
             {
-                moveTarget.y = initialY;
+                targetPos.y = initialY;
             }
 
             // Z축 고정: 2D 게임에서 앞뒤로 이동하지 않도록 초기 Z 유지
             if (lockZ)
             {
-                moveTarget.z = initialZ;
+                targetPos.z = initialZ;
             }
 
-            moveSpeed = speed;
-            moveStopDistance = stopDist;
-            hasMoveTarget = true;
+            if (Vector3.Distance(current, targetPos) <= stopDist)
+            {
+                return;
+            }
+
+            Vector3 next = Vector3.MoveTowards(current, targetPos, speed * Time.deltaTime);
+            transform.position = next;
+
+            // Rigidbody 위치 동기화 (충돌 감지 유지)
+            if (rb != null)
+            {
+                rb.position = next;
+            }
         }
     }
 }

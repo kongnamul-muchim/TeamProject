@@ -228,18 +228,26 @@ namespace HideAndInk.Siyeon1
             }
 
             chargeTimer += Time.deltaTime;
-            ChargeStatus = $"충전 중 {Mathf.RoundToInt(ChargeProgress01 * 100f)}%";
-            ChargeProgressChanged?.Invoke(ChargeProgress01);
+            float progress = ChargeProgress01;
+            ChargeStatus = $"충전 중 {Mathf.RoundToInt(progress * 100f)}%";
+            ChargeProgressChanged?.Invoke(progress);
+
+            // 점진적 잉크 전달: chargeDuration 동안 chargeAmountPerUse만큼 천천히 회복
+            if (chargeDuration > 0f && inkTank.CanSpendCharge)
+            {
+                float transferThisFrame = (chargeAmountPerUse / chargeDuration) * Time.deltaTime;
+                InkReceiver?.AddInk(transferThisFrame);
+            }
 
             if (chargeTimer < chargeDuration)
             {
                 return;
             }
 
+            // 충전 완료: 치치 탱크에서 차감
             float tankAmount = inkTank.SpendCharge();
-            float added = InkReceiver?.AddInk(tankAmount) ?? 0f;
-            ChargeStatus = $"충전 완료: +{Mathf.RoundToInt(added)}";
-            ChargeCompleted?.Invoke(added);
+            ChargeStatus = $"충전 완료: +{Mathf.RoundToInt(tankAmount)}";
+            ChargeCompleted?.Invoke(tankAmount);
             StopChargeFlow(false);
         }
 
