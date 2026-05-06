@@ -141,11 +141,16 @@ public class ZoneChanger : MonoBehaviour
                 Debug.Log($"[ZoneChanger] '{name}' 초기 Ground 동기화: Zone_{fromZoneNumber} (Ground_{fromZoneNumber:D2} 활성화)");
             }
 
-            // 게임 시작 시 Zone1이면 Underwater Effects 활성화
-            if (isCurrentZoneActive && fromZoneNumber == 1)
+            // 게임 시작 시 Fog Zone(1,2,3,6)이면 Underwater Effects 활성화
+            if (isCurrentZoneActive && IsFogZone(fromZoneNumber))
             {
                 SetUnderwaterEffect(true);
-                Debug.Log("[ZoneChanger] 게임 시작 - Zone 1, Underwater Effects 활성화");
+                Debug.Log($"[ZoneChanger] 게임 시작 - Zone {fromZoneNumber}, Underwater Effects 활성화");
+            }
+            else if (isCurrentZoneActive && !IsFogZone(fromZoneNumber))
+            {
+                SetUnderwaterEffect(false);
+                Debug.Log($"[ZoneChanger] 게임 시작 - Zone {fromZoneNumber}, Underwater Effects 비활성화");
             }
         }
 
@@ -423,18 +428,18 @@ public class ZoneChanger : MonoBehaviour
         }
 
         // ── 안개 효과 전환 (URP FullScreenPassRendererFeature) ──
-        bool isEnteringZone1 = IsZone1InArray(activateZones);
-        bool isLeavingZone1 = IsZone1InArray(deactivateZones);
-
-        if (isEnteringZone1)
+        if (toZoneNumber >= 0)
         {
-            SetUnderwaterEffect(true);
-            Debug.Log("[ZoneChanger] Underwater Effects 활성화 (Zone 1 진입)");
-        }
-        else if (isLeavingZone1)
-        {
-            SetUnderwaterEffect(false);
-            Debug.Log("[ZoneChanger] Underwater Effects 비활성화 (Zone 1 이탈)");
+            if (IsFogZone(toZoneNumber))
+            {
+                SetUnderwaterEffect(true);
+                Debug.Log($"[ZoneChanger] Underwater Effects 활성화 (Zone {toZoneNumber} 진입)");
+            }
+            else
+            {
+                SetUnderwaterEffect(false);
+                Debug.Log($"[ZoneChanger] Underwater Effects 비활성화 (Zone {toZoneNumber} 진입)");
+            }
         }
 
         // ── Ground 동기화: 현재 Zone에 해당하는 Ground만 활성화, 나머지는 비활성화 ──
@@ -767,19 +772,12 @@ public class ZoneChanger : MonoBehaviour
     }
 
     /// <summary>
-    /// 배열 안에 Zone_1 관련 오브젝트가 포함되어 있는지 확인합니다.
+    /// 해당 Zone 번호가 안개 효과가 적용되는 Zone인지 확인합니다.
+    /// (Zone 1, 2, 3, 6)
     /// </summary>
-    private bool IsZone1InArray(GameObject[] zones)
+    private static bool IsFogZone(int zoneNumber)
     {
-        if (zones == null) return false;
-        foreach (var zone in zones)
-        {
-            if (zone != null && zone.name.StartsWith("Zone_1"))
-            {
-                return true;
-            }
-        }
-        return false;
+        return zoneNumber == 1 || zoneNumber == 2 || zoneNumber == 3 || zoneNumber == 6;
     }
 
     /// <summary>
