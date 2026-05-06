@@ -24,6 +24,10 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         private GroundBounds _groundBounds;
         private bool _hasGroundBounds;
 
+        // Player 반경 제한 (Controller에서 전달)
+        private Transform _playerTransform;
+        private float _patrolRadius = 0f; // 0 = 제한 없음
+
         // 상태
         private Vector3 _currentTarget;
         private bool _isInitialized;
@@ -68,6 +72,16 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         {
             _groundBounds = bounds;
             _hasGroundBounds = true;
+        }
+
+        /// <summary>
+        /// Player 기준 순찰 반경 설정 (Controller에서 호출)
+        /// 보스가 Player 주변 일정 범위 밖으로 벗어나지 않도록 제한
+        /// </summary>
+        public void SetPlayerPatrolRadius(Transform player, float radius)
+        {
+            _playerTransform = player;
+            _patrolRadius = Mathf.Max(0f, radius);
         }
 
         public EnemyAIState StateType => EnemyAIState.Patrol;
@@ -122,7 +136,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
         /// <summary>
         /// 새로운 순찰 목표 지점 선택
         /// X축만 이동, Z축은 현재 위치 유지
-        /// Ground 범위 내에서만 목표 설정
+        /// Ground 범위 + Player 반경 내에서만 목표 설정
         /// </summary>
         private void PickNewTarget()
         {
@@ -130,29 +144,50 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
 
             // X축: 랜덤 방향 (-1 또는 1)
             float xDir = Random.value > 0.5f ? 1f : -1f;
-            // X축 이동 거리: 5~15 (맵 전체 순찰)
             float xDistance = Random.Range(5f, 15f);
 
             float targetX = currentPos.x + xDir * xDistance;
 
-            // Ground 범위 내로 제한
+            // Player 반경 내로 제한 (1순위)
+            if (_playerTransform != null && _patrolRadius > 0f)
+            {
+                float distFromPlayer = Mathf.Abs(targetX - _playerTransform.position.x);
+                if (distFromPlayer > _patrolRadius)
+                {
+                    // Player 방향으로 되돌림
+                    float dirToPlayer = _playerTransform.position.x > currentPos.x ? 1f : -1f;
+                    targetX = _playerTransform.position.x + dirToPlayer * _patrolRadius * 0.8f;
+                }
+            }
+
+            // Ground 범위 내로 제한 (2순위)
             if (_hasGroundBounds)
             {
                 targetX = _groundBounds.ClampX(targetX);
 
-                // 현재 위치와 너무 가까우면 반대 방향으로
                 if (Mathf.Abs(targetX - currentPos.x) < 1f)
                 {
                     xDir = -xDir;
                     targetX = currentPos.x + xDir * xDistance;
                     targetX = _groundBounds.ClampX(targetX);
+
+                    // Player 반경 재적용
+                    if (_playerTransform != null && _patrolRadius > 0f)
+                    {
+                        float distFromPlayer = Mathf.Abs(targetX - _playerTransform.position.x);
+                        if (distFromPlayer > _patrolRadius)
+                        {
+                            float dirToPlayer = _playerTransform.position.x > currentPos.x ? 1f : -1f;
+                            targetX = _playerTransform.position.x + dirToPlayer * _patrolRadius * 0.8f;
+                        }
+                    }
                 }
             }
 
             _currentTarget = new Vector3(
                 targetX,
-                currentPos.y, // Y축 고정
-                currentPos.z  // Z축 고정 (Patrol에서는 Z 이동 없음)
+                currentPos.y,
+                currentPos.z
             );
         }
     }

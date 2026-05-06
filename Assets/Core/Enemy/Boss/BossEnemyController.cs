@@ -40,6 +40,8 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private float searchDistance = 3f;
         [Tooltip("수색 상태 지속 시간")]
         [SerializeField] private float searchDuration = 5f;
+        [Tooltip("순찰 시 Player 기준 최대 이동 반경 (0 = 제한 없음)")]
+        [SerializeField] private float patrolRadius = 8f;
 
         [Header("기믹 설정")]
         [Tooltip("보스 기믹 에셋 (ScriptableObject)")]
@@ -416,6 +418,12 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _patrolBehavior.SetGroundBounds(_groundBounds);
                 _searchBehavior.SetGroundBounds(_groundBounds);
+            }
+
+            // Player 기준 순찰 반경 제한 (멀리 벗어나지 않도록)
+            if (_playerTransform != null && patrolRadius > 0f)
+            {
+                _patrolBehavior.SetPlayerPatrolRadius(_playerTransform, patrolRadius);
             }
         }
 
