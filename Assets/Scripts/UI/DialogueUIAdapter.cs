@@ -251,6 +251,7 @@ public class DialogueUIAdapter : MonoBehaviour
             storyCutscene.sprite = sprite;
             storyCutscene.color = Color.white;
             storyCutscene.gameObject.SetActive(true);
+            storyCutscene.enabled = true;       // Image 컴포넌트 활성화 (프리팹 기본값 보정)
             panelBgImage.enabled = false;
 
             Debug.Log($"[DialogueUIAdapter] 컷씬 배경 변경: {sprite.name}");
