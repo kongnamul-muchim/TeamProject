@@ -793,20 +793,34 @@ public class ZoneChanger : MonoBehaviour
             return;
         }
 
-        var rendererData = pipelineAsset.GetRenderer(0) as UniversalRendererData;
-        if (rendererData == null)
+        var rendererDataListField = pipelineAsset.GetType()
+            .GetField("m_RendererDataList", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        if (rendererDataListField == null)
         {
-            Debug.LogWarning("[ZoneChanger] UniversalRendererData를 찾을 수 없습니다.");
+            Debug.LogWarning("[ZoneChanger] m_RendererDataList 필드를 찾을 수 없습니다.");
             return;
         }
 
-        foreach (var feature in rendererData.rendererFeatures)
+        var rendererDataList = rendererDataListField.GetValue(pipelineAsset) as ScriptableRendererData[];
+        if (rendererDataList == null || rendererDataList.Length == 0)
         {
-            if (feature is FullScreenPassRendererFeature && feature.name == "Underwater Effects")
+            Debug.LogWarning("[ZoneChanger] RendererDataList가 비어있습니다.");
+            return;
+        }
+
+        foreach (var rendererData in rendererDataList)
+        {
+            if (rendererData == null) continue;
+
+            foreach (var feature in rendererData.rendererFeatures)
             {
-                feature.SetActive(active);
-                Debug.Log($"[ZoneChanger] Underwater Effects {(active ? "활성화" : "비활성화")}");
-                return;
+                if (feature is FullScreenPassRendererFeature && feature.name == "Underwater Effects")
+                {
+                    feature.SetActive(active);
+                    Debug.Log($"[ZoneChanger] Underwater Effects {(active ? "활성화" : "비활성화")}");
+                    return;
+                }
             }
         }
 
