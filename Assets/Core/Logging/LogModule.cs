@@ -132,7 +132,6 @@ namespace HideAndInk.Core.Logging
                 if (writer != null)
                 {
                     writer.Close();
-                    writer.Dispose();
                 }
             }
         }

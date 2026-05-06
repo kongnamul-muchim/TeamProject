@@ -56,6 +56,11 @@ public class PlayerInk : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         currentInk = Mathf.Clamp(currentInk, 0f, maxInk);
     }

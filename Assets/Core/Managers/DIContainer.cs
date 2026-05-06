@@ -115,6 +115,10 @@ namespace HideAndInk.Core.Managers
             {
                 _singletons[interfaceType] = instance;
             }
+            else if (lifetime == ServiceLifetime.Scoped)
+            {
+                _scopedInstances[interfaceType] = instance;
+            }
         }
 
         /// <summary>

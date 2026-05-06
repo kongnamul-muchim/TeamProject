@@ -94,29 +94,13 @@ namespace HideAndInk.Player
                 _playerRenderer = GetComponentInChildren<Renderer>();
             }
 
-            // Detector: Config 생성 + DI 등록 후 Resolve
+            // Detector: Config 직접 생성 후 주입 (DI 우회 — InitOrder 안전성)
             var detectorConfig = new CamouflageDetectorConfig(detectionRadius, camouflageLayer);
-            if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageDetector>())
-            {
-                GameManager.Container.RegisterInstance<ICamouflageDetectorConfig>(detectorConfig);
-                _detector = GameManager.Container.Resolve<ICamouflageDetector>();
-            }
-            else
-            {
-                _detector = new CamouflageDetector(detectorConfig);
-            }
+            _detector = new CamouflageDetector(detectorConfig);
 
-            // StateMachine: Config 생성 + DI 등록 후 Resolve
+            // StateMachine: Config 직접 생성 후 주입 (DI 우회 — InitOrder 안전성)
             var stateConfig = new CamouflageStateMachineConfig(attachDelay, lockTime, blendTime, perfectTime);
-            if (GameManager.Container != null && GameManager.Container.IsRegistered<ICamouflageStateMachine>())
-            {
-                GameManager.Container.RegisterInstance<ICamouflageStateMachineConfig>(stateConfig);
-                _stateMachine = GameManager.Container.Resolve<ICamouflageStateMachine>();
-            }
-            else
-            {
-                _stateMachine = new CamouflageStateMachine(stateConfig);
-            }
+            _stateMachine = new CamouflageStateMachine(stateConfig);
 
             if (_playerRenderer != null)
             {
@@ -180,7 +164,7 @@ namespace HideAndInk.Player
             _hasInvokedEndEvent = true;
             CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
 
-            _stateMachine.CancelCamouflage(true);
+            _stateMachine.CancelCamouflage();
             _isRestoringRate = true;
             _rateRestoreProgress = 0f;
             StartRestoreOutline();
@@ -361,7 +345,7 @@ namespace HideAndInk.Player
                 _hasInvokedEndEvent = true;
                 CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
                 
-                _stateMachine.CancelCamouflage(true);
+                _stateMachine.CancelCamouflage();
                 _isRestoringRate = true;
                 _rateRestoreProgress = 0f;
                 StartRestoreOutline();
@@ -451,7 +435,7 @@ namespace HideAndInk.Player
                 _hasInvokedEndEvent = true;
                 CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
                 
-                _stateMachine.CancelCamouflage(true);
+                _stateMachine.CancelCamouflage();
                 
                 // 색상 복원 시작 (Update에서 wasNotNone 체크가 실패하므로 여기서 직접 설정)
                 _isRestoringRate = true;
@@ -738,7 +722,7 @@ namespace HideAndInk.Player
             _hasInvokedEndEvent = true;
             CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
 
-            _stateMachine.CancelCamouflage(true);
+            _stateMachine.CancelCamouflage();
             _isRestoringRate = true;
             _rateRestoreProgress = 0f;
             StartRestoreOutline();

@@ -93,8 +93,7 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의태 해제
         /// </summary>
-        /// <param name="force">강제 취소 (키 입력으로 인한 취소)</param>
-        public void CancelCamouflage(bool force = false)
+        public void CancelCamouflage()
         {
             Reset();
         }

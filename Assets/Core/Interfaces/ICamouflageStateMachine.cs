@@ -67,8 +67,7 @@ namespace HideAndInk.Core.Interfaces
         /// <summary>
         /// 의태 해제
         /// </summary>
-        /// <param name="force">강제 취소 (이동으로 인한 취소가 아닌 경우)</param>
-        void CancelCamouflage(bool force = false);
+        void CancelCamouflage();
 
         /// <summary>
         /// 업데이트 (매 프레임 호출)

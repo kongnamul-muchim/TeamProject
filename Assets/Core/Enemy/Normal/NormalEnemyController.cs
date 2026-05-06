@@ -365,7 +365,7 @@ namespace HideAndInk.Core.Enemy.Normal
         private void OnDestroy()
         {
             // Rigidbody 정리 (추가한 경우)
-            if (_rigidbody != null && !GetComponent<Rigidbody>())
+            if (_rigidbody != null)
             {
                 Destroy(_rigidbody);
             }

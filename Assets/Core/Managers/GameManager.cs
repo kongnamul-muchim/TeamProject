@@ -50,6 +50,9 @@ namespace HideAndInk.Core.Managers
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
+            // Time.timeScale 복원 (비정상 종료 후 0으로 남아있는 경우 방지)
+            Time.timeScale = 1f;
+
             // LogModule 초기화
             _ = LogModule.Instance;
 
