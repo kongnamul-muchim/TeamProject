@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using HideAndInk.Core.Interfaces;
 using UnityEngine;
 
 namespace HideAndInk.Core.Audio
@@ -6,9 +8,10 @@ namespace HideAndInk.Core.Audio
     /// <summary>
     /// 오디오 관리자 Singleton
     /// BGM/SFX 볼륨, 음소거를 관리하고 PlayerPrefs에 저장
+    /// ISfxService / IBgmService / IAmbientService 구현
     /// GameManager 오브젝트에 붙여서 사용 (DontDestroyOnLoad)
     /// </summary>
-    public sealed class AudioManager : MonoBehaviour
+    public sealed class AudioManager : MonoBehaviour, ISfxService
     {
         private static AudioManager _instance;
         public static AudioManager Instance
@@ -48,6 +51,12 @@ namespace HideAndInk.Core.Audio
         private float _sfxVolume;
         private bool _bgmMute;
         private bool _sfxMute;
+
+        // 오디오 클립 캐시 (Resources.Load 결과 재사용)
+        private readonly Dictionary<SfxId, AudioClip> _sfxClipCache = new Dictionary<SfxId, AudioClip>();
+
+        // Resources 폴더 기준 경로
+        private const string SFX_RESOURCES_PATH = "Audio/SFX/";
 
         // 이벤트
         public event System.Action<float> OnBgmVolumeChanged;
@@ -139,6 +148,7 @@ namespace HideAndInk.Core.Audio
                 sfxSource = gameObject.AddComponent<AudioSource>();
                 sfxSource.loop = false;
                 sfxSource.playOnAwake = false;
+                sfxSource.spatialBlend = 0f;
             }
 
             LoadSettings();
@@ -184,6 +194,116 @@ namespace HideAndInk.Core.Audio
         {
             if (sfxSource == null || clip == null) return;
             sfxSource.PlayOneShot(clip);
+        }
+
+        // ======================================================================
+        // ISfxService 구현
+        // ======================================================================
+
+        /// <summary>
+        /// SfxId에 해당하는 효과음 재생
+        /// </summary>
+        public void Play(SfxId id)
+        {
+            if (id == SfxId.None) return;
+            AudioClip clip = GetOrLoadClip(id);
+            if (clip != null)
+            {
+                sfxSource.PlayOneShot(clip, _sfxVolume);
+            }
+        }
+
+        /// <summary>
+        /// 효과음 재생 (볼륨 조절)
+        /// </summary>
+        public void Play(SfxId id, float volumeScale)
+        {
+            if (id == SfxId.None) return;
+            AudioClip clip = GetOrLoadClip(id);
+            if (clip != null)
+            {
+                float finalVolume = _sfxVolume * Mathf.Clamp01(volumeScale);
+                sfxSource.PlayOneShot(clip, finalVolume);
+            }
+        }
+
+        /// <summary>
+        /// 효과음 재생 (위치 기반 3D 사운드)
+        /// </summary>
+        public void PlayAtPoint(SfxId id, Vector3 position)
+        {
+            if (id == SfxId.None) return;
+            AudioClip clip = GetOrLoadClip(id);
+            if (clip != null)
+            {
+                AudioSource.PlayClipAtPoint(clip, position, _sfxVolume);
+            }
+        }
+
+        /// <summary>
+        /// 효과음 재생 (위치 + 볼륨)
+        /// </summary>
+        public void PlayAtPoint(SfxId id, Vector3 position, float volumeScale)
+        {
+            if (id == SfxId.None) return;
+            AudioClip clip = GetOrLoadClip(id);
+            if (clip != null)
+            {
+                float finalVolume = _sfxVolume * Mathf.Clamp01(volumeScale);
+                AudioSource.PlayClipAtPoint(clip, position, finalVolume);
+            }
+        }
+
+        /// <summary>
+        /// 특정 SFX가 현재 재생 중인지 (정확도: sfxSource가 재생 중인지만 확인)
+        /// 단일 sfxSource를 사용하므로 여러 SFX가 겹쳐도 재생 중으로 간주
+        /// </summary>
+        public bool IsPlaying(SfxId id)
+        {
+            return sfxSource != null && sfxSource.isPlaying;
+        }
+
+        /// <summary>
+        /// 모든 SFX 정지
+        /// </summary>
+        public void StopAll()
+        {
+            if (sfxSource != null)
+            {
+                sfxSource.Stop();
+            }
+        }
+
+        // ======================================================================
+        // 내부 헬퍼
+        // ======================================================================
+
+        /// <summary>
+        /// SfxId → AudioClip 로드 (캐시)
+        /// Resources/Audio/SFX/{SfxId}.확장자
+        /// </summary>
+        private AudioClip GetOrLoadClip(SfxId id)
+        {
+            // 캐시 확인
+            if (_sfxClipCache.TryGetValue(id, out AudioClip cached))
+            {
+                if (cached != null) return cached;
+                // 캐시된 값이 null이면 재시도
+                _sfxClipCache.Remove(id);
+            }
+
+            // Resources.Load (확장자 불필요)
+            string path = SFX_RESOURCES_PATH + id.ToString();
+            AudioClip clip = Resources.Load<AudioClip>(path);
+
+            if (clip == null)
+            {
+                Debug.LogWarning($"[AudioManager] SFX clip not found: {path} (SfxId: {id})");
+            }
+
+            // 결과 캐시 (null도 캐시 — 재시도 방지)
+            _sfxClipCache[id] = clip;
+            return clip;
         }
 
         /// <summary>

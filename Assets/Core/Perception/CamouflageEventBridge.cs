@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
@@ -61,12 +62,12 @@ namespace HideAndInk.Core.Perception
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
         [SerializeField] private float vfxSpeedMultiplier = 1f;
 
-        [Header("기존 효과 시스템 참조")]
-        [Tooltip("의태 시작/종료 시 사운드를 재생하는 컴포넌트 (ISoundEffect 구현 권장)")]
-        [SerializeField] private MonoBehaviour soundEffect;
+        [Header("SFX")]
+        [Tooltip("의태 시작/종료 시 사운드 재생 (DI: ISfxService)")]
+        [SerializeField] private bool useSfxService = true;
 
-        // 캐싱된 인터페이스 참조
-        private ISoundEffect _soundEffectInterface;
+        // DI로 주입받은 SFX 서비스
+        private ISfxService _sfxService;
         private IEventBus _eventBus;
 
         private Transform _playerTransform;
@@ -80,12 +81,19 @@ namespace HideAndInk.Core.Perception
         private void Awake()
         {
             _playerTransform = transform;
-            _soundEffectInterface = soundEffect as ISoundEffect;
 
-            // EventBus 해결
-            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            // DI 컨테이너에서 서비스 해결
+            if (GameManager.Container != null)
             {
-                _eventBus = GameManager.Container.Resolve<IEventBus>();
+                if (useSfxService && GameManager.Container.IsRegistered<ISfxService>())
+                {
+                    _sfxService = GameManager.Container.Resolve<ISfxService>();
+                }
+
+                if (GameManager.Container.IsRegistered<IEventBus>())
+                {
+                    _eventBus = GameManager.Container.Resolve<IEventBus>();
+                }
             }
         }
 
@@ -201,8 +209,8 @@ namespace HideAndInk.Core.Perception
                 }
             }
 
-            // 사운드 효과 호출 (인터페이스 우선, 폴백으로 SendMessage)
-            PlaySound(s => s.PlayAttachSound(), "PlayAttachSound");
+            // 사운드 효과 재생
+            _sfxService?.Play(SfxId.CamouflageAttach);
         }
 
         /// <summary>
@@ -210,7 +218,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void OnCamouflageCompleteEvent(CamouflageCompleteEvent e)
         {
-            PlaySound(s => s.PlayPerfectSound(), "PlayPerfectSound");
+            _sfxService?.Play(SfxId.CamouflagePerfect);
         }
 
         /// <summary>
@@ -308,7 +316,7 @@ namespace HideAndInk.Core.Perception
 
             _activeEndVFXs.Add(vfx);
 
-            PlaySound(s => s.PlayDetachSound(), "PlayDetachSound");
+            _sfxService?.Play(SfxId.CamouflageDetach);
         }
 
         /// <summary>
@@ -354,19 +362,5 @@ namespace HideAndInk.Core.Perception
             }
         }
 
-        /// <summary>
-        /// 사운드 효과 호출 (인터페이스 우선, 폴백으로 SendMessage)
-        /// </summary>
-        private void PlaySound(Action<ISoundEffect> interfaceCall, string fallbackMessage)
-        {
-            if (_soundEffectInterface != null)
-            {
-                interfaceCall(_soundEffectInterface);
-            }
-            else if (soundEffect != null)
-            {
-                soundEffect.SendMessage(fallbackMessage, SendMessageOptions.DontRequireReceiver);
-            }
-        }
     }
 }
