@@ -219,8 +219,9 @@ namespace HideAndInk.Core.Managers
         }
 
         /// <summary>
-        /// UI_SuspicionVinette의 fillAmount를 의심도 최대치(1.0)로 고정
-        /// SuspicionMeterUI가 평소에 조절하는 방식(fillAmount)과 동일하게 적용
+        /// UI_SuspicionVinette의 alpha를 의심도 최대치(200/255)로 고정
+        /// SuspicionMeterUI가 평소에 alpha를 조절하는 방식과 동일
+        /// (최대 의심도 100% → alpha = 200/255 ≈ 0.784)
         /// </summary>
         private void SetSuspicionVignetteToMax()
         {
@@ -234,8 +235,11 @@ namespace HideAndInk.Core.Managers
             var img = vignette.GetComponent<UnityEngine.UI.Image>();
             if (img != null)
             {
-                // fillAmount = 1.0 = 의심도 100% 기준 이미지 fill (alpha는 프리팹 기본값 유지)
-                img.fillAmount = 1f;
+                // SuspicionMeterUI와 동일한 방식: alpha = 의심도 100% 기준
+                // value=100 → alpha = 200/255 ≈ 0.784 (최대)
+                var color = img.color;
+                color.a = 200f / 255f;
+                img.color = color;
             }
         }
 
