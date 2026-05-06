@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Managers;
@@ -481,8 +482,6 @@ namespace HideAndInk.Player
             }
             // else: Perfect 도달했으면 유지 (아무 동작 안 함)
         }
-
-        private float _currentBlendRate = 1f; // 현재 애니메이션 보간 기억용
 
         /// <summary>
         /// 활성 의태 중 색상 블렌드만 처리 (복원은 RestoreCoroutine이 담당)
