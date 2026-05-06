@@ -345,7 +345,7 @@ MonoBehaviour:
   - {fileID: 7434583648830536641, guid: 3f52760b68794424086712e4f9ca7a2c, type: 3}
   inkMarkYOffset: -0.5
   inkMarkYMicroOffset: 0.01
-  inkMarkSortingOrder: -1
+  inkMarkSortingOrder: 5
   inkMarkScale: {x: 0.2, y: 0.2, z: 0.2}
   startVFXSortingOrder: 10
   endVFXSortingOrder: 10
