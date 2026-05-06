@@ -37,7 +37,7 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private float inkMarkYMicroOffset = 0.01f;
 
         [Tooltip("InkMark Sorting Order (바닥보다 위에 표시)")]
-        [SerializeField] private int inkMarkSortingOrder = -1;
+        [SerializeField] private int inkMarkSortingOrder = 5;
 
         [Tooltip("InkMark 스케일")]
         [SerializeField] private Vector3 inkMarkScale = Vector3.one;
