@@ -507,8 +507,7 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (suspicionSystem == null) return;
             bool isCamouflaging = IsPlayerCamouflaging();
-            bool isPerfect = _camouflageAdapter != null && _camouflageAdapter.IsPerfect;
-            suspicionSystem.SetCamouflageState(isCamouflaging, isPerfect);
+            suspicionSystem.SetCamouflageState(isCamouflaging);
         }
 
         private void UpdateGimmick(float deltaTime)

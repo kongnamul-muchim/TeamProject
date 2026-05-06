@@ -56,7 +56,6 @@ namespace HideAndInk.Core.Perception
         private float _currentValue;
         private SuspicionLevel _currentLevel;
         private bool _isCamouflaging;
-        private bool _isPerfectCamouflage;
         private bool _wasDetected;
         private float _lastDetectedTime;
         private float _suspicionDecayMultiplier = 1f; // 의심도 하락 배율 (RelentlessChase용)
@@ -273,12 +272,11 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 의태 상태 설정
+        /// 의태 상태 설정 (보스는 기믹이 의심도를 직접 통제하므로 완벽 의태 구분 불필요)
         /// </summary>
-        public void SetCamouflageState(bool isCamouflaging, bool isPerfect = false)
+        public void SetCamouflageState(bool isCamouflaging)
         {
             _isCamouflaging = isCamouflaging;
-            _isPerfectCamouflage = isPerfect;
         }
 
         /// <summary>

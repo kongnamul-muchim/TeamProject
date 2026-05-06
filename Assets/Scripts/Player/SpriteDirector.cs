@@ -170,6 +170,10 @@ namespace HideAndInk.Player
             return sprite;
         }
 
+        /// <summary>
+        /// 스프라이트 로드. Editor에서는 AssetDatabase 우선, 빌드에서는 Resources.Load 사용.
+        /// 주의: AssetDatabase 경로는 .png 확장자 포함, Resources 경로는 미포함.
+        /// </summary>
         private Sprite LoadSprite(string path)
         {
 #if UNITY_EDITOR

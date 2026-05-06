@@ -40,7 +40,8 @@ namespace HideAndInk.Core.Enemy.Boss
                     _hasTriggered = true;
                     OnPlayerEnterPit?.Invoke(transform.position);
 
-                    // 밟힌 구덩이는 즉시 소멸
+                    // 밟힌 구덩이는 즉시 소멸 (같은 프레임 Update 재실행 방지)
+                    enabled = false;
                     Destroy(gameObject);
                     return;
                 }
