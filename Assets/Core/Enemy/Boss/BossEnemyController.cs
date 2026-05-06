@@ -829,6 +829,13 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateMovement(float deltaTime)
         {
+            // 💥 기절 중(Swordfish Stunned)에는 모든 이동 차단
+            if (_activeGimmick is SwordfishGimmick swordfish && swordfish.IsStunned)
+            {
+                _movement?.Stop();
+                return;
+            }
+
             bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
 
             if (isMorayChase)

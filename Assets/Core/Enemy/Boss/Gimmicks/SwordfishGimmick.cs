@@ -79,6 +79,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _hasHitWall;
         private float _wallCooldownTimer;
 
+        /// <summary>기절 상태 여부 (BossEnemyController에서 이동 차단용)</summary>
+        public bool IsStunned => _currentPhase == Phase.Stunned;
+
         // 의심도 (0~1, IGimmickPlayerAware.SetSuspicionLevel에서 설정)
         private float _normalizedSuspicion;
 
