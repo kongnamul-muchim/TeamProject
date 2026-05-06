@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using HideAndInk.Core.Transition;
 using HideAndInk.CameraSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// 구역 전환 트리거: 플레이어가 닿으면 현재 구역을 끄고 다음 구역을 켭니다.
@@ -95,10 +97,6 @@ public class ZoneChanger : MonoBehaviour
     [Header("DI - 칼라이동 추적 (미할당 시 자동 탐색)")]
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
-
-    [Header("안개 효과")]
-    [Tooltip("안개 오버레이 UI 오브젝트 (Canvas/RawImage 등). 이 Zone으로 진입 시 켜고 나갈 때 끕니다.")]
-    public GameObject fogOverlayObject;
 
     private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
@@ -417,22 +415,19 @@ public class ZoneChanger : MonoBehaviour
             changed = true;
         }
 
-        // ── 안개 효과 전환 ──
-        if (fogOverlayObject != null)
-        {
-            bool isEnteringZone1 = IsZone1InArray(activateZones);
-            bool isLeavingZone1 = IsZone1InArray(deactivateZones);
+        // ── 안개 효과 전환 (URP FullScreenPassRendererFeature) ──
+        bool isEnteringZone1 = IsZone1InArray(activateZones);
+        bool isLeavingZone1 = IsZone1InArray(deactivateZones);
 
-            if (isEnteringZone1)
-            {
-                fogOverlayObject.SetActive(true);
-                Debug.Log("[ZoneChanger] 안개 오버레이 활성화 (Zone 1 진입)");
-            }
-            else if (isLeavingZone1)
-            {
-                fogOverlayObject.SetActive(false);
-                Debug.Log("[ZoneChanger] 안개 오버레이 비활성화 (Zone 1 이탈)");
-            }
+        if (isEnteringZone1)
+        {
+            SetUnderwaterEffect(true);
+            Debug.Log("[ZoneChanger] Underwater Effects 활성화 (Zone 1 진입)");
+        }
+        else if (isLeavingZone1)
+        {
+            SetUnderwaterEffect(false);
+            Debug.Log("[ZoneChanger] Underwater Effects 비활성화 (Zone 1 이탈)");
         }
 
         // ── Ground 동기화: 현재 Zone에 해당하는 Ground만 활성화, 나머지는 비활성화 ──
@@ -778,5 +773,36 @@ public class ZoneChanger : MonoBehaviour
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// URP Renderer의 FullScreenPassRendererFeature를 활성화/비활성화합니다.
+    /// </summary>
+    private static void SetUnderwaterEffect(bool active)
+    {
+        if (GraphicsSettings.currentRenderPipeline is not UniversalRenderPipelineAsset pipelineAsset)
+        {
+            Debug.LogWarning("[ZoneChanger] UniversalRenderPipelineAsset을 찾을 수 없습니다.");
+            return;
+        }
+
+        var rendererData = pipelineAsset.GetRenderer(0) as UniversalRendererData;
+        if (rendererData == null)
+        {
+            Debug.LogWarning("[ZoneChanger] UniversalRendererData를 찾을 수 없습니다.");
+            return;
+        }
+
+        foreach (var feature in rendererData.rendererFeatures)
+        {
+            if (feature is FullScreenPassRendererFeature && feature.name == "Underwater Effects")
+            {
+                feature.SetActive(active);
+                Debug.Log($"[ZoneChanger] Underwater Effects {(active ? "활성화" : "비활성화")}");
+                return;
+            }
+        }
+
+        Debug.LogWarning("[ZoneChanger] 'Underwater Effects' RendererFeature를 찾을 수 없습니다.");
     }
 }
