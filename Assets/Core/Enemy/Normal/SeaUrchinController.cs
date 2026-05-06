@@ -2,6 +2,8 @@ using System.Collections;
 using UnityEngine;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Environment;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Core.Enemy.Normal
 {
@@ -90,11 +92,18 @@ namespace HideAndInk.Core.Enemy.Normal
         private Color _originalColor;
         private Vector3 _originalScale;
         private static readonly int IsRollingHash = Animator.StringToHash("IsRolling");
+        private IEventBus _eventBus;
 
         public void SetPool(SeaUrchinPool pool) => _pool = pool;
 
         private void Awake()
         {
+            // EventBus 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
+
             _rigidbody = GetComponent<Rigidbody>();
             _animator = GetComponent<Animator>();
             _collider = GetComponent<Collider>();
@@ -287,7 +296,7 @@ namespace HideAndInk.Core.Enemy.Normal
             if (other.CompareTag("Player"))
             {
                 AttachToPlayer(other.transform);
-                EnemyEvents.InvokePlayerSlowed(transform.position, slowPercent, slowDuration);
+                _eventBus?.Publish(new PlayerSlowedEvent(transform.position, slowPercent, slowDuration));
                 return;
             }
 

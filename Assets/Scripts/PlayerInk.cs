@@ -1,51 +1,84 @@
+using HideAndInk.Core.Audio;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using UnityEngine;
 
 /// <summary>
-/// 두두의 잉크 수치와 연막 사용만 담당한다.
+/// 두두의 잉크 수치와 대시 기능을 담당한다.
+/// SpaceBar = 대시 (Ink가 최대치일 때만 발동)
+/// 대시 중 Ink는 0까지 감소, 자연 회복 시작
 /// </summary>
 public class PlayerInk : MonoBehaviour
 {
-        [Header("Ink")]
-        [SerializeField] private float currentInk = 0f;
-        [SerializeField] private float maxInk = 100f;
-        [Tooltip("자연 회복으로 0→최대까지 차오르는 데 걸리는 시간(초)")]
-        [SerializeField] private float passiveRechargeDuration = 10f;
+    /// <summary>
+    /// 씬의 유일한 PlayerInk 인스턴스
+    /// </summary>
+    public static PlayerInk Instance { get; private set; }
 
-    [Header("State")]
-    [SerializeField] private bool isUnderThreat = false;
-    [SerializeField] private bool isUsingSmoke = false;
-    [SerializeField] private bool isUsingBossMimic = false;
-    [SerializeField] private bool isContactCharging = false;
+    [Header("Ink")]
+    [Tooltip("현재 잉크량")]
+    [SerializeField] private float currentInk = 0f;
+    [Tooltip("최대 잉크량")]
+    [SerializeField] private float maxInk = 100f;
+    [Tooltip("자연 회복으로 0→최대까지 차오르는 데 걸리는 시간(초)")]
+    [SerializeField] private float passiveRechargeDuration = 10f;
 
-    [Header("Smoke")]
-    [SerializeField] private KeyCode smokeKey = KeyCode.Space;
-    [SerializeField] private float smokeDuration = 2f;
-    [SerializeField] private float smokeReadyTolerance = 0.5f;
+    [Header("Dash")]
+    [Tooltip("대시 지속 시간 (초)")]
+    [SerializeField] private float dashDuration = 1.5f;
+    [Tooltip("대시 속도 추가 보정 (기본 이동 속도에 더해짐)")]
+    [SerializeField] private float dashSpeedBoost = 10f;
+    [Tooltip("대시 시작 시 재생할 연막 파티클")]
     [SerializeField] private ParticleSystem smokeEffect;
 
-    private float _smokeTimer;
+    [Header("State")]
+    [Tooltip("위협 상태 여부")]
+    [SerializeField] private bool isUnderThreat = false;
+    [Tooltip("보스 모방 사용 중 여부")]
+    [SerializeField] private bool isUsingBossMimic = false;
+    [Tooltip("접촉 충전 중 여부")]
+    [SerializeField] private bool isContactCharging = false;
+
+    private ISfxService _sfxService;
+    private bool _isDashing;
+    private float _dashTimer;
+    private ParticleSystem _runtimeSmokeEffect;
 
     public float CurrentInk => currentInk;
     public float MaxInk => maxInk;
     public bool IsUnderThreat => isUnderThreat;
-    public bool IsUsingSmoke => isUsingSmoke;
     public bool IsUsingBossMimic => isUsingBossMimic;
     public bool IsContactCharging => isContactCharging;
+    public bool IsDashing => _isDashing;
+    public float DashDuration => dashDuration;
+    public float DashSpeedBoost => dashSpeedBoost;
 
     public System.Action<float, float> OnInkChanged;
     public System.Action<bool> OnThreatChanged;
-    public System.Action OnSmokeStarted;
-    public System.Action OnSmokeStopped;
+    public System.Action<float, float> OnDashStarted;   // (duration, speedBoost)
+    public System.Action OnDashEnded;
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
         currentInk = Mathf.Clamp(currentInk, 0f, maxInk);
+
+        // SFX 서비스 해결
+        if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+        {
+            _sfxService = GameManager.Container.Resolve<ISfxService>();
+        }
     }
 
     private void Update()
     {
-        HandleSmokeInput();
-        UpdateSmoke();
+        HandleDashInput();
+        UpdateDash();
         UpdatePassiveRecharge();
     }
 
@@ -56,7 +89,7 @@ public class PlayerInk : MonoBehaviour
 
     public bool CanReceiveContactCharge()
     {
-        return NeedsInk() && !isUnderThreat && !isUsingSmoke && !isUsingBossMimic;
+        return !isUnderThreat && !_isDashing && !isUsingBossMimic;
     }
 
     public void AddInk(float amount)
@@ -78,62 +111,118 @@ public class PlayerInk : MonoBehaviour
         isContactCharging = charging;
     }
 
-    public bool TryUseSmoke()
-    {
-        if (currentInk < maxInk - smokeReadyTolerance || isUsingSmoke)
-            return false;
-
-        isUsingSmoke = true;
-        _smokeTimer = smokeDuration;
-        SetInkDirect(0f);
-
-        if (smokeEffect != null)
-        {
-            smokeEffect.gameObject.SetActive(true);
-            smokeEffect.Clear(true);
-            smokeEffect.Play(true);
-            smokeEffect.Emit(20);
-        }
-
-        OnSmokeStarted?.Invoke();
-        return true;
-    }
-
     public void StopBossMimic()
     {
         isUsingBossMimic = false;
     }
 
-    private void HandleSmokeInput()
+    /// <summary>
+    /// 대시 시작 (Ink가 최대치일 때만 발동)
+    /// </summary>
+    public bool TryStartDash()
     {
-        if (Input.GetKeyDown(smokeKey))
+        if (_isDashing)
+            return false;
+
+        if (currentInk < maxInk)
+            return false;
+
+        _isDashing = true;
+        _dashTimer = dashDuration;
+
+        // 연막 파티클 재생 (프리팹이면 Instantiate 후 재생)
+        ParticleSystem effect = GetOrCreateSmokeEffect();
+        if (effect != null)
         {
-            TryUseSmoke();
+            // 배경에 묻히지 않도록 SortingLayer 설정
+            var psRenderer = effect.GetComponent<ParticleSystemRenderer>();
+            if (psRenderer != null)
+            {
+                psRenderer.sortingLayerName = "Background";
+                psRenderer.sortingOrder = 10;
+            }
+
+            effect.gameObject.SetActive(true);
+            effect.Clear(true);
+            effect.Play(true);
+            effect.Emit(20);
+        }
+
+        // 대시(먹물) 효과음 재생
+        _sfxService?.Play(SfxId.InkShoot);
+
+        OnDashStarted?.Invoke(dashDuration, dashSpeedBoost);
+        return true;
+    }
+
+    /// <summary>
+    /// smokeEffect 참조가 프리팹이면 Instantiate하여 런타임 인스턴스를 반환한다.
+    /// 씬에 배치된 인스턴스면 그대로 반환한다.
+    /// </summary>
+    private ParticleSystem GetOrCreateSmokeEffect(bool createIfMissing = true)
+    {
+        if (smokeEffect == null)
+            return null;
+
+        // 이미 생성된 런타임 인스턴스가 있으면 반환
+        if (_runtimeSmokeEffect != null)
+            return _runtimeSmokeEffect;
+
+        // 씬에 배치된 인스턴스면 그대로 사용
+        if (smokeEffect.gameObject.scene.IsValid())
+        {
+            _runtimeSmokeEffect = smokeEffect;
+            return _runtimeSmokeEffect;
+        }
+
+        // 프리팹이면 Instantiate 후 사용
+        if (createIfMissing)
+        {
+            _runtimeSmokeEffect = Instantiate(smokeEffect, transform);
+            _runtimeSmokeEffect.gameObject.SetActive(false);
+            return _runtimeSmokeEffect;
+        }
+
+        return null;
+    }
+
+    private void HandleDashInput()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            TryStartDash();
         }
     }
 
-    private void UpdateSmoke()
+    private void UpdateDash()
     {
-        if (!isUsingSmoke)
+        if (!_isDashing)
             return;
 
-        _smokeTimer -= Time.deltaTime;
-        if (_smokeTimer > 0f)
-            return;
+        _dashTimer -= Time.deltaTime;
 
-        isUsingSmoke = false;
+        // Ink를 100→0 으로 선형 감소
+        float inkDrainRate = maxInk / Mathf.Max(0.01f, dashDuration);
+        SetInkDirect(currentInk - inkDrainRate * Time.deltaTime);
 
-        if (smokeEffect != null)
+        if (_dashTimer <= 0f)
         {
-            smokeEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        }
+            _isDashing = false;
+            SetInkDirect(0f);
 
-        OnSmokeStopped?.Invoke();
+            ParticleSystem effect = GetOrCreateSmokeEffect(createIfMissing: false);
+            if (effect != null)
+            {
+                effect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            OnDashEnded?.Invoke();
+        }
     }
 
     private void UpdatePassiveRecharge()
     {
-        if (isUsingSmoke || isUsingBossMimic || isContactCharging)
+        if (_isDashing || isUsingBossMimic || isContactCharging)
             return;
 
         // 자연 회복: 0→maxInk까지 passiveRechargeDuration 초 동안 선형 회복

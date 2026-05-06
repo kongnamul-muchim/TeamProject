@@ -12,6 +12,7 @@ namespace HideAndInk.CameraSystem
     public sealed class LocalSway : MonoBehaviour
     {
         [Header("흔들림 설정")]
+        [Tooltip("흔들림 효과 활성화")]
         [SerializeField] private bool enableSway = true;
 
         [Tooltip("흔들림 폭 (클수록 넓게 흔들림)")]

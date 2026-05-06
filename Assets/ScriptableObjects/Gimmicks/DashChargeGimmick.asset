@@ -12,7 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 159a64f3194f6ba4dae987b497d4d1b6, type: 3}
   m_Name: DashChargeGimmick
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Enemy.Boss.Gimmicks.DashChargeGimmick
-  dashSpeed: 15
-  dashCooldown: 2
-  chargeWidth: 2
-  maxDashDistance: 20
+  suspicionRateStage1: 3
+  suspicionRateStage2: 8
+  suspicionRateStage3: 15
+  suspicionRateStage4: 25
+  suspicionDecreaseRateCamouflage: 10
+  postChaseSuspicion: 0
+  patrolSpeed: 3
+  chargeSpeedPatrol: 15
+  chargeSpeedChase: 22
+  chargeWidth: 2.5
+  maxDashDistance: 25
+  chargeCooldownChase: 1.5
+  camouflageLockDelay: 0.5
+  indicatorDuration: 0.8
+  targetSearchRadius: 12
+  minPatrolRadius: 5
+  maxPatrolRadius: 12

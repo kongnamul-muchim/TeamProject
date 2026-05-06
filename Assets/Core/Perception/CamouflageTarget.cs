@@ -9,7 +9,7 @@ namespace HideAndInk.Core.Perception
     public class CamouflageTarget : MonoBehaviour
     {
         [Header("의태 색상")]
-        [SerializeField] private Color camouflageColor = Color.white;
+        [SerializeField, Tooltip("의태 색상")] private Color camouflageColor = Color.white;
 
         /// <summary>
         /// 대표 색상 반환

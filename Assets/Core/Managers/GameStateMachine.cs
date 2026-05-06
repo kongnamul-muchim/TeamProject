@@ -13,7 +13,7 @@ namespace HideAndInk.Core.Managers
         // 유효한 상태 전환 목록
         private static readonly Dictionary<GameState, HashSet<GameState>> ValidTransitions = new()
         {
-            { GameState.Playing, new HashSet<GameState> { GameState.Paused, GameState.Detected } },
+            { GameState.Playing, new HashSet<GameState> { GameState.Paused, GameState.Detected, GameState.Dead } },
             { GameState.Paused, new HashSet<GameState> { GameState.Playing } },
             { GameState.Detected, new HashSet<GameState> { GameState.Escaped, GameState.Dead, GameState.Playing } },
             { GameState.Escaped, new HashSet<GameState> { GameState.Playing } },

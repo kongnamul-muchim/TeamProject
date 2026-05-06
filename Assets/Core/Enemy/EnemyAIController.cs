@@ -26,7 +26,9 @@ namespace HideAndInk.Core.Enemy
         [SerializeField] protected float maxSpeed = 5f;
 
         [Header("시야 설정")]
+        [Tooltip("Enemy_Forward 자식 Transform (시야 방향 기준)")]
         [SerializeField] protected Transform enemyForward; // Enemy_Forward 자식 Transform
+        [Tooltip("시야 회전 속도")]
         [SerializeField] protected float viewRotationSpeed = 5f;
 
         [Header("방향 설정")]
@@ -34,10 +36,15 @@ namespace HideAndInk.Core.Enemy
         [System.NonSerialized] protected bool isDefaultFacingLeft;
 
         [Header("Ground 제한 설정")]
+        [Tooltip("Ground 레이어 마스크")]
         [SerializeField] protected LayerMask groundLayer; // Ground 레이어
+        [Tooltip("이동 방향 앞쪽 Ground 체크 거리")]
         [SerializeField] protected float groundCheckDistance = 0.5f; // 이동 방향 앞쪽 Ground 체크 거리
+        [Tooltip("Ground 체크 반경")]
         [SerializeField] protected float groundCheckRadius = 0.3f; // Ground 체크 반경
+        [Tooltip("Ground 경계 스캔 최대 거리")]
         [SerializeField] protected float groundScanDistance = 50f; // Ground 경계 스캔 최대 거리
+        [Tooltip("Ground 경계 스캔 간격")]
         [SerializeField] protected float groundScanStep = 1f; // Ground 경계 스캔 간격
 
         // 컴포넌트 참조 (런타임 캐싱, 직렬화 불필요)
@@ -378,18 +385,6 @@ namespace HideAndInk.Core.Enemy
             {
                 _movement.Stop();
             }
-        }
-
-        /// <summary>
-        /// IEnemy.Update 구현
-        /// MonoBehaviour.Update와 동일한 동작 보장
-        /// </summary>
-        public void Update(float deltaTime)
-        {
-            if (!_isActive) return;
-            UpdateAI(deltaTime);
-            UpdateMovement(deltaTime);
-            UpdateViewDirection();
         }
     }
 }

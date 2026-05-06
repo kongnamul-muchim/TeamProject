@@ -39,26 +39,33 @@ namespace HideAndInk.ParallaxSystem
         // ── DI ──
 
         [Header("DI - 추적할 대상 (미할당 시 자신의 Transform 사용)")]
+        [Tooltip("추적 대상 트랜스폼")]
         [SerializeField] private Transform trackingTarget;
 
         [Header("DI - 정렬 기준 Transform (미할당 시 trackingTarget 사용)")]
+        [Tooltip("정렬 기준 트랜스폼")]
         [SerializeField] private Transform sortingReference;
 
         // ── 설정 ──
 
         [Header("기본 Sorting Order (Y=0일 때의 값)")]
+        [Tooltip("기본 정렬 순서")]
         [SerializeField] private int baseOrder;
 
         [Header("Y축 정밀도 (클수록 미세한 Y차이도 구분)")]
+        [Tooltip("Y축 세분화 정밀도")]
         [SerializeField] private int precision = 10;
 
         [Header("Y 오프셋 (오브젝트 발 위치 보정, 양수=아래쪽 기준점)")]
+        [Tooltip("Y축 오프셋")]
         [SerializeField] private float yOffset;
 
         [Header("업데이트 모드")]
+        [Tooltip("업데이트 모드")]
         [SerializeField] private UpdateMode mode = UpdateMode.LateUpdate;
 
         [Header("Sorting Layer 이름 (비어있으면 변경 안 함)")]
+        [Tooltip("정렬 레이어 이름")]
         [SerializeField] private string sortingLayerName;
 
         // ── 열거형 ──

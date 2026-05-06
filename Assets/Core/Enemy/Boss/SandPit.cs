@@ -9,8 +9,8 @@ namespace HideAndInk.Core.Enemy.Boss
     public class SandPit : MonoBehaviour
     {
         [Header("구덩이 설정")]
-        [SerializeField] private float lifetime = 8f;
-        [SerializeField] private float triggerRadius = 1.5f;
+        [SerializeField, Tooltip("구덩이 지속 시간")] private float lifetime = 8f;
+        [SerializeField, Tooltip("트리거 반경")] private float triggerRadius = 1.5f;
 
         /// <summary>
         /// Player가 구덩이를 밟았을 때 발생 (Controller에서 의심도 처리)
@@ -40,7 +40,8 @@ namespace HideAndInk.Core.Enemy.Boss
                     _hasTriggered = true;
                     OnPlayerEnterPit?.Invoke(transform.position);
 
-                    // 밟힌 구덩이는 즉시 소멸
+                    // 밟힌 구덩이는 즉시 소멸 (같은 프레임 Update 재실행 방지)
+                    enabled = false;
                     Destroy(gameObject);
                     return;
                 }

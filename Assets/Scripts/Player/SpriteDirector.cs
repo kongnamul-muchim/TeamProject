@@ -14,8 +14,8 @@ namespace HideAndInk.Player
     /// </summary>
     public sealed class SpriteDirector : MonoBehaviour, ISpriteDirector
     {
-        [SerializeField] private string spritePath = "Art/1_Characters/Player/Spr_Player_Idle_";
-        [SerializeField] private string maskPath = "Art/1_Characters/Player/Mask_Player_Idle_";
+        [SerializeField, Tooltip("스프라이트 리소스 경로")] private string spritePath = "Art/1_Characters/Player/Spr_Player_Idle_";
+        [SerializeField, Tooltip("마스크 리소스 경로")] private string maskPath = "Art/1_Characters/Player/Mask_Player_Idle_";
 
         private SpriteRenderer _spriteRenderer;
         private Dictionary<MoveDirection, Sprite> _spriteCache = new();
@@ -170,6 +170,10 @@ namespace HideAndInk.Player
             return sprite;
         }
 
+        /// <summary>
+        /// 스프라이트 로드. Editor에서는 AssetDatabase 우선, 빌드에서는 Resources.Load 사용.
+        /// 주의: AssetDatabase 경로는 .png 확장자 포함, Resources 경로는 미포함.
+        /// </summary>
         private Sprite LoadSprite(string path)
         {
 #if UNITY_EDITOR

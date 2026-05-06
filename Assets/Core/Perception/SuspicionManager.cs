@@ -17,29 +17,43 @@ namespace HideAndInk.Core.Perception
     public sealed class SuspicionManager : Singleton<SuspicionManager>
     {
         [Header("임계값 설정")]
+        [Tooltip("주의 단계 임계값")]
         [SerializeField] private float cautionThreshold = 30f;
+        [Tooltip("위험 단계 임계값")]
         [SerializeField] private float dangerThreshold = 60f;
+        [Tooltip("심각 단계 임계값")]
         [SerializeField] private float criticalThreshold = 80f;
+        [Tooltip("발각 단계 임계값")]
         [SerializeField] private float detectedThreshold = 100f;
 
         [Header("상승/하락 속도 (초당)")]
+        [Tooltip("의심도 상승 속도 (초당)")]
         [SerializeField] private float increaseSpeed = 40f;
+        [Tooltip("의심도 하락 속도 (초당)")]
         [SerializeField] private float decreaseSpeed = 10f;
 
         [Header("의태 하락 보정치")]
+        [Tooltip("의태 중 의심도 감소 배율")]
         [SerializeField] private float camouflageReduceMultiplier = 0.5f;
+        [Tooltip("완벽 의태 시 초당 의심도 감소량")]
         [SerializeField] private float perfectCamouflageReducePerSec = 6f;
 
         [Header("감지 Grace Period")]
+        [Tooltip("감지 유예 시간")]
         [SerializeField] private float detectionGracePeriod = 0.5f;
 
         [Header("발각 후 추적 복귀 설정")]
+        [Tooltip("발각 상태 지속 시간")]
         [SerializeField] private float detectedStateDuration = 2f;
+        [Tooltip("발각 후 최소 의심도")]
         [SerializeField] private float minSuspicionAfterDetected = 0.3f;
 
         [Header("경보 공유 설정")]
+        [Tooltip("경보 전파 반경")]
         [SerializeField] private float alertBroadcastRadius = 10f;
+        [Tooltip("공유 의심도 증가량")]
         [SerializeField] private float sharedSuspicionAmount = 0.3f;
+        [Tooltip("의심도 공유 쿨타임")]
         [SerializeField] private float sharedSuspicionCooldown = 2f;
 
         // === SuspicionMeterService — 의심도 계산 순수 C# 서비스 ===

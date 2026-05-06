@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "categories": {
+    "software-engineering": {
+      "name": "Software Engineering",
+      "description": "Core programming and software design experts",
+      "masks": [
+        {
+          "id": "linus-torvalds",
+          "name": "Linus Torvalds",
+          "file": "software-engineering/linus-torvalds.yaml",
+          "tags": ["systems", "c", "linux", "git", "kernel"]
+        },
+        {
+          "id": "martin-fowler",
+          "name": "Martin Fowler",
+          "file": "software-engineering/martin-fowler.yaml",
+          "tags": ["architecture", "refactoring", "patterns", "agile"]
+        },
+        {
+          "id": "kent-beck",
+          "name": "Kent Beck",
+          "file": "software-engineering/kent-beck.yaml",
+          "tags": ["tdd", "xp", "testing", "agile"]
+        },
+        {
+          "id": "dan-abramov",
+          "name": "Dan Abramov",
+          "file": "software-engineering/dan-abramov.yaml",
+          "tags": ["react", "javascript", "state-management", "frontend", "ui"]
+        }
+      ]
+    },
+    "ai-ml": {
+      "name": "AI & Machine Learning",
+      "description": "Machine learning and AI research experts",
+      "masks": [
+        {
+          "id": "andrew-ng",
+          "name": "Andrew Ng",
+          "file": "ai-ml/andrew-ng.yaml",
+          "tags": ["deep-learning", "teaching", "production-ml"]
+        }
+      ]
+    },
+    "architecture": {
+      "name": "Software Architecture",
+      "description": "System design and architecture experts",
+      "masks": [
+        {
+          "id": "robert-martin",
+          "name": "Robert C. Martin (Uncle Bob)",
+          "file": "architecture/robert-martin.yaml",
+          "tags": ["clean-code", "solid", "architecture"]
+        },
+        {
+          "id": "jeff-dean",
+          "name": "Jeff Dean",
+          "file": "architecture/jeff-dean.yaml",
+          "tags": ["distributed-systems", "scale", "performance", "infrastructure", "google"]
+        }
+      ]
+    }
+  }
+}

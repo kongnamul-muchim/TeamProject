@@ -43,7 +43,7 @@ namespace HideAndInk.Core.Enemy.Elite
         [SerializeField] private float detectionRangeHeight = 0.05f;
 
         [Header("스프라이트 방향")]
-        [SerializeField] private SpriteRenderer eliteSpriteRenderer;
+        [SerializeField, Tooltip("정예 적 스프라이트 렌더러")] private SpriteRenderer eliteSpriteRenderer;
 
         // 상태
         private float _stateTimer;

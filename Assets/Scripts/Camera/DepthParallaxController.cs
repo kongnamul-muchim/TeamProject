@@ -71,10 +71,12 @@ namespace HideAndInk.ParallaxSystem
         [SerializeField] private DepthLayerData[] layers = new DepthLayerData[0];
 
         [Header("원점 Y (캐릭터 시작 높이, 0이면 자동)")]
+        [Tooltip("기준 Y 위치")]
         [SerializeField] private float originY;
 
         [Header("전역 깊이 배율 (0=효과 없음, 1=정상, 2=강조)")]
         [Range(0f, 3f)]
+        [Tooltip("전역 깊이 배율")]
         [SerializeField] private float globalDepthMultiplier = 1f;
 
         // ── 내부 상태 ──

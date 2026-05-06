@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Player;
+using HideAndInk.Core.Events;
 
 namespace HideAndInk.Core.Enemy.Normal
 {
@@ -31,12 +32,17 @@ namespace HideAndInk.Core.Enemy.Normal
         [SerializeField] private float attackRange = 1.5f;
 
         [Header("순찰 패턴")]
+        [Tooltip("이동 간격 시간")]
         [SerializeField] private float moveInterval = 2f;
+        [Tooltip("이동 거리")]
         [SerializeField] private float moveDistance = 2f;
+        [Tooltip("대기 시간")]
         [SerializeField] private float idleTime = 1f;
 
         [Header("스프라이트 방향")]
+        [Tooltip("적 스프라이트 렌더러")]
         [SerializeField] private SpriteRenderer enemySpriteRenderer;
+        [Tooltip("적 애니메이터")]
         [SerializeField] private Animator enemyAnimator;
 
         [Header("감지 범위 시각화")]
@@ -257,7 +263,7 @@ namespace HideAndInk.Core.Enemy.Normal
             if (_playerLives.IsInvincible) return;
 
             // 🔴 데미지
-            _playerLives.TakeDamage();
+            _playerLives.TakeDamage(DeathCause.CrabAttack, gameObject.name);
             _damageTimer = damageCooldown;
 
             // 💥 넉백
@@ -338,7 +344,7 @@ namespace HideAndInk.Core.Enemy.Normal
             if (_playerLives == null || _playerLives.IsInvincible) return;
 
             // 데미지
-            _playerLives.TakeDamage();
+            _playerLives.TakeDamage(DeathCause.CrabAttack, gameObject.name);
             _damageTimer = damageCooldown;
 
             // 넉백
@@ -360,7 +366,7 @@ namespace HideAndInk.Core.Enemy.Normal
         private void OnDestroy()
         {
             // Rigidbody 정리 (추가한 경우)
-            if (_rigidbody != null && !GetComponent<Rigidbody>())
+            if (_rigidbody != null)
             {
                 Destroy(_rigidbody);
             }
