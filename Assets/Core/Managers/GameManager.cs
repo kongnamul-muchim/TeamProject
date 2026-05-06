@@ -254,6 +254,15 @@ namespace HideAndInk.Core.Managers
             var color = img.color;
             color.a = 200f / 255f;
             img.color = color;
+
+            // SuspicionMeterUI 비활성화 (OnValueChanged 이벤트로 alpha가 덮어써지는 것 방지)
+            var suspicionUI = canvasObj.GetComponentInChildren<Perception.SuspicionMeterUI>(true);
+            if (suspicionUI != null && suspicionUI.enabled)
+            {
+                suspicionUI.enabled = false;
+                Debug.Log("[GameManager] SuspicionMeterUI disabled to prevent alpha override.");
+            }
+
             Debug.Log($"[GameManager] Vignette alpha: {beforeAlpha:F3} → {img.color.a:F3} (GameObject.activeSelf={vignette.gameObject.activeSelf}, Image.enabled={img.enabled})");
         }
 
