@@ -140,6 +140,13 @@ public class ZoneChanger : MonoBehaviour
                 SyncGroundObjects(fromZoneNumber);
                 Debug.Log($"[ZoneChanger] '{name}' 초기 Ground 동기화: Zone_{fromZoneNumber} (Ground_{fromZoneNumber:D2} 활성화)");
             }
+
+            // 게임 시작 시 Zone1이면 Underwater Effects 활성화
+            if (isCurrentZoneActive && fromZoneNumber == 1)
+            {
+                SetUnderwaterEffect(true);
+                Debug.Log("[ZoneChanger] 게임 시작 - Zone 1, Underwater Effects 활성화");
+            }
         }
 
         Debug.Log($"[ZoneChanger] '{name}' 초기화: " +
