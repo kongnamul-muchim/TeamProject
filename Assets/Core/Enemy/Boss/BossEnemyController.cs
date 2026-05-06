@@ -950,10 +950,6 @@ namespace HideAndInk.Core.Enemy.Boss
             if (bossSprite != null)
             {
                 bossSprite.flipX = flip;
-
-#if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] Facing: dir.x={dir.x:F2}, flipX={flip}, sprite={bossSprite.flipX}");
-#endif
             }
 
             // localEulerAngles.y 동기화 (ConeVisionSensor의 viewDirectionRef.forward 방향 보정)

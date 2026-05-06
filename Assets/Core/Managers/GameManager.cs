@@ -216,8 +216,8 @@ namespace HideAndInk.Core.Managers
         }
 
         /// <summary>
-        /// UI_SuspicionVinette 의 투명도를 최대(1.0)로 고정
-        /// 사망 시 의심도 비네트를 완전히 불투명하게 만들어 죽음 시각화
+        /// UI_SuspicionVinette의 fillAmount를 의심도 최대치(1.0)로 고정
+        /// SuspicionMeterUI가 평소에 조절하는 방식(fillAmount)과 동일하게 적용
         /// </summary>
         private void SetSuspicionVignetteToMax()
         {
@@ -231,9 +231,8 @@ namespace HideAndInk.Core.Managers
             var img = vignette.GetComponent<UnityEngine.UI.Image>();
             if (img != null)
             {
-                var color = img.color;
-                color.a = 1f;
-                img.color = color;
+                // fillAmount = 1.0 = 의심도 100% 기준 이미지 fill (alpha는 프리팹 기본값 유지)
+                img.fillAmount = 1f;
             }
         }
 
