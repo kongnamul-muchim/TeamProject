@@ -96,13 +96,6 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
-    [Header("안개 효과")]
-    [Tooltip("안개 오버레이 오브젝트 (FogOverlayController 포함). 미할당 시 작동하지 않습니다.")]
-    public GameObject fogOverlayObject;
-
-    [Tooltip("이 Zone으로 진입 시 안개를 활성화할지 여부")]
-    public bool enableFogOnEnter = false;
-
     private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
     private GameObject _autoCreatedLeftBoundaryWall;
@@ -461,41 +454,6 @@ public class ZoneChanger : MonoBehaviour
         {
             ActivateSingleWallInContainer();
         }
-
-        // ── 안개 효과 전환 ──
-        if (fogOverlayObject != null)
-        {
-            var fogController = fogOverlayObject.GetComponentInChildren<HideAndInk.Core.Environment.FogOverlayController>();
-            if (enableFogOnEnter)
-            {
-                fogOverlayObject.SetActive(true);
-                if (fogController != null)
-                {
-                    StartCoroutine(fogController.FadeIn());
-                }
-            }
-            else
-            {
-                if (fogController != null)
-                {
-                    StartCoroutine(FadeOutFog(fogController, 2f));
-                }
-                else
-                {
-                    fogOverlayObject.SetActive(false);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 안개를 서서히 사라지게 한 후 오브젝트를 비활성화합니다.
-    /// </summary>
-    private IEnumerator FadeOutFog(HideAndInk.Core.Environment.FogOverlayController controller, float duration)
-    {
-        yield return StartCoroutine(controller.FadeOut(duration));
-        if (fogOverlayObject != null)
-            fogOverlayObject.SetActive(false);
     }
 
     /// <summary>
