@@ -129,6 +129,7 @@ namespace HideAndInk.Core.Managers
 
         /// <summary>
         /// 현재 인덱스의 대사를 UI에 전달
+        /// cutsceneBg가 null이 아니면 컷씬 배경 변경 이벤트도 함께 발행
         /// </summary>
         private void ShowCurrentLine()
         {
@@ -136,6 +137,12 @@ namespace HideAndInk.Core.Managers
 
             var line = _currentLines[_currentIndex];
             StoryEvents.InvokeDialogueLineChanged(line.speaker, line.text);
+
+            // 컷씬 배경 이미지가 있으면 교체 (null이면 이전 이미지 유지)
+            if (line.cutsceneBg != null)
+            {
+                StoryEvents.InvokeCutsceneBackgroundChanged(line.cutsceneBg);
+            }
         }
 
         /// <summary>
@@ -152,6 +159,9 @@ namespace HideAndInk.Core.Managers
 
             // 게임 시간 복원
             ResumeGameTime();
+
+            // 컷씬 배경 이미지 제거
+            StoryEvents.InvokeCutsceneBackgroundChanged(null);
 
             // 종료 이벤트
             StoryEvents.InvokeDialogueEnd();

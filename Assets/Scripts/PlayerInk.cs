@@ -42,6 +42,7 @@ public class PlayerInk : MonoBehaviour
     private ISfxService _sfxService;
     private bool _isDashing;
     private float _dashTimer;
+    private float _dashInputBlockedUntil;   // 대시 입력 차단 (대화 종료 후 잔여 입력 방지)
     private ParticleSystem _runtimeSmokeEffect;
 
     public float CurrentInk => currentInk;
@@ -186,8 +187,25 @@ public class PlayerInk : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// 대화 종료 후 잔여 Space 입력으로 회피가 발동되는 것을 방지
+    /// DialogueUIAdapter.OnDialogueEnd()에서 호출됨
+    /// </summary>
+    public void BlockDashInputTemporarily(float duration = 0.3f)
+    {
+        _dashInputBlockedUntil = Time.realtimeSinceStartup + duration;
+    }
+
     private void HandleDashInput()
     {
+        // 게임 일시정지(대화/메뉴) 중에는 대시 입력 무시
+        if (Mathf.Approximately(Time.timeScale, 0f))
+            return;
+
+        // 대화 종료 직후 잔여 Space 입력 차단
+        if (Time.realtimeSinceStartup < _dashInputBlockedUntil)
+            return;
+
         if (Input.GetKeyDown(KeyCode.Space))
         {
             TryStartDash();

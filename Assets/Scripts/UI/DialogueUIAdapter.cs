@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using HideAndInk.Core.Events;
@@ -16,6 +17,12 @@ public class DialogueUIAdapter : MonoBehaviour
     [SerializeField] private TextMeshProUGUI textDialoge;   // 대사 텍스트 (Text_dialoge)
     [SerializeField] private TextMeshProUGUI textSpeaker;   // 화자 이름 텍스트 (Panel_name > Text)
     [SerializeField] private GameObject endDialogueSign;    // "이어 하기" 표시 (EndDialogueSign)
+
+    [Header("Cutscene References")]
+    [SerializeField] private Image storyCutscene;           // StoryCutScene Image (컷씬 배경)
+    [SerializeField] private GameObject dialogeBgPanel;     // Panel (대화창 배경 프레임)
+    [SerializeField] private GameObject playerInfoPanel;    // Panel_PlayerInfo (대화 중 숨김)
+    [SerializeField] private GameObject pauseButton;        // Btn_Pause (대화 중 비활성화)
 
     [Header("Typewriter Settings")]
     [SerializeField] private float charDelay = 0.04f;       // 글자당 지연 시간 (초)
@@ -87,10 +94,52 @@ public class DialogueUIAdapter : MonoBehaviour
                 endDialogueSign = signObj.gameObject;
         }
 
+        // StoryCutScene (Image) 찾기
+        if (storyCutscene == null)
+        {
+            var cutObj = dialogeUIRoot.transform.Find("StoryCutScene");
+            if (cutObj != null)
+                storyCutscene = cutObj.GetComponent<Image>();
+        }
+
+        // Panel (대화창 배경) 찾기
+        if (dialogeBgPanel == null)
+        {
+            var panelObj = dialogeUIRoot.transform.Find("Panel");
+            if (panelObj != null)
+                dialogeBgPanel = panelObj.gameObject;
+        }
+
+        // Canvas 직속 자식들 찾기 (Panel_PlayerInfo, Btn_Pause)
+        if (playerInfoPanel == null || pauseButton == null)
+        {
+            var canvasRoot = dialogeUIRoot.transform.parent;
+            if (canvasRoot != null)
+            {
+                if (playerInfoPanel == null)
+                {
+                    var infoObj = canvasRoot.Find("Panel_PlayerInfo");
+                    if (infoObj != null)
+                        playerInfoPanel = infoObj.gameObject;
+                }
+
+                if (pauseButton == null)
+                {
+                    var btnObj = canvasRoot.Find("Btn_Pause");
+                    if (btnObj != null)
+                        pauseButton = btnObj.gameObject;
+                }
+            }
+        }
+
         // 자동 탐색 결과 로그
         if (textDialoge == null) Debug.LogWarning("[DialogueUIAdapter] textDialoge를 찾을 수 없습니다.");
         if (textSpeaker == null) Debug.LogWarning("[DialogueUIAdapter] textSpeaker를 찾을 수 없습니다.");
         if (endDialogueSign == null) Debug.LogWarning("[DialogueUIAdapter] endDialogueSign을 찾을 수 없습니다.");
+        if (storyCutscene == null) Debug.LogWarning("[DialogueUIAdapter] StoryCutScene(Image)을 찾을 수 없습니다. DialogeUI 자식에 StoryCutScene 오브젝트가 필요합니다.");
+        if (dialogeBgPanel == null) Debug.LogWarning("[DialogueUIAdapter] Panel을 찾을 수 없습니다.");
+        if (playerInfoPanel == null) Debug.LogWarning("[DialogueUIAdapter] Panel_PlayerInfo를 찾을 수 없습니다.");
+        if (pauseButton == null) Debug.LogWarning("[DialogueUIAdapter] Btn_Pause를 찾을 수 없습니다.");
     }
 
     /// <summary>
@@ -130,12 +179,14 @@ public class DialogueUIAdapter : MonoBehaviour
     private void SubscribeToEvents()
     {
         StoryEvents.OnDialogueLineChanged += OnDialogueLineChanged;
+        StoryEvents.OnCutsceneBackgroundChanged += OnCutsceneBackgroundChanged;
         StoryEvents.OnDialogueEnd += OnDialogueEnd;
     }
 
     private void OnDestroy()
     {
         StoryEvents.OnDialogueLineChanged -= OnDialogueLineChanged;
+        StoryEvents.OnCutsceneBackgroundChanged -= OnCutsceneBackgroundChanged;
         StoryEvents.OnDialogueEnd -= OnDialogueEnd;
 
         if (_typewriterCoroutine != null)
@@ -155,6 +206,14 @@ public class DialogueUIAdapter : MonoBehaviour
         if (dialogeUIRoot != null)
             dialogeUIRoot.SetActive(true);
 
+        // PlayerInfo UI 숨김
+        if (playerInfoPanel != null)
+            playerInfoPanel.SetActive(false);
+
+        // 일시정지 버튼 숨김
+        if (pauseButton != null)
+            pauseButton.SetActive(false);
+
         // 화자 이름 설정
         if (textSpeaker != null)
             textSpeaker.text = speaker;
@@ -166,6 +225,46 @@ public class DialogueUIAdapter : MonoBehaviour
         // 타자기 효과 시작
         _currentFullText = text;
         StartTypewriter(text);
+    }
+
+    /// <summary>
+    /// 컷씬 배경 이미지가 변경될 때 호출됨
+    /// null = 이미지 제거 (대화 종료 시)
+    /// not null = 컷씬 모드 전환
+    /// </summary>
+    private void OnCutsceneBackgroundChanged(Sprite sprite)
+    {
+        if (storyCutscene == null)
+        {
+            Debug.LogWarning("[DialogueUIAdapter] OnCutsceneBackgroundChanged: storyCutscene(Image) 참조가 null입니다.");
+            return;
+        }
+        if (dialogeBgPanel == null)
+        {
+            Debug.LogWarning("[DialogueUIAdapter] OnCutsceneBackgroundChanged: dialogeBgPanel(Panel) 참조가 null입니다.");
+            return;
+        }
+
+        if (sprite != null)
+        {
+            // 컷씬 모드: Panel 배경 숨기고, 컷씬 이미지 표시
+            storyCutscene.sprite = sprite;
+            storyCutscene.color = Color.white;          // 색상 초기화
+            storyCutscene.gameObject.SetActive(true);
+            storyCutscene.enabled = true;               // Image 컴포넌트 활성화
+            dialogeBgPanel.SetActive(false);
+
+            Debug.Log($"[DialogueUIAdapter] 컷씬 배경 변경: {sprite.name}");
+        }
+        else
+        {
+            // 일반 모드: 컷씬 이미지 숨기고, Panel 배경 복원
+            storyCutscene.enabled = false;              // Image 컴포넌트 비활성화
+            storyCutscene.gameObject.SetActive(false);
+            dialogeBgPanel.SetActive(true);
+
+            Debug.Log("[DialogueUIAdapter] 컷씬 배경 제거 → 일반 모드");
+        }
     }
 
     /// <summary>
@@ -183,6 +282,18 @@ public class DialogueUIAdapter : MonoBehaviour
         }
 
         _isCurrentlyTyping = false;
+
+        // PlayerInfo UI 복원
+        if (playerInfoPanel != null)
+            playerInfoPanel.SetActive(true);
+
+        // 일시정지 버튼 복원
+        if (pauseButton != null)
+            pauseButton.SetActive(true);
+
+        // 잔여 Space 입력으로 회피 발동 방지
+        if (PlayerInk.Instance != null)
+            PlayerInk.Instance.BlockDashInputTemporarily(0.3f);
 
         // DialogeUI 비활성화
         if (dialogeUIRoot != null)
