@@ -48,6 +48,10 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("활성화할 구역 번호 (예: 1 = Zone_1_*, 2 = Zone_2_*). -1이면 자동 탐색 안 함")]
     public int toZoneNumber = -1;
 
+    [Header("UI - Canvas_Ingame")]
+    [Tooltip("Zone 1~5에서만 활성화, Zone 6에서는 비활성화할 Canvas_Ingame 오브젝트. 미할당 시 자동 탐색")]
+    public GameObject canvasIngame;
+
     [Header("트랜지션 설정")]
     [Tooltip("패턴 트랜지션 효과 사용 여부")]
     public bool useTransition = true;
@@ -159,6 +163,14 @@ public class ZoneChanger : MonoBehaviour
                 Debug.Log($"[ZoneChanger] 게임 시작 - Zone {fromZoneNumber}, Underwater Effects 비활성화");
             }
         }
+
+        // Canvas_Ingame 자동 탐색 및 초기 상태 설정
+        if (canvasIngame == null)
+        {
+            canvasIngame = GameObject.Find("Canvas_Ingame");
+        }
+        int currentZone = fromZoneNumber >= 0 ? fromZoneNumber : toZoneNumber;
+        UpdateCanvasIngame(currentZone);
 
         Debug.Log($"[ZoneChanger] '{name}' 초기화: " +
             $"비활성화={fromZoneNumber}({(deactivateZones != null ? deactivateZones.Length : 0)}개), " +
@@ -493,6 +505,25 @@ public class ZoneChanger : MonoBehaviour
         if (wallContainer != null && !string.IsNullOrEmpty(activeWallName))
         {
             ActivateSingleWallInContainer();
+        }
+
+        // ── Canvas_Ingame: Zone 1~5 활성화, Zone 6 비활성화 ──
+        UpdateCanvasIngame(toZoneNumber);
+    }
+
+    /// <summary>
+    /// Canvas_Ingame의 활성화 상태를 Zone 번호에 따라 설정합니다.
+    /// Zone 1~5에서는 활성화, Zone 6에서는 비활성화합니다.
+    /// </summary>
+    private void UpdateCanvasIngame(int zoneNumber)
+    {
+        if (canvasIngame == null) return;
+
+        bool shouldBeActive = (zoneNumber >= 1 && zoneNumber <= 5);
+        if (canvasIngame.activeSelf != shouldBeActive)
+        {
+            canvasIngame.SetActive(shouldBeActive);
+            Debug.Log($"[ZoneChanger] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
         }
     }
 
