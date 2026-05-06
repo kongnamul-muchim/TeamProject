@@ -317,6 +317,7 @@ namespace HideAndInk.Core.Perception
             Vector3 spawnPos = _playerTransform.position;
             spawnPos.y += inkMarkYOffset;
             spawnPos.y += inkMarkYMicroOffset; // Z-fighting 방지 미세 보정
+            spawnPos.z = -0.5f; // 배경보다 앞으로 (칵테일 샌드위치 문제 해결)
 
             // X축 -90°로 명시적 회전 (바닥에 눕힘)
             Quaternion spawnRotation = Quaternion.Euler(-90f, 0f, 0f);
@@ -329,6 +330,8 @@ namespace HideAndInk.Core.Perception
             if (sr != null)
             {
                 sr.sortingOrder = inkMarkSortingOrder;
+                // 배경과 동일한 SortingLayer를 사용하되, Order로 구분
+                // 혹시 모를 중복 생성 시 Layer 변경 방지
             }
         }
 
