@@ -32,6 +32,7 @@ namespace HideAndInk.Core.Player
         private float _invincibilityTimer;
         private bool _isInvincible;
         private bool _blinkTargetWasActive;
+        private bool _isDashInvincibility; // 대시용 무적 여부 (깜빡임 없음)
 
         // 프로퍼티
         public int CurrentLives => _currentLives;
@@ -60,8 +61,8 @@ namespace HideAndInk.Core.Player
             {
                 _invincibilityTimer -= Time.deltaTime;
 
-                // 깜빡임: Visual 오브젝트 켰다/껐다 반복 (Animator와 충돌 없음)
-                if (blinkTarget != null)
+                // 깜빡임: 대시용 무적이 아닐 때만 Visual 오브젝트 켰다/껐다 반복
+                if (blinkTarget != null && !_isDashInvincibility)
                 {
                     float wave = Mathf.Sin(Time.time * blinkFrequency * Mathf.PI * 2);
                     blinkTarget.SetActive(wave > 0f);
@@ -70,6 +71,7 @@ namespace HideAndInk.Core.Player
                 if (_invincibilityTimer <= 0f)
                 {
                     _isInvincible = false;
+                    _isDashInvincibility = false;
                     if (blinkTarget != null)
                         blinkTarget.SetActive(true); // 복원
 #if UNITY_EDITOR
@@ -80,16 +82,27 @@ namespace HideAndInk.Core.Player
         }
 
         /// <summary>
-        /// 외부에서 강제로 무적 시간 설정 (백상아리 강제 이탈 등)
+        /// 외부에서 강제로 무적 시간 설정 (피격용 - 깜빡임 있음)
         /// </summary>
         public void SetInvincible(float duration)
         {
             _isInvincible = true;
+            _isDashInvincibility = false;
             _invincibilityTimer = duration;
 
             // 현재 blinkTarget의 활성 상태 저장 (나중에 복원용)
             if (blinkTarget != null)
                 _blinkTargetWasActive = blinkTarget.activeSelf;
+        }
+
+        /// <summary>
+        /// 대시용 무적 시간 설정 (깜빡임 없음)
+        /// </summary>
+        public void SetDashInvincible(float duration)
+        {
+            _isInvincible = true;
+            _isDashInvincibility = true;
+            _invincibilityTimer = duration;
         }
 
         /// <summary>

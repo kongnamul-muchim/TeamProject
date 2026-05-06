@@ -148,9 +148,9 @@ namespace HideAndInk.Player
             if (_playerMovement != null)
                 _playerMovement.SpeedBoost = speedBoost;
 
-            // 무적 설정
+            // 대시용 무적 설정 (깜빡임 없음)
             if (playerLives != null)
-                playerLives.SetInvincible(duration);
+                playerLives.SetDashInvincible(duration);
         }
 
         /// <summary>
