@@ -4,6 +4,7 @@ using HideAndInk.Core.Perception;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Logging;
+using HideAndInk.Core.Audio;
 
 namespace HideAndInk.Core.Managers
 {
@@ -82,6 +83,30 @@ namespace HideAndInk.Core.Managers
 
             // 의태 상태 머신 (Transient)
             _rootContainer.Register<ICamouflageStateMachine, CamouflageStateMachine>(ServiceLifetime.Transient);
+
+            // 오디오 서비스 등록 (TODO: AudioManager가 인터페이스 구현 후 활성화)
+            // RegisterAudioServices();
+        }
+
+        /// <summary>
+        /// 오디오 서비스 DI 등록
+        /// AudioManager가 ISfxService / IBgmService / IAmbientService를 구현한 후 활성화
+        /// 
+        /// 사용 예:
+        ///   _rootContainer.RegisterSingleton&lt;ISfxService, AudioManager&gt;();
+        ///   _rootContainer.RegisterSingleton&lt;IBgmService, AudioManager&gt;();
+        ///   _rootContainer.RegisterSingleton&lt;IAmbientService, AudioManager&gt;();
+        /// </summary>
+        private void RegisterAudioServices()
+        {
+            // SFX 서비스 (Singleton — 전역 AudioManager 인스턴스)
+            // _rootContainer.Register<ISfxService, AudioManager>(ServiceLifetime.Singleton);
+
+            // BGM 서비스 (Singleton)
+            // _rootContainer.Register<IBgmService, AudioManager>(ServiceLifetime.Singleton);
+
+            // Ambient 서비스 (Singleton)
+            // _rootContainer.Register<IAmbientService, AudioManager>(ServiceLifetime.Singleton);
         }
 
         /// <summary>

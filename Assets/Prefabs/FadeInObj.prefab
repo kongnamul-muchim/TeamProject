@@ -835,13 +835,14 @@ GameObject:
   m_Component:
   - component: {fileID: 6982204433850927215}
   - component: {fileID: 1281401924874940978}
+  - component: {fileID: 3892858054823365931}
   m_Layer: 5
   m_Name: FadeInObj
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6982204433850927215
 RectTransform:
   m_ObjectHideFlags: 0
@@ -886,6 +887,20 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3892858054823365931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1909509472827441946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5501f2b1bb7e1fd48aa89fc324712896, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Scripts.UI.FadeInObjController
+  frameCount: 60
+  animationStateName: Transition_Enter
 --- !u!1 &2262085475470859963
 GameObject:
   m_ObjectHideFlags: 0
