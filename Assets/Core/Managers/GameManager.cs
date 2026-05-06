@@ -38,8 +38,8 @@ namespace HideAndInk.Core.Managers
 
         // 게임 상태 머신
         private IGameStateMachine _gameStateMachine;
-        // SuspicionToGameStateLink 캐싱 (FindObjectOfType 반복 방지)
-        private SuspicionToGameStateLink _suspicionLink;
+        // 이벤트 버스 (DI에서 해결)
+        private IEventBus _eventBus;
 
         private void Awake()
         {
@@ -76,6 +76,9 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void RegisterCoreServices()
         {
+            // 이벤트 버스 (Singleton — 전역 이벤트 중앙화)
+            _rootContainer.RegisterInstance<IEventBus>(new EventBus(), ServiceLifetime.Singleton);
+
             // 게임 상태 머신 (Singleton)
             _gameStateMachine = new GameStateMachine(GameState.Playing);
             _rootContainer.RegisterInstance<IGameStateMachine>(_gameStateMachine, ServiceLifetime.Singleton);
@@ -119,14 +122,18 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void SubscribeToEvents()
         {
-            // GameStateMachine 상태 변경 구독 → GameEvents 발생
+            // EventBus 해결
+            _eventBus = _rootContainer.Resolve<IEventBus>();
+
+            // GameStateMachine 상태 변경 구독 → EventBus 발행
             _gameStateMachine.OnStateChanged += OnGameStateChanged;
-            
-            // SuspicionToGameStateLink에서 발각 이벤트 구독 (참조 캐싱)
-            _suspicionLink = FindObjectOfType<SuspicionToGameStateLink>();
-            if (_suspicionLink != null)
+
+            // SuspicionManager 직접 구독 (SuspicionToGameStateLink 중간 계층 제거)
+            // 주의: SuspicionManager가 아직 Awake되지 않았을 수 있으므로 Instance 접근
+            var suspicionMgr = SuspicionManager.Instance;
+            if (suspicionMgr != null)
             {
-                _suspicionLink.OnPlayerDetected += OnPlayerDetected;
+                suspicionMgr.OnDetected += OnPlayerDetected;
             }
         }
 
@@ -135,14 +142,14 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void OnGameStateChanged(GameState previous, GameState current)
         {
-            // 상태 전환에 따른 전역 이벤트 발생
+            // 상태 전환에 따른 이벤트 발행 (EventBus 통해)
             if (current == GameState.Detected)
             {
-                GameEvents.InvokePlayerDetected();
+                _eventBus?.Publish(new PlayerDetectedEvent());
             }
             else if (current == GameState.Dead)
             {
-                GameEvents.InvokePlayerDeath();
+                _eventBus?.Publish(new PlayerDeathEvent());
             }
         }
 
@@ -172,10 +179,11 @@ namespace HideAndInk.Core.Managers
             {
                 _gameStateMachine.OnStateChanged -= OnGameStateChanged;
             }
-            
-            if (_suspicionLink != null)
+
+            var suspicionMgr = SuspicionManager.Instance;
+            if (suspicionMgr != null)
             {
-                _suspicionLink.OnPlayerDetected -= OnPlayerDetected;
+                suspicionMgr.OnDetected -= OnPlayerDetected;
             }
 
             _rootContainer?.Dispose();

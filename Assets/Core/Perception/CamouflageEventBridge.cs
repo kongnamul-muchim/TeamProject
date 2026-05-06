@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using HideAndInk.Core.VFX;
 
 namespace HideAndInk.Core.Perception
@@ -66,6 +67,7 @@ namespace HideAndInk.Core.Perception
 
         // 캐싱된 인터페이스 참조
         private ISoundEffect _soundEffectInterface;
+        private IEventBus _eventBus;
 
         private Transform _playerTransform;
         private GameObject _activeStartVFX;
@@ -79,6 +81,12 @@ namespace HideAndInk.Core.Perception
         {
             _playerTransform = transform;
             _soundEffectInterface = soundEffect as ISoundEffect;
+
+            // EventBus 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
         }
 
         private void OnEnable()
@@ -90,20 +98,23 @@ namespace HideAndInk.Core.Perception
                 return;
             }
 
-            // 의태 이벤트 구독
-            CamouflageEvents.OnCamouflageStart += HandleCamouflageStart;
-            CamouflageEvents.OnCamouflageComplete += HandleCamouflageComplete;
-            CamouflageEvents.OnCamouflageEnd += HandleCamouflageEnd;
-            CamouflageEvents.OnStateChanged += HandleStateChanged;
+            if (_eventBus == null) return;
+
+            // 의태 이벤트 구독 (EventBus 통해)
+            _eventBus.Subscribe<CamouflageStartEvent>(OnCamouflageStartEvent);
+            _eventBus.Subscribe<CamouflageCompleteEvent>(OnCamouflageCompleteEvent);
+            _eventBus.Subscribe<CamouflageEndEvent>(OnCamouflageEndEvent);
+            _eventBus.Subscribe<CamouflageStateChangedEvent>(OnCamouflageStateChangedEvent);
         }
 
         private void OnDisable()
         {
-            // 의태 이벤트 구독 해제 (메모리 누수 방지)
-            CamouflageEvents.OnCamouflageStart -= HandleCamouflageStart;
-            CamouflageEvents.OnCamouflageComplete -= HandleCamouflageComplete;
-            CamouflageEvents.OnCamouflageEnd -= HandleCamouflageEnd;
-            CamouflageEvents.OnStateChanged -= HandleStateChanged;
+            if (_eventBus == null) return;
+
+            _eventBus.Unsubscribe<CamouflageStartEvent>(OnCamouflageStartEvent);
+            _eventBus.Unsubscribe<CamouflageCompleteEvent>(OnCamouflageCompleteEvent);
+            _eventBus.Unsubscribe<CamouflageEndEvent>(OnCamouflageEndEvent);
+            _eventBus.Unsubscribe<CamouflageStateChangedEvent>(OnCamouflageStateChangedEvent);
         }
 
         private void Update()
@@ -133,24 +144,23 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의태 상태 변화 처리 (Perfect 상태 도달 시 Start VFX 삭제)
         /// </summary>
-        private void HandleStateChanged(CamouflageState state)
+        private void OnCamouflageStateChangedEvent(CamouflageStateChangedEvent e)
         {
-            // Perfect 상태 도달 시 Start VFX 삭제
-            if (state == CamouflageState.Perfect)
+            if (e.State == CamouflageState.Perfect)
             {
                 if (_activeStartVFX != null)
                 {
                     Destroy(_activeStartVFX);
                     _activeStartVFX = null;
                 }
-                _wasPerfect = true; // Perfect 상태였음 기록
+                _wasPerfect = true;
             }
         }
 
         /// <summary>
         /// 의태 시작 시 호출 (None → Attached)
         /// </summary>
-        private void HandleCamouflageStart(GameObject target)
+        private void OnCamouflageStartEvent(CamouflageStartEvent e)
         {
             // 의태 사이클 시작 시 플래그 리셋
             _endVFXSpawnedForCurrentCycle = false;
@@ -198,7 +208,7 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 완벽 의태 달성 시 호출 (Perfect 도달)
         /// </summary>
-        private void HandleCamouflageComplete(GameObject target)
+        private void OnCamouflageCompleteEvent(CamouflageCompleteEvent e)
         {
             PlaySound(s => s.PlayPerfectSound(), "PlayPerfectSound");
         }
@@ -206,7 +216,7 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의태 해제 시 호출 (→ None)
         /// </summary>
-        private void HandleCamouflageEnd(GameObject target)
+        private void OnCamouflageEndEvent(CamouflageEndEvent e)
         {
             // 의태 사이클당 End VFX 한 번만 생성 (중복 방지)
             if (_endVFXSpawnedForCurrentCycle)

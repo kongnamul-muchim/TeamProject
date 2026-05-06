@@ -8,6 +8,7 @@ using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Managers;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -82,6 +83,7 @@ namespace HideAndInk.Core.Enemy.Boss
         private Animator _animator;
         private PlayerLives _playerLives;
         private Rigidbody _playerRigidbody;
+        private IEventBus _eventBus;
 
         // 기믹 인터페이스 캐싱 (SOLID - ISP)
         private IGimmickPlayerAware _playerAware;
@@ -122,6 +124,13 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             isDefaultFacingLeft = defaultFacingLeft;
             base.Start();
+
+            // EventBus 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
+
             _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
             CacheCamouflageAdapter();
             CacheBossPlayerComponents();
@@ -1344,7 +1353,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 // Pit 슬로우 효과 (AmbushGimmick 전용: 이동 속도 감소)
                 if (_activeGimmick is AmbushGimmick ambush)
                 {
-                    EnemyEvents.InvokePlayerSlowed(pos, ambush.PitSlowPercent, ambush.PitSlowDuration);
+                    _eventBus?.Publish(new PlayerSlowedEvent(pos, ambush.PitSlowPercent, ambush.PitSlowDuration));
                 }
             };
         }

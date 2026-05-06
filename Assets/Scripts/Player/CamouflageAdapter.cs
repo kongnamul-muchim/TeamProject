@@ -44,6 +44,7 @@ namespace HideAndInk.Player
         private IMaterialCloner _materialCloner;
         private PlayerMovementAdapter _playerMovement;
         private Renderer _playerRenderer;
+        private IEventBus _eventBus;                      // EventBus 참조
 
         // ── 아키텍처: OnStateChanged 이벤트 구독 + 코루틴 기반 애니메이션 ──
 
@@ -109,6 +110,12 @@ namespace HideAndInk.Player
             var stateConfig = new CamouflageStateMachineConfig(attachDelay, lockTime, blendTime, perfectTime);
             _stateMachine = new CamouflageStateMachine(stateConfig);
 
+            // EventBus 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
+
             if (_playerRenderer != null)
             {
                 _materialCloner = new MaterialCloner(_playerRenderer);
@@ -137,14 +144,14 @@ namespace HideAndInk.Player
 
         private void OnEnable()
         {
-            // 조류 밀림 이벤트 구독
-            HideAndInk.Core.Events.TideEvents.OnPlayerPushed += OnPlayerPushedByTide;
+            // 조류 밀림 이벤트 구독 (EventBus 통해)
+            _eventBus?.Subscribe<PlayerPushedByTideEvent>(OnPlayerPushedByTideEvent);
         }
 
         private void OnDisable()
         {
             // 조류 밀림 이벤트 해제
-            HideAndInk.Core.Events.TideEvents.OnPlayerPushed -= OnPlayerPushedByTide;
+            _eventBus?.Unsubscribe<PlayerPushedByTideEvent>(OnPlayerPushedByTideEvent);
         }
 
         private void OnDestroy()
@@ -160,15 +167,13 @@ namespace HideAndInk.Player
         /// 조류에 밀렸을 때 처리
         /// 의태 중이고 타겟과의 거리가 detectionRadius를 벗어나면 의태 해제
         /// </summary>
-        private void OnPlayerPushedByTide(Vector3 pushDirection, float force)
+        private void OnPlayerPushedByTideEvent(PlayerPushedByTideEvent e)
         {
             if (_stateMachine.CurrentState == CamouflageState.None) return;
             if (_stateMachine.TargetObject == null) return;
 
-            // Player와 타겟 간 거리 체크
             float distanceToTarget = Vector3.Distance(transform.position, _stateMachine.TargetObject.transform.position);
 
-            // 거리가 탐지 반경을 벗어나면 의태 해제
             if (distanceToTarget > detectionRadius)
             {
 #if UNITY_EDITOR
@@ -184,7 +189,7 @@ namespace HideAndInk.Player
         private void CancelCamouflageDueToTide()
         {
             _didFireEndEvent = true;
-            CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+            _eventBus?.Publish(new CamouflageEndEvent(_stateMachine.TargetObject));
             _stateMachine.CancelCamouflage(); // → OnStateChanged(None) → OnExitCamouflage가 복원 처리
         }
 
@@ -247,19 +252,19 @@ namespace HideAndInk.Player
             if (cur == CamouflageState.Perfect && prev != CamouflageState.Perfect)
             {
                 _camouflageCooldown = 0f;
-                CamouflageEvents.InvokeStateChanged(cur);
-                CamouflageEvents.InvokeCamouflageComplete(_stateMachine.TargetObject);
+                _eventBus?.Publish(new CamouflageStateChangedEvent(cur));
+                _eventBus?.Publish(new CamouflageCompleteEvent(_stateMachine.TargetObject));
             }
             else if (cur != CamouflageState.None)
             {
-                CamouflageEvents.InvokeStateChanged(cur);
+                _eventBus?.Publish(new CamouflageStateChangedEvent(cur));
             }
         }
 
         private void OnEnterCamouflage(CamouflageState cur)
         {
             _materialCloner?.ApplyOctopusMaterial();
-            CamouflageEvents.InvokeStateChanged(cur);
+            _eventBus?.Publish(new CamouflageStateChangedEvent(cur));
 
             // 이동 블록 타이머 시작
             StartEnterDelay();
@@ -270,7 +275,7 @@ namespace HideAndInk.Player
             // End 이벤트 (외부에서 이미 발행했으면 스킵)
             if (!_didFireEndEvent)
             {
-                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                _eventBus?.Publish(new CamouflageEndEvent(_stateMachine.TargetObject));
             }
             _didFireEndEvent = false;
 
@@ -399,7 +404,7 @@ namespace HideAndInk.Player
             if (_stateMachine.CurrentState == CamouflageState.Perfect)
             {
                 _didFireEndEvent = true;
-                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                _eventBus?.Publish(new CamouflageEndEvent(_stateMachine.TargetObject));
                 _stateMachine.CancelCamouflage(); // → OnExitCamouflage가 복원 + PerfectCooldown 처리
                 return;
             }
@@ -444,7 +449,7 @@ namespace HideAndInk.Player
                 _camouflageCooldown = camouflageCooldownTime;
 
                 // 이벤트 (Start는 StateChanged보다 먼저)
-                CamouflageEvents.InvokeCamouflageStart(nearest);
+                _eventBus?.Publish(new CamouflageStartEvent(nearest));
 
                 // Outline 초기화
                 SetupOutlineForTarget(nearest);
@@ -477,7 +482,7 @@ namespace HideAndInk.Player
             if (!_stateMachine.IsPerfectReached)
             {
                 _didFireEndEvent = true;
-                CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+                _eventBus?.Publish(new CamouflageEndEvent(_stateMachine.TargetObject));
                 _stateMachine.CancelCamouflage(); // → OnExitCamouflage가 복원 처리
             }
             // else: Perfect 도달했으면 유지 (아무 동작 안 함)
@@ -696,7 +701,7 @@ namespace HideAndInk.Player
             if (_stateMachine.TargetObject != targetObject) return false;
 
             _didFireEndEvent = true;
-            CamouflageEvents.InvokeCamouflageEnd(_stateMachine.TargetObject);
+            _eventBus?.Publish(new CamouflageEndEvent(_stateMachine.TargetObject));
             _stateMachine.CancelCamouflage(); // → OnExitCamouflage가 복원 처리
             return true;
         }

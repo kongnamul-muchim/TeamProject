@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Player
 {
     /// <summary>
     /// [속도 둔화 관리] 성게 접촉 등 외부 효과로 인한 플레이어 속도 둔화를 관리한다.
-    /// - EnemyEvents.OnPlayerSlowed를 구독하여 스택 기반 둔화 적용
+    /// - EventBus를 통해 PlayerSlowedEvent 구독하여 스택 기반 둔화 적용
     /// - 각 스택은 독립적인 타이머를 가짐 (중첩 시 둔화율 곱연산)
     /// - 최대 스택 수 제한으로 과도한 둔화 방지
     /// </summary>
@@ -27,6 +29,7 @@ namespace HideAndInk.Player
         // 활성 둔화 효과 목록
         private readonly List<SlowStack> _activeStacks = new List<SlowStack>();
         private bool _needsUpdate = false;
+        private IEventBus _eventBus;
 
         private class SlowStack
         {
@@ -38,16 +41,21 @@ namespace HideAndInk.Player
         {
             if (playerAdapter == null)
                 playerAdapter = GetComponent<PlayerMovementAdapter>();
+
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
         }
 
         private void OnEnable()
         {
-            EnemyEvents.OnPlayerSlowed += HandlePlayerSlowed;
+            _eventBus?.Subscribe<PlayerSlowedEvent>(OnPlayerSlowedEvent);
         }
 
         private void OnDisable()
         {
-            EnemyEvents.OnPlayerSlowed -= HandlePlayerSlowed;
+            _eventBus?.Unsubscribe<PlayerSlowedEvent>(OnPlayerSlowedEvent);
             ClearAllStacks();
         }
 
@@ -71,13 +79,13 @@ namespace HideAndInk.Player
         /// <summary>
         /// 성게 둔화 이벤트 처리
         /// </summary>
-        private void HandlePlayerSlowed(Vector3 urchinPosition, float slowPercent, float duration)
+        private void OnPlayerSlowedEvent(PlayerSlowedEvent e)
         {
             // 새 둔화 스택 추가
             _activeStacks.Add(new SlowStack
             {
-                SlowPercent = Mathf.Clamp01(slowPercent),
-                RemainingTime = Mathf.Max(0f, duration)
+                SlowPercent = Mathf.Clamp01(e.SlowPercent),
+                RemainingTime = Mathf.Max(0f, e.Duration)
             });
 
             // 최대 중첩 수 제한 (가장 오래된 것부터 제거)
