@@ -324,7 +324,7 @@ public class ChichiFollower : MonoBehaviour
         spriteRenderer.flipX = flipX;
     }
 
-    private void HandleStateChanged(ChichiStateMachine.ChichiState state)
+    private void HandleStateChanged(ChichiState state)
     {
         _moveVelocity = Vector3.zero;
     }
