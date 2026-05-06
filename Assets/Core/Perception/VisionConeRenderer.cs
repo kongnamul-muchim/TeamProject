@@ -135,7 +135,7 @@ namespace HideAndInk.Core.Perception
                 Debug.Log($"[VisionConeRenderer] Initialized: mode={visibilityMode}, visible={IsRenderingActive}", this);
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (!_isInitialized)
             {
@@ -143,7 +143,6 @@ namespace HideAndInk.Core.Perception
                 if (!_isInitialized) return;
             }
 
-            // 가시성 모드에 따른 렌더링 제어
             if (!ShouldRender())
             {
                 if (IsRenderingActive)
