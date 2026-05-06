@@ -225,22 +225,32 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void SetSuspicionVignetteToMax()
         {
-            // UI_SuspicionVinette는 Canvas_Ingame의 자식
             var canvasObj = GameObject.Find("Canvas_Ingame");
-            if (canvasObj == null) return;
+            if (canvasObj == null)
+            {
+                Debug.LogError("[GameManager] Canvas_Ingame not found!");
+                return;
+            }
 
             var vignette = canvasObj.transform.Find("UI_SuspicionVinette");
-            if (vignette == null) return;
+            if (vignette == null)
+            {
+                Debug.LogError("[GameManager] UI_SuspicionVinette not found under Canvas_Ingame!");
+                return;
+            }
 
             var img = vignette.GetComponent<UnityEngine.UI.Image>();
-            if (img != null)
+            if (img == null)
             {
-                // SuspicionMeterUI와 동일한 방식: alpha = 의심도 100% 기준
-                // value=100 → alpha = 200/255 ≈ 0.784 (최대)
-                var color = img.color;
-                color.a = 200f / 255f;
-                img.color = color;
+                Debug.LogError("[GameManager] UI_SuspicionVinette has no Image component!");
+                return;
             }
+
+            float beforeAlpha = img.color.a;
+            var color = img.color;
+            color.a = 200f / 255f;
+            img.color = color;
+            Debug.Log($"[GameManager] Vignette alpha: {beforeAlpha:F3} → {img.color.a:F3} (GameObject.activeSelf={vignette.gameObject.activeSelf}, Image.enabled={img.enabled})");
         }
 
         /// <summary>
