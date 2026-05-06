@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Player;
+using HideAndInk.Core.Events;
 
 namespace HideAndInk.Core.Enemy.Normal
 {
@@ -262,7 +263,7 @@ namespace HideAndInk.Core.Enemy.Normal
             if (_playerLives.IsInvincible) return;
 
             // 🔴 데미지
-            _playerLives.TakeDamage();
+            _playerLives.TakeDamage(DeathCause.CrabAttack, gameObject.name);
             _damageTimer = damageCooldown;
 
             // 💥 넉백
@@ -343,7 +344,7 @@ namespace HideAndInk.Core.Enemy.Normal
             if (_playerLives == null || _playerLives.IsInvincible) return;
 
             // 데미지
-            _playerLives.TakeDamage();
+            _playerLives.TakeDamage(DeathCause.CrabAttack, gameObject.name);
             _damageTimer = damageCooldown;
 
             // 넉백
@@ -365,7 +366,7 @@ namespace HideAndInk.Core.Enemy.Normal
         private void OnDestroy()
         {
             // Rigidbody 정리 (추가한 경우)
-            if (_rigidbody != null && !GetComponent<Rigidbody>())
+            if (_rigidbody != null)
             {
                 Destroy(_rigidbody);
             }

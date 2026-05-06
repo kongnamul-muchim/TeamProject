@@ -1,8 +1,10 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using HideAndInk.Core.VFX;
 
 namespace HideAndInk.Core.Perception
@@ -60,12 +62,13 @@ namespace HideAndInk.Core.Perception
         [Tooltip("의태 시간에 비례한 VFX 재생 속도 배수 (1 = 기본 속도)")]
         [SerializeField] private float vfxSpeedMultiplier = 1f;
 
-        [Header("기존 효과 시스템 참조")]
-        [Tooltip("의태 시작/종료 시 사운드를 재생하는 컴포넌트 (ISoundEffect 구현 권장)")]
-        [SerializeField] private MonoBehaviour soundEffect;
+        [Header("SFX")]
+        [Tooltip("의태 시작/종료 시 사운드 재생 (DI: ISfxService)")]
+        [SerializeField] private bool useSfxService = true;
 
-        // 캐싱된 인터페이스 참조
-        private ISoundEffect _soundEffectInterface;
+        // DI로 주입받은 SFX 서비스
+        private ISfxService _sfxService;
+        private IEventBus _eventBus;
 
         private Transform _playerTransform;
         private GameObject _activeStartVFX;
@@ -78,7 +81,20 @@ namespace HideAndInk.Core.Perception
         private void Awake()
         {
             _playerTransform = transform;
-            _soundEffectInterface = soundEffect as ISoundEffect;
+
+            // DI 컨테이너에서 서비스 해결
+            if (GameManager.Container != null)
+            {
+                if (useSfxService && GameManager.Container.IsRegistered<ISfxService>())
+                {
+                    _sfxService = GameManager.Container.Resolve<ISfxService>();
+                }
+
+                if (GameManager.Container.IsRegistered<IEventBus>())
+                {
+                    _eventBus = GameManager.Container.Resolve<IEventBus>();
+                }
+            }
         }
 
         private void OnEnable()
@@ -90,20 +106,23 @@ namespace HideAndInk.Core.Perception
                 return;
             }
 
-            // 의태 이벤트 구독
-            CamouflageEvents.OnCamouflageStart += HandleCamouflageStart;
-            CamouflageEvents.OnCamouflageComplete += HandleCamouflageComplete;
-            CamouflageEvents.OnCamouflageEnd += HandleCamouflageEnd;
-            CamouflageEvents.OnStateChanged += HandleStateChanged;
+            if (_eventBus == null) return;
+
+            // 의태 이벤트 구독 (EventBus 통해)
+            _eventBus.Subscribe<CamouflageStartEvent>(OnCamouflageStartEvent);
+            _eventBus.Subscribe<CamouflageCompleteEvent>(OnCamouflageCompleteEvent);
+            _eventBus.Subscribe<CamouflageEndEvent>(OnCamouflageEndEvent);
+            _eventBus.Subscribe<CamouflageStateChangedEvent>(OnCamouflageStateChangedEvent);
         }
 
         private void OnDisable()
         {
-            // 의태 이벤트 구독 해제 (메모리 누수 방지)
-            CamouflageEvents.OnCamouflageStart -= HandleCamouflageStart;
-            CamouflageEvents.OnCamouflageComplete -= HandleCamouflageComplete;
-            CamouflageEvents.OnCamouflageEnd -= HandleCamouflageEnd;
-            CamouflageEvents.OnStateChanged -= HandleStateChanged;
+            if (_eventBus == null) return;
+
+            _eventBus.Unsubscribe<CamouflageStartEvent>(OnCamouflageStartEvent);
+            _eventBus.Unsubscribe<CamouflageCompleteEvent>(OnCamouflageCompleteEvent);
+            _eventBus.Unsubscribe<CamouflageEndEvent>(OnCamouflageEndEvent);
+            _eventBus.Unsubscribe<CamouflageStateChangedEvent>(OnCamouflageStateChangedEvent);
         }
 
         private void Update()
@@ -133,24 +152,23 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의태 상태 변화 처리 (Perfect 상태 도달 시 Start VFX 삭제)
         /// </summary>
-        private void HandleStateChanged(CamouflageState state)
+        private void OnCamouflageStateChangedEvent(CamouflageStateChangedEvent e)
         {
-            // Perfect 상태 도달 시 Start VFX 삭제
-            if (state == CamouflageState.Perfect)
+            if (e.State == CamouflageState.Perfect)
             {
                 if (_activeStartVFX != null)
                 {
                     Destroy(_activeStartVFX);
                     _activeStartVFX = null;
                 }
-                _wasPerfect = true; // Perfect 상태였음 기록
+                _wasPerfect = true;
             }
         }
 
         /// <summary>
         /// 의태 시작 시 호출 (None → Attached)
         /// </summary>
-        private void HandleCamouflageStart(GameObject target)
+        private void OnCamouflageStartEvent(CamouflageStartEvent e)
         {
             // 의태 사이클 시작 시 플래그 리셋
             _endVFXSpawnedForCurrentCycle = false;
@@ -191,22 +209,22 @@ namespace HideAndInk.Core.Perception
                 }
             }
 
-            // 사운드 효과 호출 (인터페이스 우선, 폴백으로 SendMessage)
-            PlaySound(s => s.PlayAttachSound(), "PlayAttachSound");
+            // 사운드 효과 재생
+            _sfxService?.Play(SfxId.CamouflageAttach);
         }
 
         /// <summary>
         /// 완벽 의태 달성 시 호출 (Perfect 도달)
         /// </summary>
-        private void HandleCamouflageComplete(GameObject target)
+        private void OnCamouflageCompleteEvent(CamouflageCompleteEvent e)
         {
-            PlaySound(s => s.PlayPerfectSound(), "PlayPerfectSound");
+            _sfxService?.Play(SfxId.CamouflagePerfect);
         }
 
         /// <summary>
         /// 의태 해제 시 호출 (→ None)
         /// </summary>
-        private void HandleCamouflageEnd(GameObject target)
+        private void OnCamouflageEndEvent(CamouflageEndEvent e)
         {
             // 의태 사이클당 End VFX 한 번만 생성 (중복 방지)
             if (_endVFXSpawnedForCurrentCycle)
@@ -298,7 +316,7 @@ namespace HideAndInk.Core.Perception
 
             _activeEndVFXs.Add(vfx);
 
-            PlaySound(s => s.PlayDetachSound(), "PlayDetachSound");
+            _sfxService?.Play(SfxId.CamouflageDetach);
         }
 
         /// <summary>
@@ -347,19 +365,5 @@ namespace HideAndInk.Core.Perception
             }
         }
 
-        /// <summary>
-        /// 사운드 효과 호출 (인터페이스 우선, 폴백으로 SendMessage)
-        /// </summary>
-        private void PlaySound(Action<ISoundEffect> interfaceCall, string fallbackMessage)
-        {
-            if (_soundEffectInterface != null)
-            {
-                interfaceCall(_soundEffectInterface);
-            }
-            else if (soundEffect != null)
-            {
-                soundEffect.SendMessage(fallbackMessage, SendMessageOptions.DontRequireReceiver);
-            }
-        }
     }
 }

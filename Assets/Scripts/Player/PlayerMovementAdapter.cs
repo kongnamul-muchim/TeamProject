@@ -1,6 +1,5 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
-using HideAndInk.Core.Managers;
 using HideAndInk.Core.Player;
 using HideAndInk.Scripts.Save;
 
@@ -61,16 +60,8 @@ namespace HideAndInk.Player
             // Config 객체 생성 (인스펙터 값 보존)
             var config = new PlayerMovementConfig(horizontalSpeed, verticalSpeed, acceleration, friction);
 
-            // DI 컨테이너에서 해결하거나 직접 생성
-            if (GameManager.Container != null && GameManager.Container.IsRegistered<IPlayerMovement>())
-            {
-                GameManager.Container.RegisterInstance<IPlayerMovementConfig>(config);
-                _playerMovement = GameManager.Container.Resolve<IPlayerMovement>();
-            }
-            else
-            {
-                _playerMovement = new PlayerMovement(config);
-            }
+            // IPlayerMovement 직접 생성 (DI 컨테이너 등록 대신 Config를 직접 주입)
+            _playerMovement = new PlayerMovement(config);
 
             // PlayerInk 자동 탐색 (같은 오브젝트)
             if (playerInk == null)
@@ -210,6 +201,9 @@ namespace HideAndInk.Player
         {
             int playerLayer = gameObject.layer;
 
+            // wallLayer 미설정 시 아무 동작 안 함
+            if (wallLayer.value == 0) return;
+
             // wallLayer에 포함된 모든 레이어에 대해 충돌 무시/복원
             for (int i = 0; i < 32; i++)
             {
@@ -221,7 +215,7 @@ namespace HideAndInk.Player
         }
 
         // 충돌 감지용 레이어
-        [Tooltip("벽 레이어 마스크")]
+        [Tooltip("벽 레이어 마스크 (설정 안 하면 충돌 무시/복원 미동작)")]
         [SerializeField] private LayerMask wallLayer;
     }
 }

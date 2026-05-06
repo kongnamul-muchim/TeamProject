@@ -1,6 +1,8 @@
 using UnityEngine;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Enemy.Normal;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Core.Environment
 {
@@ -60,9 +62,16 @@ namespace HideAndInk.Core.Environment
 
         // Player 의태 상태 캐싱
         private bool _wasCamouflaging;
+        private IEventBus _eventBus;
 
         private void Awake()
         {
+            // EventBus 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
+
             // 성게 풀 초기화
             if (seaUrchinPrefab != null)
             {
@@ -200,7 +209,7 @@ namespace HideAndInk.Core.Environment
             // 의태 중일 때 이벤트 발생 (CamouflageAdapter가 구독하여 거리 체크)
             if (isCamouflaging)
             {
-                TideEvents.InvokePlayerPushed(pushDirection, appliedForce);
+                _eventBus?.Publish(new PlayerPushedByTideEvent(pushDirection, appliedForce));
             }
         }
 

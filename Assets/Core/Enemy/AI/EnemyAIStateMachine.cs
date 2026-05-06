@@ -5,7 +5,7 @@ namespace HideAndInk.Core.Enemy.AI
 {
     /// <summary>
     /// Enemy AI 상태 머신
-    /// 순수 C# 클래스 (현재는 BossEnemyController에서 직접 생성)
+    /// BossEnemyController에서 직접 생성하여 사용 (DI 컨테이너 미사용 — 복잡한 생성자 의존성)
     /// </summary>
     public sealed class EnemyAIStateMachine
     {

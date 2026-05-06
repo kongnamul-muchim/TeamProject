@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using HideAndInk.Core.Interfaces;
 
 namespace HideAndInk.Core.Perception
@@ -23,6 +24,11 @@ namespace HideAndInk.Core.Perception
         private bool _isPerfectReached;
         private bool _wasKeyReleasedBeforePerfect; // Perfect 도달 전 키가 떼졌는지
 
+        /// <summary>
+        /// 상태 전환 시 발생 (이전 상태, 새 상태). Adapter가 polling 없이 반응 가능.
+        /// </summary>
+        public event Action<CamouflageState, CamouflageState> OnStateChanged;
+
         public CamouflageState CurrentState => _currentState;
         public GameObject TargetObject => _targetObject;
         public bool IsAttachedComplete => _isAttachedComplete;
@@ -44,11 +50,22 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
+        /// 상태 전환 시 매번 호출되는 통일 지점. OnStateChanged 이벤트 발행.
+        /// </summary>
+        private void SetState(CamouflageState newState)
+        {
+            if (_currentState == newState) return;
+            var prev = _currentState;
+            _currentState = newState;
+            OnStateChanged?.Invoke(prev, newState);
+        }
+
+        /// <summary>
         /// 초기 상태로 리셋
         /// </summary>
         private void Reset()
         {
-            _currentState = CamouflageState.None;
+            SetState(CamouflageState.None);
             _targetObject = null;
             _stateTimer = 0f;
             _blendProgress = 0f;
@@ -70,7 +87,7 @@ namespace HideAndInk.Core.Perception
             }
 
             _targetObject = target;
-            _currentState = CamouflageState.Attached;
+            SetState(CamouflageState.Attached);
             _stateTimer = 0f;
             _blendProgress = 0f;
             _isAttachedComplete = false;
@@ -93,8 +110,7 @@ namespace HideAndInk.Core.Perception
         /// <summary>
         /// 의태 해제
         /// </summary>
-        /// <param name="force">강제 취소 (키 입력으로 인한 취소)</param>
-        public void CancelCamouflage(bool force = false)
+        public void CancelCamouflage()
         {
             Reset();
         }
@@ -132,7 +148,7 @@ namespace HideAndInk.Core.Perception
                 case CamouflageState.Approaching:
                     // Approaching은 Locked → Partial 전환을 위한 과도기 상태
                     // 즉시 Partial로 전환
-                    _currentState = CamouflageState.Partial;
+                    SetState(CamouflageState.Partial);
                     _stateTimer = 0f;
                     break;
 
@@ -154,7 +170,7 @@ namespace HideAndInk.Core.Perception
             if (_stateTimer >= _attachDelay)
             {
                 _isAttachedComplete = true;
-                _currentState = CamouflageState.Locked;
+                SetState(CamouflageState.Locked);
                 _stateTimer = 0f;
             }
         }
@@ -167,7 +183,7 @@ namespace HideAndInk.Core.Perception
             if (_stateTimer >= _lockTime)
             {
                 _isLockComplete = true;
-                _currentState = CamouflageState.Approaching;
+                SetState(CamouflageState.Approaching);
                 _stateTimer = 0f;
             }
         }
@@ -183,7 +199,7 @@ namespace HideAndInk.Core.Perception
             if (_blendProgress >= 1f)
             {
                 _isPerfectReached = true;
-                _currentState = CamouflageState.Perfect;
+                SetState(CamouflageState.Perfect);
                 _stateTimer = 0f;
             }
         }

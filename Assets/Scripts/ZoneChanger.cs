@@ -1,3 +1,6 @@
+using HideAndInk.Core.Audio;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using UnityEngine;
 using UnityEngine.Events;
 using System.Collections;
@@ -107,6 +110,7 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
+    private ISfxService _sfxService;
     private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
     private GameObject _autoCreatedLeftBoundaryWall;
@@ -128,6 +132,12 @@ public class ZoneChanger : MonoBehaviour
         if (cameraFollow == null)
         {
             cameraFollow = FindObjectOfType<CameraFollow>();
+        }
+
+        // SFX 서비스 해결
+        if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+        {
+            _sfxService = GameManager.Container.Resolve<ISfxService>();
         }
 
         // 게임 시작 시 현재 활성 Zone의 Ground 동기화
@@ -476,6 +486,9 @@ public class ZoneChanger : MonoBehaviour
             // 구역 전환 이벤트 발생 (Save 등 외부에서 구독)
             if (toZoneNumber >= 0)
                 onZoneChanged?.Invoke(toZoneNumber);
+
+            // 구역 전환 효과음 재생
+            _sfxService?.Play(SfxId.StageClear);
         }
         else
         {

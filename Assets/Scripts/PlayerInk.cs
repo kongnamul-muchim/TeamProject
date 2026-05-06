@@ -1,3 +1,6 @@
+using HideAndInk.Core.Audio;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using UnityEngine;
 
 /// <summary>
@@ -36,6 +39,7 @@ public class PlayerInk : MonoBehaviour
     [Tooltip("접촉 충전 중 여부")]
     [SerializeField] private bool isContactCharging = false;
 
+    private ISfxService _sfxService;
     private bool _isDashing;
     private float _dashTimer;
     private ParticleSystem _runtimeSmokeEffect;
@@ -56,8 +60,19 @@ public class PlayerInk : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         currentInk = Mathf.Clamp(currentInk, 0f, maxInk);
+
+        // SFX 서비스 해결
+        if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+        {
+            _sfxService = GameManager.Container.Resolve<ISfxService>();
+        }
     }
 
     private void Update()
@@ -132,6 +147,9 @@ public class PlayerInk : MonoBehaviour
             effect.Play(true);
             effect.Emit(20);
         }
+
+        // 대시(먹물) 효과음 재생
+        _sfxService?.Play(SfxId.InkShoot);
 
         OnDashStarted?.Invoke(dashDuration, dashSpeedBoost);
         return true;

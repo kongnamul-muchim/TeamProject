@@ -8,6 +8,7 @@ using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Managers;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -82,6 +83,7 @@ namespace HideAndInk.Core.Enemy.Boss
         private Animator _animator;
         private PlayerLives _playerLives;
         private Rigidbody _playerRigidbody;
+        private IEventBus _eventBus;
 
         // 기믹 인터페이스 캐싱 (SOLID - ISP)
         private IGimmickPlayerAware _playerAware;
@@ -122,6 +124,13 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             isDefaultFacingLeft = defaultFacingLeft;
             base.Start();
+
+            // EventBus 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
+            {
+                _eventBus = GameManager.Container.Resolve<IEventBus>();
+            }
+
             _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
             CacheCamouflageAdapter();
             CacheBossPlayerComponents();
@@ -344,7 +353,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     dash.OnPlayerHit = () =>
                     {
                         if (_playerLives != null && !_playerLives.IsInvincible)
-                            _playerLives.TakeDamage();
+                            _playerLives.TakeDamage(DeathCause.GreatWhiteCharge, gameObject.name);
                     };
                     dash.OnObstacleDamaged = (obj) =>
                     {
@@ -368,7 +377,7 @@ namespace HideAndInk.Core.Enemy.Boss
                             _camouflageAdapter.CurrentTarget == obj;
                         if (wasPlayerInside && _playerLives != null && !_playerLives.IsInvincible)
                         {
-                            _playerLives.TakeDamage();
+                            _playerLives.TakeDamage(DeathCause.CamouflageObstacleDestroyed, obj.name);
                         }
                         Debug.Log("[DashChargeGimmick] 오브젝트 파괴 (HP 1→0): " + obj.name
                             + (wasPlayerInside ? " (Player 데미지)" : ""), obj);
@@ -484,7 +493,6 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_ambushProximityCooldown > 0f)
                 _ambushProximityCooldown -= deltaTime;
 
-            UpdateCamouflageState();
             UpdateSuspicion(canSeePlayer);
             UpdateVisionConeVisibility();
             CheckStateTransitions(canSeePlayer);
@@ -492,14 +500,6 @@ namespace HideAndInk.Core.Enemy.Boss
             UpdateGimmick(deltaTime);
             RestoreSpeedAfterGimmick();
             UpdatePitDebuff(deltaTime);
-        }
-
-        private void UpdateCamouflageState()
-        {
-            if (suspicionSystem == null) return;
-            bool isCamouflaging = IsPlayerCamouflaging();
-            bool isPerfect = _camouflageAdapter != null && _camouflageAdapter.IsPerfect;
-            suspicionSystem.SetCamouflageState(isCamouflaging, isPerfect);
         }
 
         private void UpdateGimmick(float deltaTime)
@@ -950,10 +950,6 @@ namespace HideAndInk.Core.Enemy.Boss
             if (bossSprite != null)
             {
                 bossSprite.flipX = flip;
-
-#if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] Facing: dir.x={dir.x:F2}, flipX={flip}, sprite={bossSprite.flipX}");
-#endif
             }
 
             // localEulerAngles.y 동기화 (ConeVisionSensor의 viewDirectionRef.forward 방향 보정)
@@ -1101,7 +1097,19 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_playerLives == null || _playerLives.IsInvincible) return;
             if (!CanBossDamagePlayer()) return;
 
-            _playerLives.TakeDamage();
+            _playerLives.TakeDamage(GetCurrentBossDeathCause(), gameObject.name);
+        }
+
+        /// <summary>
+        /// 현재 활성화된 기믹에 따른 사망 원인 반환
+        /// </summary>
+        private DeathCause GetCurrentBossDeathCause()
+        {
+            if (_activeGimmick is AmbushGimmick) return DeathCause.GajamiDash;
+            if (_activeGimmick is RelentlessChaseGimmick) return DeathCause.MorayCharge;
+            if (_activeGimmick is SwordfishGimmick) return DeathCause.SwordfishCharge;
+            if (_activeGimmick is DashChargeGimmick) return DeathCause.GreatWhiteCharge;
+            return DeathCause.BossCollision;
         }
 
         private bool CanBossDamagePlayer()
@@ -1244,7 +1252,7 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (_playerLives != null && !_playerLives.IsInvincible)
             {
-                _playerLives.TakeDamage();
+                _playerLives.TakeDamage(DeathCause.MorayCharge, gameObject.name);
                 ApplyKnockback();
             }
         }
@@ -1344,7 +1352,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 // Pit 슬로우 효과 (AmbushGimmick 전용: 이동 속도 감소)
                 if (_activeGimmick is AmbushGimmick ambush)
                 {
-                    EnemyEvents.InvokePlayerSlowed(pos, ambush.PitSlowPercent, ambush.PitSlowDuration);
+                    _eventBus?.Publish(new PlayerSlowedEvent(pos, ambush.PitSlowPercent, ambush.PitSlowDuration));
                 }
             };
         }

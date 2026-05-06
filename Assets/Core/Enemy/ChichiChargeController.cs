@@ -1,0 +1,341 @@
+using System;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
+using UnityEngine;
+
+namespace HideAndInk.Siyeon1
+{
+    [DisallowMultipleComponent]
+    public sealed class ChichiChargeController : MonoBehaviour
+    {
+        [Header("DI References")]
+        [Tooltip("치치 상태 머신 참조")]
+        [SerializeField] private ChichiStateMachine stateMachine;
+        [Tooltip("치치 잉크 탱크 참조")]
+        [SerializeField] private ChichiInkTank inkTank;
+        [Tooltip("두두(Player) Transform")]
+        [SerializeField] private Transform duduTransform;
+
+        [Header("Contact Check")]
+        [Tooltip("치치 접촉 감지 Collider")]
+        [SerializeField] private Collider chichiContactCollider;
+        [Tooltip("두두 접촉 감지 Collider")]
+        [SerializeField] private Collider duduContactCollider;
+
+        [Header("Input")]
+        [Tooltip("충전 키 (Inspector에서 설정)")]
+        [SerializeField] private KeyCode chargeKey = KeyCode.X;
+
+        [Header("Charge Rules")]
+        [Tooltip("충전을 시작할 접근 거리")]
+        [SerializeField] private float approachDistance = 1.2f;
+        [Tooltip("실제 충전이 가능한 접촉 거리")]
+        [SerializeField] private float contactDistance = 0.05f;
+        [Tooltip("충전 게이지가 100%까지 차는 시간(초)")]
+        [SerializeField] private float chargeDuration = 2f;
+        [Tooltip("두두가 의태 중일 때도 충전 가능")]
+        [SerializeField] private bool canChargeWhileDuduCamouflaged;
+        [Tooltip("두두가 도망 중일 때도 충전 가능")]
+        [SerializeField] private bool canChargeWhileDuduFleeing;
+        [Tooltip("접촉이 끊기면 충전 게이지 초기화")]
+        [SerializeField] private bool resetProgressWhenContactLost = true;
+
+        private bool isApproaching;
+        private bool isCharging;
+        private float chargeTimer;
+        private bool chargeBreak; // 위협/중단 시 충전 로직 완전 차단, X키 재입력 시 해제
+        private IDuduInkReceiver inkReceiver;
+        private IDuduStateProvider stateProvider;
+        private IDuduContactChargeSession contactChargeSession;
+
+        public KeyCode ChargeKey => chargeKey;
+        public float ChargeProgress01 => isCharging && chargeDuration > 0f ? Mathf.Clamp01(chargeTimer / chargeDuration) : 0f;
+        public bool IsApproaching => isApproaching;
+        public bool IsCharging => isCharging;
+        public string ChargeStatus { get; private set; } = "대기";
+
+        // Lazy resolve: Start() 시점이 아닌 최초 사용 시점에 DI 해결
+        // (DuduDevelopChargeAdapter가 아직 등록되지 않았을 수 있으므로)
+        private IDuduInkReceiver InkReceiver
+        {
+            get
+            {
+                EnsureDependencies();
+                return inkReceiver;
+            }
+        }
+        private IDuduStateProvider StateProvider
+        {
+            get
+            {
+                EnsureDependencies();
+                return stateProvider;
+            }
+        }
+        private IDuduContactChargeSession ContactChargeSession
+        {
+            get
+            {
+                EnsureDependencies();
+                return contactChargeSession;
+            }
+        }
+
+        public event Action ChargeRequested;
+        public event Action ChargeApproachStarted;
+        public event Action ChargingStarted;
+        public event Action<float> ChargeProgressChanged;
+        public event Action<float> ChargeCompleted;
+        public event Action ChargeInterrupted;
+        public event Action ChargeEnded;
+
+        private void Start()
+        {
+            // NOTE: DI 의존성은 Start()에서 바로 resolve하지 않음.
+            // DuduDevelopChargeAdapter가 아직 DI 등록을 안 했을 수 있기 때문.
+            // 대신 CanBeginChargeRequest()에서 최초 사용 시점에 지연 해결(lazy resolve)함.
+            ResolvePlayerTransform();
+        }
+
+        private void ResolvePlayerTransform()
+        {
+            // PlayerInk.Instance 싱글톤으로 Player Transform 및 Collider 확보
+            // (크로스-프리팹 참조가 깨져서 위치/충돌이 업데이트되지 않는 문제 회피)
+            // 주의: 프리팹에 할당된 참조가 null이 아니어도 깨진 경우가 있으므로 무조건 덮어씀
+            if (PlayerInk.Instance != null)
+            {
+                duduTransform = PlayerInk.Instance.transform;
+                duduContactCollider = PlayerInk.Instance.GetComponent<Collider>();
+            }
+
+            if (duduTransform == null)
+            {
+                Debug.LogError("[ChichiChargeController] duduTransform을 찾을 수 없음! PlayerInk가 씬에 있는지 확인.", this);
+            }
+        }
+
+        /// <summary>
+        /// 최초 사용 시점에 DI 의존성을 지연 해결 (lazy resolve).
+        /// Start() 순서에 의존하지 않으므로 DuduDevelopChargeAdapter가 등록된 후 정상 동작함.
+        /// 이미 해결된 경우 아무것도 하지 않음.
+        /// </summary>
+        private void EnsureDependencies()
+        {
+            if (inkReceiver != null && stateProvider != null && contactChargeSession != null)
+            {
+                return; // 이미 모두 해결됨
+            }
+
+            if (GameManager.Container == null)
+            {
+                return; // 아직 Container 미준비, 다음 기회에 재시도
+            }
+
+            if (inkReceiver == null && GameManager.Container.IsRegistered<IDuduInkReceiver>())
+            {
+                inkReceiver = GameManager.Container.Resolve<IDuduInkReceiver>();
+            }
+
+            if (stateProvider == null && GameManager.Container.IsRegistered<IDuduStateProvider>())
+            {
+                stateProvider = GameManager.Container.Resolve<IDuduStateProvider>();
+            }
+
+            if (contactChargeSession == null && GameManager.Container.IsRegistered<IDuduContactChargeSession>())
+            {
+                contactChargeSession = GameManager.Container.Resolve<IDuduContactChargeSession>();
+            }
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(chargeKey))
+            {
+                TryStartApproach();
+            }
+
+            if (isApproaching)
+            {
+                UpdateApproach();
+            }
+
+            if (isCharging)
+            {
+                UpdateCharging();
+            }
+        }
+
+        public bool TryStartApproach()
+        {
+            if (isApproaching || isCharging)
+            {
+                return true;
+            }
+
+            // 사용자가 X를 직접 누름 → chargeBreak 해제
+            chargeBreak = false;
+
+            ChargeStatus = "충전 요청";
+            ChargeRequested?.Invoke();
+
+            if (!CanBeginChargeRequest())
+            {
+                return false;
+            }
+
+            isApproaching = true;
+            isCharging = false;
+            chargeTimer = 0f;
+            ContactChargeSession?.SetContactCharging(true);
+            ChargeStatus = "두두에게 이동 중";
+            ChargeApproachStarted?.Invoke();
+            return true;
+        }
+
+        public void InterruptCharge()
+        {
+            if (!isApproaching && !isCharging)
+            {
+                return;
+            }
+
+            StopChargeFlow(true);
+        }
+
+        private bool CanBeginChargeRequest()
+        {
+            if (chargeBreak)
+            {
+                ChargeStatus = "충전 차단: X키를 다시 눌러 충전 재시작";
+                return false;
+            }
+
+            if (duduTransform == null || inkTank == null || !inkTank.CanSpendCharge)
+            {
+                ChargeStatus = "충전 불가: 치치 탱크/두두 위치 확인";
+                return false;
+            }
+
+            IDuduStateProvider provider = StateProvider;
+            if (provider != null)
+            {
+                if (!canChargeWhileDuduCamouflaged && (provider.CurrentState == DuduState.AutoCamouflaging || provider.CurrentState == DuduState.PerfectCamouflage))
+                {
+                    ChargeStatus = "충전 불가: 두두가 의태 중";
+                    return false;
+                }
+
+                if (!canChargeWhileDuduFleeing && provider.CurrentState == DuduState.Fleeing)
+                {
+                    ChargeStatus = "충전 불가: 두두가 도망 중";
+                    return false;
+                }
+
+                if (provider.CurrentState == DuduState.Dead)
+                {
+                    ChargeStatus = "충전 불가: 두두 사망";
+                    return false;
+                }
+            }
+
+            IDuduInkReceiver receiver = InkReceiver;
+            if (receiver == null || !receiver.CanReceiveInk)
+            {
+                ChargeStatus = "충전 불가: 두두 잉크/먹물/상태 확인";
+                return false;
+            }
+
+            return stateMachine == null || stateMachine.CanChargeDudu(canChargeWhileDuduCamouflaged, canChargeWhileDuduFleeing);
+        }
+
+        private void UpdateApproach()
+        {
+            if (!CanBeginChargeRequest())
+            {
+                StopChargeFlow(true);
+                return;
+            }
+
+            if (IsTouchingDudu())
+            {
+                isApproaching = false;
+                isCharging = true;
+                chargeTimer = 0f;
+                ChargeStatus = "충전 중";
+                ChargingStarted?.Invoke();
+            }
+        }
+
+        private void UpdateCharging()
+        {
+            if (!CanBeginChargeRequest() || !IsTouchingDudu())
+            {
+                if (resetProgressWhenContactLost)
+                {
+                    StopChargeFlow(true);
+                }
+                return;
+            }
+
+            chargeTimer += Time.deltaTime;
+            float progress = ChargeProgress01;
+            ChargeStatus = $"충전 중 {Mathf.RoundToInt(progress * 100f)}%";
+            ChargeProgressChanged?.Invoke(progress);
+
+            // 점진적 잉크 전달: chargeDuration 동안 chargeAmountPerUse만큼 천천히 회복
+            if (chargeDuration > 0f && inkTank.CanSpendCharge)
+            {
+                float transferThisFrame = (inkTank.ChargeAmountPerUse / chargeDuration) * Time.deltaTime;
+                InkReceiver?.AddInk(transferThisFrame);
+            }
+
+            if (chargeTimer < chargeDuration)
+            {
+                return;
+            }
+
+            // 충전 완료: 치치 탱크에서 차감
+            float tankAmount = inkTank.SpendCharge();
+            ChargeStatus = $"충전 완료: +{Mathf.RoundToInt(tankAmount)}";
+            ChargeCompleted?.Invoke(tankAmount);
+            StopChargeFlow(false);
+        }
+
+        private bool IsTouchingDudu()
+        {
+            if (chichiContactCollider != null && duduContactCollider != null)
+            {
+                Bounds chichiBounds = chichiContactCollider.bounds;
+                Bounds duduBounds = duduContactCollider.bounds;
+
+                return chichiBounds.min.x <= duduBounds.max.x &&
+                       chichiBounds.max.x >= duduBounds.min.x &&
+                       chichiBounds.min.y <= duduBounds.max.y &&
+                       chichiBounds.max.y >= duduBounds.min.y;
+            }
+
+            return duduTransform != null && Vector3.Distance(transform.position, duduTransform.position) <= contactDistance;
+        }
+
+        private void StopChargeFlow(bool interrupted)
+        {
+            bool wasActive = isApproaching || isCharging;
+            isApproaching = false;
+            isCharging = false;
+            chargeTimer = 0f;
+            ContactChargeSession?.SetContactCharging(false);
+            ChargeProgressChanged?.Invoke(0f);
+            if (wasActive)
+            {
+                if (interrupted)
+                {
+                    ChargeStatus = "충전 중단";
+                    chargeBreak = true; // X키 재입력 전까지 충전 차단
+                    ChargeInterrupted?.Invoke();
+                }
+
+                ChargeEnded?.Invoke();
+            }
+        }
+    }
+}
