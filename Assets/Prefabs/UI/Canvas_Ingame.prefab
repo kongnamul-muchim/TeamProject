@@ -223,6 +223,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7827595935999683390}
   - component: {fileID: 4877939927497954926}
+  - component: {fileID: 3170952406697800609}
   m_Layer: 5
   m_Name: HP_Container
   m_TagString: Untagged
@@ -278,6 +279,25 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &3170952406697800609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 299977116837909502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7453f4e0c6e47c7885f4a8e14d0dd27, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Scripts.UI.PlayerHPUI
+  playerLives: {fileID: 0}
+  heartImages:
+  - {fileID: 5507669561148981021}
+  - {fileID: 7392127870181856726}
+  - {fileID: 7776575921340529955}
+  blinkDuration: 1
+  blinkFrequency: 10
 --- !u!1 &711663973258860092
 GameObject:
   m_ObjectHideFlags: 0
@@ -1144,7 +1164,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5591468897430404632}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 3372833323247607108}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.PauseHandler, HideAndInk
+        m_MethodName: TogglePause
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &2384225019589326110
 GameObject:
   m_ObjectHideFlags: 0
@@ -1486,86 +1518,19 @@ MonoBehaviour:
   m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
-      m_Calls: []
---- !u!1 &3284882257439292447
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2817398106502749429}
-  - component: {fileID: 866397323140549725}
-  - component: {fileID: 329965259332104756}
-  m_Layer: 5
-  m_Name: Text (Legacy) (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &2817398106502749429
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3284882257439292447}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3941961476890629209}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 1}
-  m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -50}
-  m_SizeDelta: {x: 160, y: 30}
-  m_Pivot: {x: 0.5, y: 1}
---- !u!222 &866397323140549725
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3284882257439292447}
-  m_CullTransparentMesh: 1
---- !u!114 &329965259332104756
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3284882257439292447}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 50
-    m_FontStyle: 0
-    m_BestFit: 0
-    m_MinSize: 5
-    m_MaxSize: 50
-    m_Alignment: 1
-    m_AlignByGeometry: 0
-    m_RichText: 1
-    m_HorizontalOverflow: 1
-    m_VerticalOverflow: 1
-    m_LineSpacing: 1
-  m_Text: New Text
+      m_Calls:
+      - m_Target: {fileID: 1611777033733680414}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetSfxVolume
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &3364405650498998894
 GameObject:
   m_ObjectHideFlags: 0
@@ -1861,7 +1826,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 6129833010973450079}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1611777033733680414}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: OnGoTitleClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &3708635821178451653
 GameObject:
   m_ObjectHideFlags: 0
@@ -1999,85 +1976,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1 &3859983563878830531
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6184504420211466009}
-  - component: {fileID: 7562356257677357095}
-  - component: {fileID: 5217303176932014810}
-  m_Layer: 5
-  m_Name: Text (Legacy)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &6184504420211466009
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3859983563878830531}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3941961476890629209}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 1}
-  m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 160, y: 30}
-  m_Pivot: {x: 0.5, y: 1}
---- !u!222 &7562356257677357095
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3859983563878830531}
-  m_CullTransparentMesh: 1
---- !u!114 &5217303176932014810
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3859983563878830531}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_FontData:
-    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 50
-    m_FontStyle: 0
-    m_BestFit: 0
-    m_MinSize: 5
-    m_MaxSize: 50
-    m_Alignment: 1
-    m_AlignByGeometry: 0
-    m_RichText: 1
-    m_HorizontalOverflow: 1
-    m_VerticalOverflow: 1
-    m_LineSpacing: 1
-  m_Text: New Text
 --- !u!1 &3895007156856911955
 GameObject:
   m_ObjectHideFlags: 0
@@ -2736,6 +2634,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5425774290244261522}
+  - component: {fileID: 1611777033733680414}
   m_Layer: 5
   m_Name: Popup_Pause
   m_TagString: Untagged
@@ -2771,6 +2670,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1611777033733680414
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4696767313281621923}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2269d14b00e70b4fa4a5177182988b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Scripts.UI.SettingsPopup
+  titleSceneBuildIndex: 0
+  titleSceneName: 0.TitleScene
+  fadeInObjPrefab: {fileID: 1909509472827441946, guid: d10e4f5c0a0402f41ab008c45322b772, type: 3}
+  useSceneTransition: 1
 --- !u!1 &4696965944943316751
 GameObject:
   m_ObjectHideFlags: 0
@@ -3043,6 +2958,8 @@ GameObject:
   m_Component:
   - component: {fileID: 8486111147966446146}
   - component: {fileID: 1156808344343466681}
+  - component: {fileID: 8123400158842844049}
+  - component: {fileID: 3372833323247607108}
   m_Layer: 5
   m_Name: GameObject
   m_TagString: Untagged
@@ -3082,14 +2999,40 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Perception.SuspicionMeterUI
   bossSuspicionSystem: {fileID: 0}
-  suspicionFillImage: {fileID: 0}
-  suspicionText: {fileID: 5217303176932014810}
-  suspicionLevelText: {fileID: 329965259332104756}
-  safeColor: {r: 0, g: 1, b: 0, a: 1}
-  cautionColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  dangerColor: {r: 1, g: 0.5, b: 0, a: 1}
-  criticalColor: {r: 1, g: 0, b: 0, a: 1}
-  detectedColor: {r: 1, g: 0, b: 1, a: 1}
+  suspicionFillImage: {fileID: 4177863813800453462}
+--- !u!114 &8123400158842844049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4948577365126826780}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c6d288386b18934a81728a5d3c2c512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Scripts.UI.GameOverUI
+  gameOverPanel: {fileID: 2487066404578454712}
+  logText: {fileID: 3572697049173125798}
+  continueButton: {fileID: 4209574997670955511}
+  restartButton: {fileID: 4052093065796394915}
+  titleButton: {fileID: 4441565675578094579}
+  fadeInObjPrefab: {fileID: 1909509472827441946, guid: d10e4f5c0a0402f41ab008c45322b772, type: 3}
+  titleSceneIndex: 0
+  gameSceneIndex: 1
+--- !u!114 &3372833323247607108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4948577365126826780}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 016d83b110e6cc74889b35e6fb5fbb80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Scripts.UI.PauseHandler
+  pausePopup: {fileID: 4696767313281621923}
 --- !u!1 &5066045519501807684
 GameObject:
   m_ObjectHideFlags: 0
@@ -3511,7 +3454,19 @@ MonoBehaviour:
   m_Group: {fileID: 0}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1611777033733680414}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetSfxMute
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_IsOn: 1
 --- !u!1 &5954422058091443713
 GameObject:
@@ -3912,7 +3867,19 @@ MonoBehaviour:
   m_Value: 1
   m_OnValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1611777033733680414}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetBgmVolume
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &6427540180061885977
 GameObject:
   m_ObjectHideFlags: 0
@@ -4150,6 +4117,7 @@ GameObject:
   - component: {fileID: 4878284967680893190}
   - component: {fileID: 7013581305025798665}
   - component: {fileID: 5456453960804518103}
+  - component: {fileID: 468794229967792100}
   m_Layer: 5
   m_Name: InkGauge_Frame
   m_TagString: Untagged
@@ -4215,6 +4183,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &468794229967792100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7439586772749919852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bf2f8e48eb74e64bac8f677366b777f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::InkGaugeUI
+  playerInk: {fileID: 0}
+  inkFillImage: {fileID: 8714632146680259593}
 --- !u!1 &7570228841138238237
 GameObject:
   m_ObjectHideFlags: 0
@@ -4668,7 +4650,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1440571440350258423}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 3372833323247607108}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.PauseHandler, HideAndInk
+        m_MethodName: ResumeGame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &8002560091602375977
 GameObject:
   m_ObjectHideFlags: 0
@@ -4701,8 +4695,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8486111147966446146}
-  - {fileID: 6184504420211466009}
-  - {fileID: 2817398106502749429}
   - {fileID: 7377683963900192403}
   - {fileID: 3974023145462530460}
   - {fileID: 2471382136364221772}
@@ -4934,7 +4926,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2471382136364221772
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4975,7 +4967,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.78431374}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -5212,7 +5204,19 @@ MonoBehaviour:
   m_Group: {fileID: 0}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1611777033733680414}
+        m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
+        m_MethodName: SetBgmMute
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_IsOn: 1
 --- !u!1 &8865769799793144011
 GameObject:

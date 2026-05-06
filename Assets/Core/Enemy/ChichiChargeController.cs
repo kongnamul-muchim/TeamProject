@@ -54,9 +54,32 @@ namespace HideAndInk.Siyeon1
         public bool IsCharging => isCharging;
         public string ChargeStatus { get; private set; } = "대기";
 
-        private IDuduInkReceiver InkReceiver => inkReceiver;
-        private IDuduStateProvider StateProvider => stateProvider;
-        private IDuduContactChargeSession ContactChargeSession => contactChargeSession;
+        // Lazy resolve: Start() 시점이 아닌 최초 사용 시점에 DI 해결
+        // (DuduDevelopChargeAdapter가 아직 등록되지 않았을 수 있으므로)
+        private IDuduInkReceiver InkReceiver
+        {
+            get
+            {
+                EnsureDependencies();
+                return inkReceiver;
+            }
+        }
+        private IDuduStateProvider StateProvider
+        {
+            get
+            {
+                EnsureDependencies();
+                return stateProvider;
+            }
+        }
+        private IDuduContactChargeSession ContactChargeSession
+        {
+            get
+            {
+                EnsureDependencies();
+                return contactChargeSession;
+            }
+        }
 
         public event Action ChargeRequested;
         public event Action ChargeApproachStarted;
@@ -68,7 +91,9 @@ namespace HideAndInk.Siyeon1
 
         private void Start()
         {
-            ResolveDependencies();
+            // NOTE: DI 의존성은 Start()에서 바로 resolve하지 않음.
+            // DuduDevelopChargeAdapter가 아직 DI 등록을 안 했을 수 있기 때문.
+            // 대신 CanBeginChargeRequest()에서 최초 사용 시점에 지연 해결(lazy resolve)함.
             ResolvePlayerTransform();
         }
 
@@ -89,39 +114,36 @@ namespace HideAndInk.Siyeon1
             }
         }
 
-        private void ResolveDependencies()
+        /// <summary>
+        /// 최초 사용 시점에 DI 의존성을 지연 해결 (lazy resolve).
+        /// Start() 순서에 의존하지 않으므로 DuduDevelopChargeAdapter가 등록된 후 정상 동작함.
+        /// 이미 해결된 경우 아무것도 하지 않음.
+        /// </summary>
+        private void EnsureDependencies()
         {
-            if (GameManager.Container == null)
+            if (inkReceiver != null && stateProvider != null && contactChargeSession != null)
             {
-                Debug.LogWarning("[ChichiChargeController] GameManager.Container가 null! DI 서비스 해석 불가.", this);
-                return;
+                return; // 이미 모두 해결됨
             }
 
-            if (GameManager.Container.IsRegistered<IDuduInkReceiver>())
+            if (GameManager.Container == null)
+            {
+                return; // 아직 Container 미준비, 다음 기회에 재시도
+            }
+
+            if (inkReceiver == null && GameManager.Container.IsRegistered<IDuduInkReceiver>())
             {
                 inkReceiver = GameManager.Container.Resolve<IDuduInkReceiver>();
             }
-            else
-            {
-                Debug.LogWarning("[ChichiChargeController] IDuduInkReceiver가 DI에 등록되지 않음! DuduDevelopChargeAdapter가 Player에 있는지 확인.", this);
-            }
 
-            if (GameManager.Container.IsRegistered<IDuduStateProvider>())
+            if (stateProvider == null && GameManager.Container.IsRegistered<IDuduStateProvider>())
             {
                 stateProvider = GameManager.Container.Resolve<IDuduStateProvider>();
             }
-            else
-            {
-                Debug.LogWarning("[ChichiChargeController] IDuduStateProvider가 DI에 등록되지 않음!", this);
-            }
 
-            if (GameManager.Container.IsRegistered<IDuduContactChargeSession>())
+            if (contactChargeSession == null && GameManager.Container.IsRegistered<IDuduContactChargeSession>())
             {
                 contactChargeSession = GameManager.Container.Resolve<IDuduContactChargeSession>();
-            }
-            else
-            {
-                Debug.LogWarning("[ChichiChargeController] IDuduContactChargeSession이 DI에 등록되지 않음!", this);
             }
         }
 
