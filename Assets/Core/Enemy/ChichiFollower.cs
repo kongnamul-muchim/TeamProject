@@ -7,7 +7,7 @@ using HideAndInk.Siyeon1;
 /// [이동] 치치의 이동만 담당한다.
 /// - 거리 이내: 가만히 있음 (스프라이트만 Player 방향에 따라 변경)
 /// - 거리 초과: Player의 뒤로 부드럽게 이동
-/// - 충전 중(Player가 Collider 안에 있음): 완전히 멈춤
+/// - 충전 중(ApproachCharge / Charging 상태): 완전히 멈춤
 /// </summary>
 public class ChichiFollower : MonoBehaviour
 {
@@ -73,24 +73,25 @@ public class ChichiFollower : MonoBehaviour
 
     private void Start()
     {
-        if (stateMachine == null || stateMachine.Target == null)
+        if (stateMachine == null || GetPlayerTransform() == null)
             return;
 
         if (playerMovement != null)
             _smoothedPlayerDirection = MoveDirectionToVector(playerMovement.Direction);
 
-        stateMachine.OnStateChanged += HandleStateChanged;
+        stateMachine.StateChanged += HandleStateChanged;
     }
 
     private void OnDestroy()
     {
         if (stateMachine != null)
-            stateMachine.OnStateChanged -= HandleStateChanged;
+            stateMachine.StateChanged -= HandleStateChanged;
     }
 
     private void LateUpdate()
     {
-        if (stateMachine == null || stateMachine.Target == null)
+        Transform playerTransform = GetPlayerTransform();
+        if (stateMachine == null || playerTransform == null)
             return;
 
         // Player의 스프라이트 방향 가져오기
@@ -98,7 +99,7 @@ public class ChichiFollower : MonoBehaviour
         Vector3 playerForward = MoveDirectionToVector(playerDir);
 
         // Player 방향 부드럽게 업데이트 (Charging 중에는 업데이트 안 함)
-        if (!stateMachine.IsTouchingTank)
+        if (!IsInChargingState())
         {
             _smoothedPlayerDirection = Vector3.Lerp(_smoothedPlayerDirection, playerForward, turnSpeed * Time.deltaTime);
             if (_smoothedPlayerDirection.sqrMagnitude > 0.00001f)
@@ -106,11 +107,11 @@ public class ChichiFollower : MonoBehaviour
         }
 
         // Player와 치치 거리 계산 (X, Z 각각 독립 체크)
-        _distanceX = Mathf.Abs(stateMachine.Target.position.x - transform.position.x);
-        _distanceZ = Mathf.Abs(stateMachine.Target.position.z - transform.position.z);
+        _distanceX = Mathf.Abs(playerTransform.position.x - transform.position.x);
+        _distanceZ = Mathf.Abs(playerTransform.position.z - transform.position.z);
 
         // 충전 상태 판단 (히스테리시로 토글 방지)
-        bool shouldCharge = stateMachine.IsTouchingTank && CanReceiveInk();
+        bool shouldCharge = IsInChargingState() && CanReceiveInk();
         _chargeStateCooldown -= Time.deltaTime;
 
         if (shouldCharge && !_isCurrentlyCharging && _chargeStateCooldown <= 0f)
@@ -170,6 +171,22 @@ public class ChichiFollower : MonoBehaviour
         }
     }
 
+    private Transform GetPlayerTransform()
+    {
+        if (stateMachine != null && stateMachine.DuduTransform != null)
+            return stateMachine.DuduTransform;
+        if (PlayerInk.Instance != null)
+            return PlayerInk.Instance.transform;
+        return null;
+    }
+
+    private bool IsInChargingState()
+    {
+        if (stateMachine == null) return false;
+        return stateMachine.CurrentState == ChichiState.Charging
+            || stateMachine.CurrentState == ChichiState.ApproachCharge;
+    }
+
     private bool CanReceiveInk()
     {
         var listener = stateMachine.GetComponent<IChichiStateListener>();
@@ -214,7 +231,8 @@ public class ChichiFollower : MonoBehaviour
             sideDirection = Vector3.right;
         }
 
-        Vector3 targetPosition = stateMachine.Target.position;
+        Transform playerTransform = GetPlayerTransform();
+        Vector3 targetPosition = playerTransform != null ? playerTransform.position : transform.position;
         Vector3 planarOffset = behindDirection * followBehindDistance + sideDirection * currentSideOffset + new Vector3(guideOffset.x, 0f, 0f);
 
         return new Vector3(
@@ -277,8 +295,11 @@ public class ChichiFollower : MonoBehaviour
         if (spriteRenderer == null)
             return;
 
+        Transform playerTransform = GetPlayerTransform();
+        if (playerTransform == null) return;
+
         // Player가 치치 방향으로 움직이는지 확인
-        Vector3 toChichi = (transform.position - stateMachine.Target.position).normalized;
+        Vector3 toChichi = (transform.position - playerTransform.position).normalized;
         toChichi.y = 0f;
         Vector3 playerMoveDir = MoveDirectionToVector(playerDir);
         float alignment = Vector3.Dot(playerMoveDir, toChichi);
