@@ -77,9 +77,9 @@ Material:
     - _dis: 0
     - _refraction: 0.05
     m_Colors:
-    - Color_551f3de45b3f45d188af0756b6c21b12: {r: 0.494117, g: 0.784313, b: 0.890196, a: 1}
-    - _RayColor: {r: 1, g: 0.9764706, b: 0.76862746, a: 0.65882355}
-    - _color: {r: 0.84705883, g: 0.92941177, b: 0.85490197, a: 1}
+    - Color_551f3de45b3f45d188af0756b6c21b12: {r: 0.494, g: 0.784, b: 0.89, a: 1}
+    - _RayColor: {r: 1, g: 0.976, b: 0.769, a: 0.659}
+    - _color: {r: 0.847, g: 0.929, b: 0.855, a: 1}
     - _normalUV: {r: 1, g: 1, b: 0.2, a: 0.1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

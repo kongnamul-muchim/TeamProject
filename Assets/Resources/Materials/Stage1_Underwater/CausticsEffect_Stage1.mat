@@ -52,15 +52,15 @@ Material:
     m_Ints: []
     m_Floats:
     - Vector1_2d55d1f1ca7d4fa09be73286968b089f: 50
-    - _Alpha: 0.1
+    - _Alpha: 0.263
     - _DecalMeshBiasType: 0
     - _DecalMeshDepthBias: 0
     - _DecalMeshViewBias: 0
-    - _Density: 1
+    - _Density: 4
     - _DrawOrder: 0
     - _Effect: 0.1
     - _Offset: 5
-    - _Power: 1
+    - _Power: 5
     - _QueueControl: 0
     - _QueueOffset: 0
     m_Colors:
