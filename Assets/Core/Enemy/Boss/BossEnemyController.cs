@@ -353,7 +353,7 @@ namespace HideAndInk.Core.Enemy.Boss
                     dash.OnPlayerHit = () =>
                     {
                         if (_playerLives != null && !_playerLives.IsInvincible)
-                            _playerLives.TakeDamage();
+                            _playerLives.TakeDamage(DeathCause.GreatWhiteCharge, gameObject.name);
                     };
                     dash.OnObstacleDamaged = (obj) =>
                     {
@@ -377,7 +377,7 @@ namespace HideAndInk.Core.Enemy.Boss
                             _camouflageAdapter.CurrentTarget == obj;
                         if (wasPlayerInside && _playerLives != null && !_playerLives.IsInvincible)
                         {
-                            _playerLives.TakeDamage();
+                            _playerLives.TakeDamage(DeathCause.CamouflageObstacleDestroyed, obj.name);
                         }
                         Debug.Log("[DashChargeGimmick] 오브젝트 파괴 (HP 1→0): " + obj.name
                             + (wasPlayerInside ? " (Player 데미지)" : ""), obj);
@@ -1101,7 +1101,19 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_playerLives == null || _playerLives.IsInvincible) return;
             if (!CanBossDamagePlayer()) return;
 
-            _playerLives.TakeDamage();
+            _playerLives.TakeDamage(GetCurrentBossDeathCause(), gameObject.name);
+        }
+
+        /// <summary>
+        /// 현재 활성화된 기믹에 따른 사망 원인 반환
+        /// </summary>
+        private DeathCause GetCurrentBossDeathCause()
+        {
+            if (_activeGimmick is AmbushGimmick) return DeathCause.GajamiDash;
+            if (_activeGimmick is RelentlessChaseGimmick) return DeathCause.MorayCharge;
+            if (_activeGimmick is SwordfishGimmick) return DeathCause.SwordfishCharge;
+            if (_activeGimmick is DashChargeGimmick) return DeathCause.GreatWhiteCharge;
+            return DeathCause.BossCollision;
         }
 
         private bool CanBossDamagePlayer()
@@ -1244,7 +1256,7 @@ namespace HideAndInk.Core.Enemy.Boss
         {
             if (_playerLives != null && !_playerLives.IsInvincible)
             {
-                _playerLives.TakeDamage();
+                _playerLives.TakeDamage(DeathCause.MorayCharge, gameObject.name);
                 ApplyKnockback();
             }
         }

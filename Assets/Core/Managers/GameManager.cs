@@ -41,6 +41,9 @@ namespace HideAndInk.Core.Managers
         // 이벤트 버스 (DI에서 해결)
         private IEventBus _eventBus;
 
+        // 사망 카운터 (로그용)
+        private int _deathCount;
+
         private void Awake()
         {
             if (_instance != null && _instance != this)
@@ -149,7 +152,32 @@ namespace HideAndInk.Core.Managers
             }
             else if (current == GameState.Dead)
             {
-                _eventBus?.Publish(new PlayerDeathEvent());
+                // PlayerLives에서 사망 원인 읽기
+                var playerLives = PlayerLives.Instance;
+                DeathCause cause = DeathCause.Unknown;
+                string sourceName = "";
+                Vector3 deathPos = Vector3.zero;
+                if (playerLives != null)
+                {
+                    cause = playerLives.LastDeathCause;
+                    sourceName = playerLives.LastDeathSourceName;
+                    deathPos = playerLives.transform.position;
+                }
+
+                _deathCount++;
+
+                // DEATH 로그 기록
+                LogModule.Instance.Log(
+                    $"사망 #{_deathCount} | 원인: {cause}" +
+                    (string.IsNullOrEmpty(sourceName) ? "" : $" | 대상: {sourceName}") +
+                    $" | 위치: ({deathPos.x:F1}, {deathPos.y:F1}, {deathPos.z:F1})" +
+                    $" | 플레이시간: {Time.timeSinceLevelLoad:F1}초",
+                    "DEATH");
+
+                // PlayerDeathEvent 발행 (사망 원인 포함)
+                _eventBus?.Publish(new PlayerDeathEvent(
+                    cause, sourceName, deathPos, Time.timeSinceLevelLoad
+                ));
             }
         }
 

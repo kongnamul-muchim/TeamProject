@@ -16,7 +16,7 @@ namespace HideAndInk.Core.Logging
         private Dictionary<string, StreamWriter> _writers = new Dictionary<string, StreamWriter>();
         private bool _isDisposed;
 
-        private string[] _logTypeTags = { "INFO", "WARN", "ERROR", "FATAL", "DEBUG" };
+        private string[] _logTypeTags = { "INFO", "WARN", "ERROR", "FATAL", "DEBUG", "DEATH" };
 
         private void Start()
         {
