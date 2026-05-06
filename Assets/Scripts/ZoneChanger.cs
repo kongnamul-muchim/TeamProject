@@ -96,6 +96,10 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
+    [Header("안개 효과")]
+    [Tooltip("안개 오버레이 UI 오브젝트 (Canvas/RawImage 등). 이 Zone으로 진입 시 켜고 나갈 때 끕니다.")]
+    public GameObject fogOverlayObject;
+
     private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
     private GameObject _autoCreatedLeftBoundaryWall;
@@ -411,6 +415,24 @@ public class ZoneChanger : MonoBehaviour
                 }
             }
             changed = true;
+        }
+
+        // ── 안개 효과 전환 ──
+        if (fogOverlayObject != null)
+        {
+            bool isEnteringZone1 = IsZone1InArray(activateZones);
+            bool isLeavingZone1 = IsZone1InArray(deactivateZones);
+
+            if (isEnteringZone1)
+            {
+                fogOverlayObject.SetActive(true);
+                Debug.Log("[ZoneChanger] 안개 오버레이 활성화 (Zone 1 진입)");
+            }
+            else if (isLeavingZone1)
+            {
+                fogOverlayObject.SetActive(false);
+                Debug.Log("[ZoneChanger] 안개 오버레이 비활성화 (Zone 1 이탈)");
+            }
         }
 
         // ── Ground 동기화: 현재 Zone에 해당하는 Ground만 활성화, 나머지는 비활성화 ──
@@ -740,5 +762,21 @@ public class ZoneChanger : MonoBehaviour
         {
             Debug.LogWarning($"[ZoneChanger] wallContainer에서 '{activeWallName}'을 찾을 수 없습니다.");
         }
+    }
+
+    /// <summary>
+    /// 배열 안에 Zone_1 관련 오브젝트가 포함되어 있는지 확인합니다.
+    /// </summary>
+    private bool IsZone1InArray(GameObject[] zones)
+    {
+        if (zones == null) return false;
+        foreach (var zone in zones)
+        {
+            if (zone != null && zone.name.StartsWith("Zone_1"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
