@@ -38,6 +38,8 @@ namespace HideAndInk.Core.Managers
 
         // 게임 상태 머신
         private IGameStateMachine _gameStateMachine;
+        // SuspicionToGameStateLink 캐싱 (FindObjectOfType 반복 방지)
+        private SuspicionToGameStateLink _suspicionLink;
 
         private void Awake()
         {
@@ -120,11 +122,11 @@ namespace HideAndInk.Core.Managers
             // GameStateMachine 상태 변경 구독 → GameEvents 발생
             _gameStateMachine.OnStateChanged += OnGameStateChanged;
             
-            // SuspicionToGameStateLink에서 발각 이벤트 구독
-            var suspicionLink = FindObjectOfType<SuspicionToGameStateLink>();
-            if (suspicionLink != null)
+            // SuspicionToGameStateLink에서 발각 이벤트 구독 (참조 캐싱)
+            _suspicionLink = FindObjectOfType<SuspicionToGameStateLink>();
+            if (_suspicionLink != null)
             {
-                suspicionLink.OnPlayerDetected += OnPlayerDetected;
+                _suspicionLink.OnPlayerDetected += OnPlayerDetected;
             }
         }
 
@@ -171,10 +173,9 @@ namespace HideAndInk.Core.Managers
                 _gameStateMachine.OnStateChanged -= OnGameStateChanged;
             }
             
-            var suspicionLink = FindObjectOfType<SuspicionToGameStateLink>();
-            if (suspicionLink != null)
+            if (_suspicionLink != null)
             {
-                suspicionLink.OnPlayerDetected -= OnPlayerDetected;
+                _suspicionLink.OnPlayerDetected -= OnPlayerDetected;
             }
 
             _rootContainer?.Dispose();
