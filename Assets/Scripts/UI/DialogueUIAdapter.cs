@@ -247,7 +247,7 @@ public class DialogueUIAdapter : MonoBehaviour
 
         if (sprite != null)
         {
-            // 컷씬 모드: Panel 배경 이미지만 숨기고, 컷씬 이미지 표시 (Text는 유지)
+            // 컷씬 모드: Panel 배경 이미지만 끄고, 컷씬 이미지 표시 (Text는 유지)
             storyCutscene.sprite = sprite;
             storyCutscene.color = Color.white;
             storyCutscene.gameObject.SetActive(true);
