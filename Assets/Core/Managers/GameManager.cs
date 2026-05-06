@@ -194,6 +194,46 @@ namespace HideAndInk.Core.Managers
                     cause, sourceName, deathPos, Time.timeSinceLevelLoad,
                     deathMessage, wasCamouflaged
                 ));
+
+                // === 사망 처리 ===
+
+                // 시간 정지 (모든 적/기믹 활동 중단)
+                Time.timeScale = 0f;
+
+                // 의심도 비네트 최대 투명도로 고정 (죽었음을 확실히 표시)
+                SetSuspicionVignetteToMax();
+            }
+            else if (current == GameState.Playing && previous == GameState.Dead)
+            {
+                // 재시작: 시간 복원
+                Time.timeScale = 1f;
+
+                // PlayerLives 초기화
+                var lives = PlayerLives.Instance;
+                if (lives != null)
+                    lives.ResetLives();
+            }
+        }
+
+        /// <summary>
+        /// UI_SuspicionVinette 의 투명도를 최대(1.0)로 고정
+        /// 사망 시 의심도 비네트를 완전히 불투명하게 만들어 죽음 시각화
+        /// </summary>
+        private void SetSuspicionVignetteToMax()
+        {
+            // UI_SuspicionVinette는 Canvas_Ingame의 자식
+            var canvasObj = GameObject.Find("Canvas_Ingame");
+            if (canvasObj == null) return;
+
+            var vignette = canvasObj.transform.Find("UI_SuspicionVinette");
+            if (vignette == null) return;
+
+            var img = vignette.GetComponent<UnityEngine.UI.Image>();
+            if (img != null)
+            {
+                var color = img.color;
+                color.a = 1f;
+                img.color = color;
             }
         }
 
