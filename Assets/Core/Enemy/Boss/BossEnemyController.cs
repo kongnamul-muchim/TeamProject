@@ -917,15 +917,16 @@ namespace HideAndInk.Core.Enemy.Boss
                     if (_directionChangeTimer > 0f) return;
                 }
 
-                float vx = _movement.Velocity.x;
-                if (Mathf.Abs(vx) < 0.01f) return;
+                Vector3 velocity = _movement.Velocity;
+                Vector3 velXZ = new Vector3(velocity.x, 0f, velocity.z);
+                if (velXZ.sqrMagnitude < 0.0001f) return;
 
-                facingDir = vx > 0f ? Vector3.right : Vector3.left;
+                facingDir = velXZ.normalized;
 #if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] UpdateViewDirection MOVEMENT path: vx={vx:F2} → facingDir=({facingDir.Value.x:F2},{facingDir.Value.z:F2})");
+                Debug.Log($"[BossEnemyController] UpdateViewDirection MOVEMENT path: vel=({velocity.x:F2},{velocity.z:F2}) → facingDir=({facingDir.Value.x:F2},{facingDir.Value.z:F2})");
 #endif
 
-                MoveDirection newDir = vx > 0f ? MoveDirection.Right : MoveDirection.Left;
+                MoveDirection newDir = velocity.x > 0f ? MoveDirection.Right : MoveDirection.Left;
                 if (newDir != _lastAppliedDirection || isMorayChase)
                 {
                     _lastAppliedDirection = newDir;
