@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 namespace HideAndInk.Core.Interfaces
 {
@@ -43,6 +44,11 @@ namespace HideAndInk.Core.Interfaces
     /// </summary>
     public interface ICamouflageStateMachine
     {
+        /// <summary>
+        /// 상태 전환 시 발생 (이전 상태, 새 상태)
+        /// </summary>
+        event Action<CamouflageState, CamouflageState> OnStateChanged;
+
         /// <summary>
         /// 현재 상태
         /// </summary>
