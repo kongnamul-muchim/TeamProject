@@ -452,14 +452,13 @@ namespace HideAndInk.Core.Enemy.Boss
                     : (flip ? 0f : 180f);
                 transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
 
-                // 시야각 방향 동기화 — _lastFacingDir의 XZ 방향 그대로 전달
+                // 시야각 방향 동기화 — flip 기준으로 강제 설정 (ApplyFacingDirection 누락 방지)
                 if (visionSensor != null)
                 {
-                    Vector3 viewDir = new Vector3(_lastFacingDir.x, 0f, _lastFacingDir.z);
-                    if (viewDir.sqrMagnitude > 0.001f)
-                        visionSensor.SetCustomViewDirection(viewDir.normalized);
+                    float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
+                    visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
 #if UNITY_EDITOR
-                    Debug.Log($"[BossEnemyController] LateUpdate _lastFacingDir=({_lastFacingDir.x:F2},{_lastFacingDir.z:F2}) → SetCustomViewDirection({viewDir.normalized.x:F2},0,{viewDir.normalized.z:F2})");
+                    Debug.Log($"[BossEnemyController] LateUpdate _lastFacingDir=({_lastFacingDir.x:F2},{_lastFacingDir.z:F2}) flip={flip} → SetCustomViewDirection({facingX:F2},0,0)");
 #endif
                 }
             }
@@ -970,11 +969,10 @@ namespace HideAndInk.Core.Enemy.Boss
 
             if (visionSensor != null)
             {
-                Vector3 viewDir = new Vector3(dir.x, 0f, dir.z);
-                if (viewDir.sqrMagnitude > 0.001f)
-                    visionSensor.SetCustomViewDirection(viewDir.normalized);
+                float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
+                visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
 #if UNITY_EDITOR
-                Debug.Log($"[BossEnemyController] ApplyFacingDirection → SetCustomViewDirection({viewDir.normalized.x:F2},0,{viewDir.normalized.z:F2})");
+                Debug.Log($"[BossEnemyController] ApplyFacingDirection → SetCustomViewDirection({facingX:F2},0,0)");
 #endif
             }
         }
