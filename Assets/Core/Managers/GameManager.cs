@@ -166,17 +166,21 @@ namespace HideAndInk.Core.Managers
 
                 _deathCount++;
 
-                // DEATH 로그 기록
+                // 사망 멘트 선택
+                string deathMessage = DeathMessages.GetRandom(cause);
+
+                // DEATH 로그 기록 (멘트 포함)
                 LogModule.Instance.Log(
                     $"사망 #{_deathCount} | 원인: {cause}" +
                     (string.IsNullOrEmpty(sourceName) ? "" : $" | 대상: {sourceName}") +
                     $" | 위치: ({deathPos.x:F1}, {deathPos.y:F1}, {deathPos.z:F1})" +
-                    $" | 플레이시간: {Time.timeSinceLevelLoad:F1}초",
+                    $" | 플레이시간: {Time.timeSinceLevelLoad:F1}초" +
+                    $"\n▶ {deathMessage}",
                     "DEATH");
 
-                // PlayerDeathEvent 발행 (사망 원인 포함)
+                // PlayerDeathEvent 발행 (사망 원인 + 멘트 포함)
                 _eventBus?.Publish(new PlayerDeathEvent(
-                    cause, sourceName, deathPos, Time.timeSinceLevelLoad
+                    cause, sourceName, deathPos, Time.timeSinceLevelLoad, deathMessage
                 ));
             }
         }

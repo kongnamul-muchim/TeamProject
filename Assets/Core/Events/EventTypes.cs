@@ -10,7 +10,7 @@ namespace HideAndInk.Core.Events
     /// <summary>플레이어 발각</summary>
     public struct PlayerDetectedEvent { }
 
-    /// <summary>플레이어 사망 (사망 원인 포함)</summary>
+    /// <summary>플레이어 사망 (사망 원인 + 멘트 포함)</summary>
     public struct PlayerDeathEvent
     {
         /// <summary>사망 원인</summary>
@@ -25,13 +25,18 @@ namespace HideAndInk.Core.Events
         /// <summary>게임 플레이 시간 (초)</summary>
         public float GameTime;
 
+        /// <summary>상황별 사망 멘트 (한국어)</summary>
+        public string DeathMessage;
+
         public PlayerDeathEvent(DeathCause cause, string sourceName = "",
-            Vector3 deathPosition = default, float gameTime = 0f)
+            Vector3 deathPosition = default, float gameTime = 0f,
+            string deathMessage = "")
         {
             Cause = cause;
             SourceName = sourceName;
             DeathPosition = deathPosition;
             GameTime = gameTime;
+            DeathMessage = deathMessage;
         }
     }
 
