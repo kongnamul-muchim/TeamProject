@@ -139,6 +139,33 @@ namespace HideAndInk.Scripts.UI
             // 게임 오버 패널 표시
             if (gameOverPanel != null)
                 gameOverPanel.SetActive(true);
+
+            // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
+            ForceVignetteToMax();
+        }
+
+        /// <summary>
+        /// UI_SuspicionVinette의 alpha를 의심도 최대치(200/255)로 강제 고정
+        /// OnPlayerDied 등으로 SuspicionMeterUI가 alpha를 0으로 만든 후에도 확실히 적용
+        /// </summary>
+        private static void ForceVignetteToMax()
+        {
+            var canvasObj = GameObject.Find("Canvas_Ingame");
+            if (canvasObj == null) return;
+
+            var vignette = canvasObj.transform.Find("UI_SuspicionVinette");
+            if (vignette == null) return;
+
+            var img = vignette.GetComponent<UnityEngine.UI.Image>();
+            if (img == null) return;
+
+            var color = img.color;
+            if (Mathf.Abs(color.a - 200f / 255f) > 0.001f)
+            {
+                color.a = 200f / 255f;
+                img.color = color;
+                Debug.Log($"[GameOverUI] Vignette alpha fixed: → {color.a:F3}");
+            }
         }
 
         // =====================================================
