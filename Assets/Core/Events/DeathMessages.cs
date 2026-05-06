@@ -16,7 +16,7 @@ namespace HideAndInk.Core.Events
             [DeathCause.CrabAttack] = new[]
             {
                 "게의 집게발에 끌려들어갔습니다...",
-                "hard-shelled creature에게 잡아먹혔습니다...",
+                "단단한 집게발에 붙잡혔습니다...",
             },
             [DeathCause.EliteAttack] = new[]
             {
