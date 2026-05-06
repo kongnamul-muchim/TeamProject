@@ -32,10 +32,11 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("Btn_GoTitle - 그만하기")]
         [SerializeField] private Button titleButton;
 
-        [Header("설정")]
-        [Tooltip("페이드 인 시간")]
-        [SerializeField] private float fadeInDuration = 0.5f;
+        [Header("페이드 트랜지션")]
+        [Tooltip("FadeInObj 프리팹 (씬 전환 시 페이드아웃)")]
+        [SerializeField] private GameObject fadeInObjPrefab;
 
+        [Header("설정")]
         [Tooltip("타이틀 씬 인덱스")]
         [SerializeField] private int titleSceneIndex = 0;
 
@@ -140,12 +141,35 @@ namespace HideAndInk.Scripts.UI
         // =====================================================
 
         /// <summary>
+        /// FadeInObj 페이드아웃 후 씬 전환 (기존 TitleController/SettingsPopup과 동일한 방식)
+        /// </summary>
+        private void TransitionToScene(int sceneIndex)
+        {
+            HideGameOver();
+
+            // 시간 복원 (FadeInObj 애니메이션이 동작하도록)
+            Time.timeScale = 1f;
+
+            if (fadeInObjPrefab != null)
+            {
+                var fadeObj = Instantiate(fadeInObjPrefab);
+                var controller = fadeObj.GetComponent<FadeInObjController>();
+                if (controller != null)
+                {
+                    controller.PlayCoverAndTransition(sceneIndex);
+                    return;
+                }
+            }
+
+            // fallback: 바로 로드
+            SceneManager.LoadScene(sceneIndex);
+        }
+
+        /// <summary>
         /// [이어하기] 저장된 지점에서 재시작
         /// </summary>
         private void OnContinueClicked()
         {
-            HideGameOver();
-
             // 저장 데이터가 있으면 로드
             if (SaveManager.HasSaveData())
             {
@@ -157,9 +181,7 @@ namespace HideAndInk.Scripts.UI
                 }
             }
 
-            // 게임 씬 로드 (ContinueZoneHandler가 자동 복원)
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(gameSceneIndex);
+            TransitionToScene(gameSceneIndex);
         }
 
         /// <summary>
@@ -167,15 +189,11 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnRestartClicked()
         {
-            HideGameOver();
-
             // 저장 데이터 삭제
             SaveManager.DeleteSave();
             SaveManager.ClearContinueZone();
 
-            // 게임 씬 로드 (처음부터)
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(gameSceneIndex);
+            TransitionToScene(gameSceneIndex);
         }
 
         /// <summary>
@@ -183,10 +201,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnTitleClicked()
         {
-            HideGameOver();
-
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(titleSceneIndex);
+            TransitionToScene(titleSceneIndex);
         }
 
         /// <summary>

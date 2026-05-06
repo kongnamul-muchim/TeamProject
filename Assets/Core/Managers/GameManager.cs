@@ -102,8 +102,8 @@ namespace HideAndInk.Core.Managers
             // 의태 상태 머신 (Transient)
             _rootContainer.Register<ICamouflageStateMachine, CamouflageStateMachine>(ServiceLifetime.Transient);
 
-            // 오디오 서비스 등록 (TODO: AudioManager가 인터페이스 구현 후 활성화)
-            // RegisterAudioServices();
+            // 오디오 서비스 등록
+            RegisterAudioServices();
         }
 
         /// <summary>
@@ -117,14 +117,17 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void RegisterAudioServices()
         {
+            // AudioManager는 MonoBehaviour Singleton이므로 RegisterInstance 사용
+            var audioManager = AudioManager.Instance;
+
             // SFX 서비스 (Singleton — 전역 AudioManager 인스턴스)
-            // _rootContainer.Register<ISfxService, AudioManager>(ServiceLifetime.Singleton);
+            _rootContainer.RegisterInstance<ISfxService>(audioManager, ServiceLifetime.Singleton);
 
-            // BGM 서비스 (Singleton)
-            // _rootContainer.Register<IBgmService, AudioManager>(ServiceLifetime.Singleton);
+            // BGM 서비스 (Singleton) — TODO: BGM 구현 후 활성화
+            // _rootContainer.RegisterInstance<IBgmService>(audioManager, ServiceLifetime.Singleton);
 
-            // Ambient 서비스 (Singleton)
-            // _rootContainer.Register<IAmbientService, AudioManager>(ServiceLifetime.Singleton);
+            // Ambient 서비스 (Singleton) — TODO: Ambient 구현 후 활성화
+            // _rootContainer.RegisterInstance<IAmbientService>(audioManager, ServiceLifetime.Singleton);
         }
 
         /// <summary>
@@ -197,11 +200,11 @@ namespace HideAndInk.Core.Managers
 
                 // === 사망 처리 ===
 
+                // 의심도 비네트를 의심도 최대치 fill로 먼저 고정 (시간 정지 전에 UI 확정)
+                SetSuspicionVignetteToMax();
+
                 // 시간 정지 (모든 적/기믹 활동 중단)
                 Time.timeScale = 0f;
-
-                // 의심도 비네트 최대 투명도로 고정 (죽었음을 확실히 표시)
-                SetSuspicionVignetteToMax();
             }
             else if (current == GameState.Playing && previous == GameState.Dead)
             {
