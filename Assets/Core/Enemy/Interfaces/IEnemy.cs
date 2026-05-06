@@ -46,10 +46,5 @@ namespace HideAndInk.Core.Enemy.Interfaces
         /// 이동 속도
         /// </summary>
         float Speed { get; }
-
-        /// <summary>
-        /// 매 프레임 업데이트
-        /// </summary>
-        void Update(float deltaTime);
     }
 }
