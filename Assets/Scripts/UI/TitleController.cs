@@ -1,3 +1,6 @@
+using HideAndInk.Core.Audio;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using HideAndInk.Core.Transition;
 using HideAndInk.Scripts.Save;
 using System.Collections;
@@ -67,6 +70,7 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("Continue 로드할 씬의 Build Index (기본: 1)")]
         [SerializeField] private int continueSceneIndex = 1;
 
+        private ISfxService _sfxService;
         private PatternTransitionController _transition;
         private bool _isTransitioning = false;
 
@@ -75,6 +79,12 @@ namespace HideAndInk.Scripts.UI
             // 팝업 초기 상태: 닫힘
             if (popupSetting != null)
                 popupSetting.SetActive(false);
+
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+            {
+                _sfxService = GameManager.Container.Resolve<ISfxService>();
+            }
         }
 
         private void Start()
@@ -156,6 +166,7 @@ namespace HideAndInk.Scripts.UI
         {
             if (_isTransitioning) return;
             _isTransitioning = true;
+            _sfxService?.Play(SfxId.ButtonClick2);
 
             // 저장 데이터 초기화
             SaveManager.DeleteSave();
@@ -171,6 +182,7 @@ namespace HideAndInk.Scripts.UI
         public void OnContinueClicked()
         {
             if (_isTransitioning) return;
+            _sfxService?.Play(SfxId.ButtonClick2);
 
             if (!SaveManager.HasSaveData())
             {
@@ -242,6 +254,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnSettingClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             if (popupSetting != null)
             {
                 bool isActive = popupSetting.activeSelf;
@@ -254,6 +267,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnExitPopupClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             if (popupSetting != null)
                 popupSetting.SetActive(false);
         }

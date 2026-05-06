@@ -1,3 +1,4 @@
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using UnityEngine;
@@ -14,10 +15,17 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("일시정지 팝업 오브젝트")]
         [SerializeField] private GameObject pausePopup;
 
+        private ISfxService _sfxService;
         private IGameStateMachine _stateMachine;
 
         private void Awake()
         {
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+            {
+                _sfxService = GameManager.Container.Resolve<ISfxService>();
+            }
+
             var gm = GameManager.Instance;
             if (gm != null)
                 _stateMachine = gm.GetGameStateMachine();
@@ -49,6 +57,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void TogglePause()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             EnsureStateMachine();
             _stateMachine?.TogglePause();
         }
@@ -58,6 +67,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void ResumeGame()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             EnsureStateMachine();
             if (_stateMachine == null) return;
             if (_stateMachine.CurrentState == GameState.Paused)

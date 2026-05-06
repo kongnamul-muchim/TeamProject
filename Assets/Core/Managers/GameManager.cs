@@ -162,6 +162,10 @@ namespace HideAndInk.Core.Managers
             }
             else if (current == GameState.Dead)
             {
+                // 게임 오버 효과음 재생
+                var audioManager = AudioManager.Instance;
+                audioManager.Play(SfxId.GameOver);
+
                 // PlayerLives에서 사망 원인 + 의태 상태 읽기
                 var playerLives = PlayerLives.Instance;
                 DeathCause cause = DeathCause.Unknown;

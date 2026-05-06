@@ -1,3 +1,4 @@
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
@@ -44,6 +45,7 @@ namespace HideAndInk.Scripts.UI
         [SerializeField] private int gameSceneIndex = 1;
 
         // DI
+        private ISfxService _sfxService;
         private IEventBus _eventBus;
         private IGameStateMachine _stateMachine;
 
@@ -104,6 +106,9 @@ namespace HideAndInk.Scripts.UI
             var container = GameManager.Container;
             if (container != null)
             {
+                if (container.IsRegistered<ISfxService>())
+                    _sfxService = container.Resolve<ISfxService>();
+
                 if (container.IsRegistered<IEventBus>())
                     _eventBus = container.Resolve<IEventBus>();
 
@@ -170,6 +175,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnContinueClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             // 저장 데이터가 있으면 로드
             if (SaveManager.HasSaveData())
             {
@@ -189,6 +195,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnRestartClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             // 저장 데이터 삭제
             SaveManager.DeleteSave();
             SaveManager.ClearContinueZone();
@@ -201,6 +208,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnTitleClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             TransitionToScene(titleSceneIndex);
         }
 

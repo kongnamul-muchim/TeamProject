@@ -1,4 +1,5 @@
 using System.Collections;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
@@ -42,6 +43,7 @@ namespace HideAndInk.Scripts.UI
         [SerializeField] private CanvasGroup canvasGroup;
 
         // DI
+        private ISfxService _sfxService;
         private IEventBus _eventBus;
         private IGameStateMachine _stateMachine;
         private Coroutine _showCoroutine;
@@ -79,6 +81,9 @@ namespace HideAndInk.Scripts.UI
             var container = GameManager.Container;
             if (container != null)
             {
+                if (container.IsRegistered<ISfxService>())
+                    _sfxService = container.Resolve<ISfxService>();
+
                 if (container.IsRegistered<IEventBus>())
                     _eventBus = container.Resolve<IEventBus>();
 
@@ -168,6 +173,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnRestartClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             HideDeathScreen();
             _stateMachine?.Restart();
         }
@@ -177,6 +183,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnTitleClicked()
         {
+            _sfxService?.Play(SfxId.ButtonClick2);
             HideDeathScreen();
             Time.timeScale = 1f;
             UnityEngine.SceneManagement.SceneManager.LoadScene(0);

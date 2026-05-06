@@ -50,6 +50,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnGoTitleClicked()
         {
+            _audio.Play(SfxId.ButtonClick2);
             Time.timeScale = 1f;
 
             // 1순위: FadeInObj 프리팹 (TitleController와 동일한 2페이즈 전환)
