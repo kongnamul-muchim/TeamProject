@@ -1,6 +1,7 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Player;
+using HideAndInk.Siyeon1;
 
 /// <summary>
 /// [이동] 치치의 이동만 담당한다.
