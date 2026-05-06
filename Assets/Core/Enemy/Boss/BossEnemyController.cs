@@ -447,7 +447,6 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (bossSprite != null)
                     bossSprite.flipX = flip;
 
-                // localEulerAngles.y 재적용 (Animator가 Y회전을 덮어쓸 수 있으므로)
                 float spriteY = isDefaultFacingLeft
                     ? (flip ? 180f : 0f)
                     : (flip ? 0f : 180f);
@@ -458,6 +457,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 {
                     float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
                     visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
+#if UNITY_EDITOR
+                    Debug.Log($"[BossEnemyController] LateUpdate _lastFacingDir=({_lastFacingDir.x:F2},{_lastFacingDir.z:F2}) flip={flip} → SetCustomViewDirection({facingX:F2},0,0)");
+#endif
                 }
             }
         }
@@ -877,6 +879,9 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_viewDir != null && _viewDir.OverridesViewDirection && _playerTransform != null)
             {
                 facingDir = _viewDir.GetViewDirectionVector();
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] UpdateViewDirection OVERRIDE path: facingDir=({facingDir.Value.x:F2},{facingDir.Value.z:F2})");
+#endif
 
                 if (_viewDir.ShowChargeIndicator)
                     UpdateChargeIndicator(facingDir.Value);
@@ -900,12 +905,14 @@ namespace HideAndInk.Core.Enemy.Boss
                         ApplyFacingDirection(_morayFacingDirection);
                         return;
                     }
+#if UNITY_EDITOR
+                    Debug.Log($"[BossEnemyController] UpdateViewDirection MOVEMENT path: NOT MOVING → early return");
+#endif
                     return;
                 }
 
                 if (!isMorayChase)
                 {
-                    // 일반 Chase: 쿨타임 적용
                     if (_directionChangeTimer > 0f) return;
                 }
 
@@ -913,8 +920,10 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (Mathf.Abs(vx) < 0.01f) return;
 
                 facingDir = vx > 0f ? Vector3.right : Vector3.left;
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] UpdateViewDirection MOVEMENT path: vx={vx:F2} → facingDir=({facingDir.Value.x:F2},{facingDir.Value.z:F2})");
+#endif
 
-                // 방향 변경 쿨타임 (Moray는 항상 통과)
                 MoveDirection newDir = vx > 0f ? MoveDirection.Right : MoveDirection.Left;
                 if (newDir != _lastAppliedDirection || isMorayChase)
                 {
@@ -938,31 +947,33 @@ namespace HideAndInk.Core.Enemy.Boss
             _lastFacingDir = dir;
             _hasFacingDir = true;
 
-            // ★ Animator가 flipX를 덮어쓰므로, localScale로 flip하여 우회
             bool flip = isDefaultFacingLeft ? dir.x > 0f : dir.x < 0f;
 
-            // localScale.x를 반전시켜 SpriteRenderer 방향 전환 (Animator가 건드리지 않음)
+#if UNITY_EDITOR
+            Debug.Log($"[BossEnemyController] ApplyFacingDirection dir=({dir.x:F2},{dir.z:F2}) flip={flip} isDefaultFacingLeft={isDefaultFacingLeft}");
+#endif
+
             Vector3 scale = transform.localScale;
             scale.x = Mathf.Abs(scale.x) * (flip ? -1f : 1f);
             transform.localScale = scale;
 
-            // flipX도 함께 설정 (다른 시스템 호환용)
             if (bossSprite != null)
             {
                 bossSprite.flipX = flip;
             }
 
-            // localEulerAngles.y 동기화 (ConeVisionSensor의 viewDirectionRef.forward 방향 보정)
             float spriteY = isDefaultFacingLeft
                 ? (flip ? 180f : 0f)
                 : (flip ? 0f : 180f);
             transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
 
-            // Vision cone 방향 동기화 — flip 기준으로 강제 설정 (dir.x가 0이어도 안전)
             if (visionSensor != null)
             {
                 float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
                 visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] ApplyFacingDirection → SetCustomViewDirection({facingX:F2},0,0)");
+#endif
             }
         }
 

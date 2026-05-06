@@ -135,7 +135,7 @@ namespace HideAndInk.Core.Perception
                 Debug.Log($"[VisionConeRenderer] Initialized: mode={visibilityMode}, visible={IsRenderingActive}", this);
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (!_isInitialized)
             {
@@ -143,7 +143,6 @@ namespace HideAndInk.Core.Perception
                 if (!_isInitialized) return;
             }
 
-            // 가시성 모드에 따른 렌더링 제어
             if (!ShouldRender())
             {
                 if (IsRenderingActive)
@@ -218,6 +217,10 @@ namespace HideAndInk.Core.Perception
             float viewRadius = _cachedSensor.ViewRadius;
             float viewAngle = _cachedSensor.ViewAngle;
             Vector3 viewDir = _cachedSensor.GetViewDirection();
+
+#if UNITY_EDITOR
+            Debug.Log($"[VisionConeRenderer] BuildFloorMesh viewDir=({viewDir.x:F2},{viewDir.z:F2}) viewAngle={viewAngle} viewRadius={viewRadius}");
+#endif
 
             if (viewDir.sqrMagnitude < 0.001f) return;
             viewDir = viewDir.normalized;
