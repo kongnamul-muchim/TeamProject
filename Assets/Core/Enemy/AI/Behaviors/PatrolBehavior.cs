@@ -109,6 +109,17 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             Vector3 currentPos = new Vector3(_enemy.Position.x, 0f, _enemy.Position.z);
             Vector3 targetPos = new Vector3(_currentTarget.x, 0f, _currentTarget.z);
 
+            // 이동 중에도 Player 반경 이탈 시 즉시 새 목표 설정
+            if (_playerTransform != null && _patrolRadius > 0f)
+            {
+                float distToPlayer = Mathf.Abs(_enemy.Position.x - _playerTransform.position.x);
+                float targetDistToPlayer = Mathf.Abs(_currentTarget.x - _playerTransform.position.x);
+                if (targetDistToPlayer > _patrolRadius || distToPlayer > _patrolRadius * 1.2f)
+                {
+                    PickNewTarget();
+                }
+            }
+
             // 목표 지점에 도달했는지 확인
             float distanceToTarget = Vector3.Distance(currentPos, targetPos);
 
