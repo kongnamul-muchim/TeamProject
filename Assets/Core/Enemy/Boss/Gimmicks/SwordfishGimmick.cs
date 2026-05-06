@@ -151,9 +151,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                     if (_wallCooldownTimer > 0f)
                         return;
 
-                    // Player가 시야에 보이고 + 돌진 발동 범위 내에 있을 때만 Aim 시작
+                    // Player가 시야에 보이고 + 돌진 발동 범위 내에 있을 때 Aim 시작
                     if (_isPlayerVisible && IsPlayerInChargeRange())
+                    {
                         StartAiming();
+                        break;
+                    }
+
+                    // 시야 밖이라도 Player와 겹쳐있으면 Aim 시작 (근접 돌진)
+                    if (!_isPlayerVisible && IsPlayerOverlapping())
+                    {
+                        StartAiming();
+                    }
                     break;
                 case Phase.Aiming:
                     UpdateAiming(deltaTime);
@@ -534,9 +543,20 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool IsPlayerInChargeRange()
         {
             if (_bossTransform == null || _playerTransform == null) return false;
-            if (_isPlayerCamouflaged) return false; // 의태 중엔 돌진 안 함
+            if (_isPlayerCamouflaged) return false;
             float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
             return dist <= chargeRange;
+        }
+
+        /// <summary>
+        /// Player와 겹쳐있는지 확인 (시야각 무시, 근접 거리)
+        /// </summary>
+        private bool IsPlayerOverlapping()
+        {
+            if (_bossTransform == null || _playerTransform == null) return false;
+            if (_isPlayerCamouflaged) return false;
+            float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
+            return dist <= 1.5f; // Collider 크기 기반 근접 거리
         }
 
         #endregion

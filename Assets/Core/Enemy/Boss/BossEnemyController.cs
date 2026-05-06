@@ -1152,9 +1152,15 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (_activeGimmick is RelentlessChaseGimmick)
                     return false;
 
-                // Swordfish (청새치): Charging 위상에서만 피격
+                // Swordfish (청새치): Chase 상태에서도 접촉 피격 + Charging 위상 피격
+                if (_activeGimmick is SwordfishGimmick)
+                {
+                    // Charging 중이거나 Chase 상태에서 접촉 시 데미지
+                    return _combatCycle != null && _combatCycle.IsCharging
+                        || _stateMachine.CurrentState == EnemyAIState.Chase;
+                }
+
                 // DashCharge (백상아리): 자체 OverlapSphere + IsCharging에서만
-                // → IGimmickCombatCycle.IsCharging으로 통일 판정
                 if (_combatCycle != null)
                     return _combatCycle.IsCharging;
             }
