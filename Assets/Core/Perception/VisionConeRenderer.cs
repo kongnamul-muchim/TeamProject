@@ -93,11 +93,10 @@ namespace HideAndInk.Core.Perception
 
             _cachedSensor = visionSensor;
 
-            // 자식 GameObject (부모 localScale flip 영향 방지)
+            // 독립 GameObject (부모 localScale flip 영향 방지 — SetParent 사용 안 함)
             _renderObject = new GameObject("VisionConeFloor");
-            _renderObject.transform.SetParent(transform);
-            _renderObject.transform.localPosition = Vector3.zero;
-            _renderObject.transform.localRotation = Quaternion.identity;
+            _renderObject.transform.position = Vector3.zero;
+            _renderObject.transform.rotation = Quaternion.identity;
             _renderObject.transform.localScale = Vector3.one;
 
             _meshFilter = _renderObject.AddComponent<MeshFilter>();
