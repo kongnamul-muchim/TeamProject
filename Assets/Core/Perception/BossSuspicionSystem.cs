@@ -37,8 +37,6 @@ namespace HideAndInk.Core.Perception
         [Header("하락 속도 (초당)")]
         [Tooltip("일반 의심도 하락 속도")]
         [SerializeField] private float normalDecreaseSpeed = 5f;
-        [Tooltip("의태 중 의심도 하락 속도")]
-        [SerializeField] private float camouflageDecreaseSpeed = 15f;
 
         [Header("의심 범위 바닥 시각화")]
         [Tooltip("의심 범위 바닥 표시 활성화")]
@@ -55,7 +53,6 @@ namespace HideAndInk.Core.Perception
         // 상태
         private float _currentValue;
         private SuspicionLevel _currentLevel;
-        private bool _isCamouflaging;
         private bool _wasDetected;
         private float _lastDetectedTime;
         private float _suspicionDecayMultiplier = 1f; // 의심도 하락 배율 (RelentlessChase용)
@@ -153,8 +150,7 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         private void OnModuleSuspicionIncrease(float rate, float deltaTime)
         {
-            if (_isIncreaseBlocked) return; // 차단 중이면 상승 무시
-            if (_isCamouflaging) return; // 의태 중이면 거리 감지 무시 (시야각 밖 안전)
+            if (_isIncreaseBlocked) return;
             AddSuspicion(rate, deltaTime);
         }
 
@@ -166,7 +162,6 @@ namespace HideAndInk.Core.Perception
         // 프로퍼티
         public float CurrentValue => Mathf.Clamp(_currentValue, 0f, 100f);
         public SuspicionLevel CurrentLevel => _currentLevel;
-        public bool IsCamouflaging => _isCamouflaging;
 
         private void Awake()
         {
@@ -193,10 +188,7 @@ namespace HideAndInk.Core.Perception
             // 의심도 하락 처리 (autoDecayEnabled=false면 기믹이 전담)
             if (_autoDecayEnabled && _currentValue > 0f)
             {
-                // 의태 중이면 빠른 하락
-                float decreaseSpeed = _isCamouflaging ? camouflageDecreaseSpeed : normalDecreaseSpeed;
-                // RelentlessChase 배율 적용
-                decreaseSpeed *= _suspicionDecayMultiplier;
+                float decreaseSpeed = normalDecreaseSpeed * _suspicionDecayMultiplier;
                 _currentValue -= decreaseSpeed * Time.deltaTime;
                 _currentValue = Mathf.Max(_currentValue, 0f);
             }
@@ -241,14 +233,12 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// 시야 기반 의심도 보고 (Player가 시야각 내에 있을 때)
-        /// 의태 중이면 상승 안 함
-        /// 상승 차단 중(Ambush Chase)이면 무시
+        /// 시야 기반 의심도 보고. 상승 차단 중이면 무시.
+        /// (의태 처리는 BossEnemyController.UpdateSuspicion에서 사전 필터링)
         /// </summary>
         public void ReportVisionDetection(float intensity = 1f)
         {
-            if (_isCamouflaging) return; // 의태 중이면 시야 기반 상승 무시
-            if (_isIncreaseBlocked) return; // 상승 차단 중이면 무시
+            if (_isIncreaseBlocked) return;
 
             _currentValue += intensity * visionIncreaseSpeed * Time.deltaTime;
             _currentValue = Mathf.Clamp(_currentValue, 0f, 100f);
@@ -269,14 +259,6 @@ namespace HideAndInk.Core.Perception
 #endif
 
             CheckLevelChange();
-        }
-
-        /// <summary>
-        /// 의태 상태 설정 (보스는 기믹이 의심도를 직접 통제하므로 완벽 의태 구분 불필요)
-        /// </summary>
-        public void SetCamouflageState(bool isCamouflaging)
-        {
-            _isCamouflaging = isCamouflaging;
         }
 
         /// <summary>

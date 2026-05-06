@@ -493,7 +493,6 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_ambushProximityCooldown > 0f)
                 _ambushProximityCooldown -= deltaTime;
 
-            UpdateCamouflageState();
             UpdateSuspicion(canSeePlayer);
             UpdateVisionConeVisibility();
             CheckStateTransitions(canSeePlayer);
@@ -501,13 +500,6 @@ namespace HideAndInk.Core.Enemy.Boss
             UpdateGimmick(deltaTime);
             RestoreSpeedAfterGimmick();
             UpdatePitDebuff(deltaTime);
-        }
-
-        private void UpdateCamouflageState()
-        {
-            if (suspicionSystem == null) return;
-            bool isCamouflaging = IsPlayerCamouflaging();
-            suspicionSystem.SetCamouflageState(isCamouflaging);
         }
 
         private void UpdateGimmick(float deltaTime)
