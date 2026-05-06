@@ -144,8 +144,9 @@ public class ZoneChanger : MonoBehaviour
             // 게임 시작 시 Fog Zone(1,2,3,6)이면 Underwater Effects 활성화
             if (isCurrentZoneActive && IsFogZone(fromZoneNumber))
             {
-                SetUnderwaterEffect(true);
-                Debug.Log($"[ZoneChanger] 게임 시작 - Zone {fromZoneNumber}, Underwater Effects 활성화");
+                bool isDark = IsDarkFogZone(fromZoneNumber);
+                SetUnderwaterEffect(true, isDark);
+                Debug.Log($"[ZoneChanger] 게임 시작 - Zone {fromZoneNumber}, Underwater Effects {(isDark ? "어둡게" : "밝게")} 활성화");
             }
             else if (isCurrentZoneActive && !IsFogZone(fromZoneNumber))
             {
@@ -432,8 +433,9 @@ public class ZoneChanger : MonoBehaviour
         {
             if (IsFogZone(toZoneNumber))
             {
-                SetUnderwaterEffect(true);
-                Debug.Log($"[ZoneChanger] Underwater Effects 활성화 (Zone {toZoneNumber} 진입)");
+                bool isDark = IsDarkFogZone(toZoneNumber);
+                SetUnderwaterEffect(true, isDark);
+                Debug.Log($"[ZoneChanger] Underwater Effects {(isDark ? "어둡게" : "밝게")} 활성화 (Zone {toZoneNumber} 진입)");
             }
             else
             {
@@ -773,17 +775,27 @@ public class ZoneChanger : MonoBehaviour
 
     /// <summary>
     /// 해당 Zone 번호가 안개 효과가 적용되는 Zone인지 확인합니다.
-    /// (Zone 1, 2, 3, 6)
+    /// (Zone 1, 2, 3, 4, 5, 6)
     /// </summary>
     private static bool IsFogZone(int zoneNumber)
     {
-        return zoneNumber == 1 || zoneNumber == 2 || zoneNumber == 3 || zoneNumber == 6;
+        return zoneNumber == 1 || zoneNumber == 2 || zoneNumber == 3 || zoneNumber == 4 || zoneNumber == 5 || zoneNumber == 6;
     }
 
     /// <summary>
-    /// URP Renderer의 FullScreenPassRendererFeature를 활성화/비활성화합니다.
+    /// 해당 Zone 번호가 어두운 안개 효과를 사용하는 Zone인지 확인합니다.
+    /// (Zone 4, 5)
     /// </summary>
-    private static void SetUnderwaterEffect(bool active)
+    private static bool IsDarkFogZone(int zoneNumber)
+    {
+        return zoneNumber == 4 || zoneNumber == 5;
+    }
+
+    /// <summary>
+    /// URP Renderer의 FullScreenPassRendererFeature를 활성화/비활성화하고,
+    /// Zone에 따라 머티리얼 설정을 조정합니다.
+    /// </summary>
+    private static void SetUnderwaterEffect(bool active, bool isDark = false)
     {
         if (GraphicsSettings.currentRenderPipeline is not UniversalRenderPipelineAsset pipelineAsset)
         {
@@ -813,15 +825,52 @@ public class ZoneChanger : MonoBehaviour
 
             foreach (var feature in rendererData.rendererFeatures)
             {
-                if (feature is FullScreenPassRendererFeature && feature.name == "Underwater Effects")
+                if (feature is FullScreenPassRendererFeature fsFeature && feature.name == "Underwater Effects")
                 {
-                    feature.SetActive(active);
-                    Debug.Log($"[ZoneChanger] Underwater Effects {(active ? "활성화" : "비활성화")}");
+                    fsFeature.SetActive(active);
+                    if (active)
+                    {
+                        ApplyFogMaterialSettings(fsFeature, isDark);
+                    }
+                    Debug.Log($"[ZoneChanger] Underwater Effects {(active ? (isDark ? "어둡게 활성화" : "활성화") : "비활성화")}");
                     return;
                 }
             }
         }
 
         Debug.LogWarning("[ZoneChanger] 'Underwater Effects' RendererFeature를 찾을 수 없습니다.");
+    }
+
+    /// <summary>
+    /// UnderwaterFog 머티리얼의 속성을 Zone에 맞게 조정합니다.
+    /// isDark=true면 Zone 4/5용 어두운 설정, false면 일반 설정을 적용합니다.
+    /// </summary>
+    private static void ApplyFogMaterialSettings(FullScreenPassRendererFeature feature, bool isDark)
+    {
+        var materialField = feature.GetType().GetField("passMaterial",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (materialField == null) return;
+
+        var material = materialField.GetValue(feature) as Material;
+        if (material == null) return;
+
+        if (isDark)
+        {
+            // Zone 4/5: 어두운 설정
+            material.SetFloat("_alpha", 0.4f);
+            material.SetFloat("_RayIntensity", 0.3f);
+            material.SetColor("_color", new Color(0.34f, 0.37f, 0.34f, 1f));
+            material.SetColor("_RayColor", new Color(0.4f, 0.39f, 0.31f, 0.4f));
+            material.SetColor("Color_551f3de45b3f45d188af0756b6c21b12", new Color(0.2f, 0.31f, 0.36f, 1f));
+        }
+        else
+        {
+            // Zone 1/2/3/6: 원래 설정 복원
+            material.SetFloat("_alpha", 0.15f);
+            material.SetFloat("_RayIntensity", 1.01f);
+            material.SetColor("_color", new Color(0.847f, 0.929f, 0.855f, 1f));
+            material.SetColor("_RayColor", new Color(1f, 0.976f, 0.769f, 0.659f));
+            material.SetColor("Color_551f3de45b3f45d188af0756b6c21b12", new Color(0.494f, 0.784f, 0.890f, 1f));
+        }
     }
 }
