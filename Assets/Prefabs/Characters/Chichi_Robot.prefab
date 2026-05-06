@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 3244945560565024912}
   - component: {fileID: 7566021691256251890}
   - component: {fileID: 5345241367204086980}
+  - component: {fileID: 5345241367204086981}
   m_Layer: 0
   m_Name: Chichi_Robot
   m_TagString: Untagged
@@ -241,3 +242,32 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &5345241367204086981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3221390537093528425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b73fabf963048b1abda37111172fb53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stateMachine: {fileID: 4627533463234035377}
+  spriteRenderer: {fileID: 6785341236302135224}
+  playerMovement: {fileID: 0}
+  spriteFront: {fileID: 0}
+  spriteBack: {fileID: 0}
+  spriteSide: {fileID: 0}
+  maxFollowDistance: 5
+  followBehindDistance: 2
+  sideOffset: 0.8
+  liftOffset: {x: 0, y: 0.5, z: 0}
+  guideOffset: {x: 0, y: 0}
+  followSmoothTime: 0.4
+  catchUpSmoothTime: 0.15
+  turnSpeed: 8
+  directionAngleThreshold: 45
+  minSpriteChangeInterval: 0.15
+  chargeStateCooldownTime: 0.5
