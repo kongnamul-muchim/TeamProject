@@ -93,11 +93,12 @@ namespace HideAndInk.Core.Perception
 
             _cachedSensor = visionSensor;
 
-            // 자식 GameObject
+            // 자식 GameObject (부모 localScale flip 영향 방지)
             _renderObject = new GameObject("VisionConeFloor");
             _renderObject.transform.SetParent(transform);
             _renderObject.transform.localPosition = Vector3.zero;
             _renderObject.transform.localRotation = Quaternion.identity;
+            _renderObject.transform.localScale = Vector3.one;
 
             _meshFilter = _renderObject.AddComponent<MeshFilter>();
             _meshRenderer = _renderObject.AddComponent<MeshRenderer>();
@@ -229,9 +230,10 @@ namespace HideAndInk.Core.Perception
             if (!Physics.Raycast(origin, Vector3.down, out RaycastHit floorHit, viewRadius * 3f, groundLayer)) return;
             float floorY = floorHit.point.y;
 
-            // 2. 자식 객체를 바닥 높이에 배치 (XZ는 origin과 동일)
+            // 2. 자식 객체를 바닥 높이에 배치 + 부모 스케일 반전 영향 제거
             _renderObject.transform.position = new Vector3(origin.x, floorY + meshYOffset, origin.z);
-            _renderObject.transform.rotation = Quaternion.identity; // Enemy 회전 무시 (월드 방향 고정)
+            _renderObject.transform.rotation = Quaternion.identity;
+            _renderObject.transform.localScale = Vector3.one; // 부모 localScale flip 반전 방지
 
             // 3. XZ 평면에서 시야 방향 투영
             Vector3 viewXZ = new Vector3(viewDir.x, 0f, viewDir.z).normalized;
