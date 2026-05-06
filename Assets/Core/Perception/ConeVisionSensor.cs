@@ -94,16 +94,23 @@ namespace HideAndInk.Core.Perception
         {
             if (viewDirectionRef != null)
             {
+#if UNITY_EDITOR
+                Debug.Log($"[ConeVisionSensor] GetViewDirection → viewDirectionRef.forward=({transform.forward.x:F2},{transform.forward.z:F2})");
+#endif
                 return viewDirectionRef.forward;
             }
 
-            // customViewDirection이 설정되어 있으면 사용
             if (customViewDirection.sqrMagnitude > 0.001f)
             {
+#if UNITY_EDITOR
+                Debug.Log($"[ConeVisionSensor] GetViewDirection → customViewDirection=({customViewDirection.x:F2},{customViewDirection.y:F2},{customViewDirection.z:F2})");
+#endif
                 return customViewDirection.normalized;
             }
 
-            // 설정 없으면 본체 right 방향 사용 (2D 스프라이트 전방, Y축 회전 연동)
+#if UNITY_EDITOR
+            Debug.Log($"[ConeVisionSensor] GetViewDirection → transform.right (FALLBACK)=({transform.right.x:F2},{transform.right.z:F2})");
+#endif
             return transform.right;
         }
 

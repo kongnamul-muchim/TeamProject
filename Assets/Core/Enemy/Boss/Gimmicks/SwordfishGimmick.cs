@@ -248,27 +248,34 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         Vector3 IGimmickViewDirection.GetViewDirectionVector()
         {
+            Vector3 result;
             switch (_currentPhase)
             {
                 case Phase.Aiming:
-                    // Aim 중: 돌진 방향 미리 계산해서 그 방향을 바라봄
                     if (_chargeDirection.sqrMagnitude > 0.01f)
-                        return _chargeDirection;
-                    // fallback: Player 방향
-                    if (_playerTransform != null && _bossTransform != null)
+                        result = _chargeDirection;
+                    else if (_playerTransform != null && _bossTransform != null)
                     {
                         Vector3 dir = _playerTransform.position - _bossTransform.position;
                         dir.y = 0f;
-                        return dir.normalized;
+                        result = dir.normalized;
                     }
-                    return Vector3.right;
+                    else
+                        result = Vector3.right;
+                    break;
 
                 case Phase.Charging:
-                    return _chargeDirection;
+                    result = _chargeDirection;
+                    break;
 
                 default:
-                    return Vector3.right;
+                    result = Vector3.right;
+                    break;
             }
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishGimmick] GetViewDirectionVector phase={_currentPhase} result=({result.x:F2},{result.y:F2},{result.z:F2}) chargeDir=({_chargeDirection.x:F2},{_chargeDirection.y:F2})");
+#endif
+            return result;
         }
 
         bool IGimmickViewDirection.ShowChargeIndicator => _currentPhase == Phase.Aiming;

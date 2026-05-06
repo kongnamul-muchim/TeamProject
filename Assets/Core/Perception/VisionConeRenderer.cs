@@ -219,6 +219,11 @@ namespace HideAndInk.Core.Perception
             float viewAngle = _cachedSensor.ViewAngle;
             Vector3 viewDir = _cachedSensor.GetViewDirection();
 
+#if UNITY_EDITOR
+            if (debugLogging)
+                Debug.Log($"[VisionConeRenderer] BuildFloorMesh viewDir=({viewDir.x:F2},{viewDir.z:F2}) viewAngle={viewAngle} viewRadius={viewRadius}");
+#endif
+
             if (viewDir.sqrMagnitude < 0.001f) return;
             viewDir = viewDir.normalized;
 
