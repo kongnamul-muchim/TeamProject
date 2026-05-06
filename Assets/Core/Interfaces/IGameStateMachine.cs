@@ -73,5 +73,10 @@ namespace HideAndInk.Core.Interfaces
         /// 일시 정지/재개 토글
         /// </summary>
         void TogglePause();
+
+        /// <summary>
+        /// 게임 재시작 (현재 상태 → Playing)
+        /// </summary>
+        void Restart();
     }
 }

@@ -28,15 +28,19 @@ namespace HideAndInk.Core.Events
         /// <summary>상황별 사망 멘트 (한국어)</summary>
         public string DeathMessage;
 
+        /// <summary>사망 당시 의태 중이었는지 여부</summary>
+        public bool WasCamouflaged;
+
         public PlayerDeathEvent(DeathCause cause, string sourceName = "",
             Vector3 deathPosition = default, float gameTime = 0f,
-            string deathMessage = "")
+            string deathMessage = "", bool wasCamouflaged = false)
         {
             Cause = cause;
             SourceName = sourceName;
             DeathPosition = deathPosition;
             GameTime = gameTime;
             DeathMessage = deathMessage;
+            WasCamouflaged = wasCamouflaged;
         }
     }
 

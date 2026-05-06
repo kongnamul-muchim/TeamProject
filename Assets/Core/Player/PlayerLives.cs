@@ -37,6 +37,7 @@ namespace HideAndInk.Core.Player
         // 마지막 사망 원인 (GameManager에서 읽어서 이벤트 발행)
         private DeathCause _lastDeathCause = DeathCause.Unknown;
         private string _lastDeathSourceName = "";
+        private bool _lastWasCamouflaged;
 
         // 프로퍼티
         public int CurrentLives => _currentLives;
@@ -115,6 +116,14 @@ namespace HideAndInk.Core.Player
             _lastDeathCause = cause;
             _lastDeathSourceName = sourceName;
 
+            // 의태 상태 확인 (같은 GameObject에 있는 CamouflageAdapter)
+            _lastWasCamouflaged = false;
+            var camouflage = GetComponent<HideAndInk.Player.CamouflageAdapter>();
+            if (camouflage != null)
+            {
+                _lastWasCamouflaged = camouflage.IsCamouflaging;
+            }
+
             OnLifeChanged?.Invoke(_currentLives);
             OnDamageTaken?.Invoke();
 
@@ -168,5 +177,10 @@ namespace HideAndInk.Core.Player
         /// 마지막 사망 원인 오브젝트 이름
         /// </summary>
         public string LastDeathSourceName => _lastDeathSourceName;
+
+        /// <summary>
+        /// 사망 당시 의태 중이었는지 여부
+        /// </summary>
+        public bool LastWasCamouflaged => _lastWasCamouflaged;
     }
 }

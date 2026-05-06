@@ -53,6 +53,13 @@ namespace HideAndInk.Core.Managers
             }
 
             _instance = this;
+
+            // DontDestroyOnLoad는 root GameObject에서만 동작하므로
+            // 씬에 child로 배치된 경우를 대비해 부모를 제거하고 root로 만듦
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
 
             // Time.timeScale 복원 (비정상 종료 후 0으로 남아있는 경우 방지)
@@ -152,35 +159,40 @@ namespace HideAndInk.Core.Managers
             }
             else if (current == GameState.Dead)
             {
-                // PlayerLives에서 사망 원인 읽기
+                // PlayerLives에서 사망 원인 + 의태 상태 읽기
                 var playerLives = PlayerLives.Instance;
                 DeathCause cause = DeathCause.Unknown;
                 string sourceName = "";
                 Vector3 deathPos = Vector3.zero;
+                bool wasCamouflaged = false;
                 if (playerLives != null)
                 {
                     cause = playerLives.LastDeathCause;
                     sourceName = playerLives.LastDeathSourceName;
                     deathPos = playerLives.transform.position;
+                    wasCamouflaged = playerLives.LastWasCamouflaged;
                 }
 
                 _deathCount++;
 
-                // 사망 멘트 선택
-                string deathMessage = DeathMessages.GetRandom(cause);
+                // 사망 멘트 선택 (의태 상태 고려)
+                string deathMessage = DeathMessages.GetRandom(cause, wasCamouflaged);
 
-                // DEATH 로그 기록 (멘트 포함)
+                // DEATH 로그 기록 (멘트 + 의태 상태 포함)
                 LogModule.Instance.Log(
-                    $"사망 #{_deathCount} | 원인: {cause}" +
+                    $"사망 #{_deathCount}" +
+                    (wasCamouflaged ? " [의태 중]" : "") +
+                    $" | 원인: {cause}" +
                     (string.IsNullOrEmpty(sourceName) ? "" : $" | 대상: {sourceName}") +
                     $" | 위치: ({deathPos.x:F1}, {deathPos.y:F1}, {deathPos.z:F1})" +
                     $" | 플레이시간: {Time.timeSinceLevelLoad:F1}초" +
                     $"\n▶ {deathMessage}",
                     "DEATH");
 
-                // PlayerDeathEvent 발행 (사망 원인 + 멘트 포함)
+                // PlayerDeathEvent 발행 (사망 원인 + 멘트 + 의태 상태 포함)
                 _eventBus?.Publish(new PlayerDeathEvent(
-                    cause, sourceName, deathPos, Time.timeSinceLevelLoad, deathMessage
+                    cause, sourceName, deathPos, Time.timeSinceLevelLoad,
+                    deathMessage, wasCamouflaged
                 ));
             }
         }

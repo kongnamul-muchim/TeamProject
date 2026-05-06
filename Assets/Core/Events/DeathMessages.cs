@@ -5,11 +5,12 @@ namespace HideAndInk.Core.Events
 {
     /// <summary>
     /// 사망 원인별 멘트 데이터베이스
-    /// 각 DeathCause에 1~2개의 한국어 사망 멘트를 제공
+    /// 일반 멘트 + 의태 중 멘트를 각각 2개씩 제공
     /// </summary>
     public static class DeathMessages
     {
-        private static readonly Dictionary<DeathCause, string[]> Messages = new()
+        // 일반 멘트 (DeathCause → 2개)
+        private static readonly Dictionary<DeathCause, string[]> NormalMessages = new()
         {
             // ===== 일반 적 =====
             [DeathCause.CrabAttack] = new[]
@@ -37,17 +38,12 @@ namespace HideAndInk.Core.Events
             [DeathCause.SwordfishCharge] = new[]
             {
                 "청새치의 일격에 꿰뚫렸습니다...",
-                "눈앞에서 번개一样的 돌진을 피하지 못했습니다...",
+                "눈앞에서 번개 같은 돌진을 피하지 못했습니다...",
             },
             [DeathCause.GreatWhiteCharge] = new[]
             {
                 "백상아리의 돌진에 산산조각났습니다...",
                 "거대한 포식자 앞에서는 도망칠 수 없었습니다...",
-            },
-            [DeathCause.CamouflageObstacleDestroyed] = new[]
-            {
-                "금속과 함께 하나의 식사가 되어버렸습니다...",
-                "의태한 오브젝트가 파괴되면서 함께 사라졌습니다...",
             },
             [DeathCause.BossCollision] = new[]
             {
@@ -71,6 +67,7 @@ namespace HideAndInk.Core.Events
             [DeathCause.Debug] = new[]
             {
                 "[디버그 모드] 개발자에게 잡혔습니다...",
+                "[디버그] 테스트 중 사망했습니다...",
             },
             [DeathCause.Unknown] = new[]
             {
@@ -79,36 +76,99 @@ namespace HideAndInk.Core.Events
             },
         };
 
-        /// <summary>
-        /// 사망 원인에 해당하는 랜덤 멘트 반환
-        /// </summary>
-        public static string GetRandom(DeathCause cause)
+        // 의태 중 사망 멘트 (보스별 + CamouflageObstacleDestroyed)
+        private static readonly Dictionary<DeathCause, string[]> CamouflagedMessages = new()
         {
-            if (Messages.TryGetValue(cause, out var messages) && messages.Length > 0)
+            [DeathCause.GajamiDash] = new[]
+            {
+                "의태 중 가자미의 기습을 받았습니다...",
+                "모래 바닥에 묻혀 함께 사라졌습니다...",
+            },
+            [DeathCause.MorayCharge] = new[]
+            {
+                "의태한 채 곰치의 돌진에 휩쓸렸습니다...",
+                "숨어도 소용없었습니다. 곰치의 먹이가 되었습니다...",
+            },
+            [DeathCause.SwordfishCharge] = new[]
+            {
+                "의태한 오브젝트째로 꿰뚫렸습니다...",
+                "숨을 곳을 찾았지만 청새치의 일격을 피할 순 없었습니다...",
+            },
+            [DeathCause.GreatWhiteCharge] = new[]
+            {
+                "금속과 함께 하나의 식사가 되어버렸습니다...",
+                "백상아리에게 의태한 물체째로 삼켜졌습니다...",
+            },
+            [DeathCause.BossCollision] = new[]
+            {
+                "의태 중 보스의 공격에 쓰러졌습니다...",
+                "숨어도 찾아내는 놈입니다...",
+            },
+            [DeathCause.CrabAttack] = new[]
+            {
+                "의태 중 게의 집게에 걸렸습니다...",
+                "숨었지만 냄새를 맡고 찾아냈습니다...",
+            },
+        };
+
+        /// <summary>
+        /// 사망 원인 + 의태 여부에 따른 랜덤 멘트 반환
+        /// </summary>
+        public static string GetRandom(DeathCause cause, bool wasCamouflaged = false)
+        {
+            // 의태 중이면 의태 전용 멘트优先
+            if (wasCamouflaged)
+            {
+                if (CamouflagedMessages.TryGetValue(cause, out var camMessages) && camMessages.Length > 0)
+                {
+                    return camMessages[Random.Range(0, camMessages.Length)];
+                }
+            }
+
+            // 일반 멘트
+            if (NormalMessages.TryGetValue(cause, out var messages) && messages.Length > 0)
             {
                 return messages[Random.Range(0, messages.Length)];
             }
+
             return "사망했습니다...";
         }
 
         /// <summary>
-        /// 사망 원인에 해당하는 첫 번째 멘트 반환 (일관된 테스트용)
+        /// 사망 원인 + 의태 여부에 따른 첫 번째 멘트 반환 (일관된 테스트용)
         /// </summary>
-        public static string GetFirst(DeathCause cause)
+        public static string GetFirst(DeathCause cause, bool wasCamouflaged = false)
         {
-            if (Messages.TryGetValue(cause, out var messages) && messages.Length > 0)
+            if (wasCamouflaged)
+            {
+                if (CamouflagedMessages.TryGetValue(cause, out var camMessages) && camMessages.Length > 0)
+                {
+                    return camMessages[0];
+                }
+            }
+
+            if (NormalMessages.TryGetValue(cause, out var messages) && messages.Length > 0)
             {
                 return messages[0];
             }
+
             return "사망했습니다...";
         }
 
         /// <summary>
-        /// 특정 사망 원인의 멘트 개수
+        /// 특정 사망 원인의 일반 멘트 개수
         /// </summary>
-        public static int GetMessageCount(DeathCause cause)
+        public static int GetNormalCount(DeathCause cause)
         {
-            return Messages.TryGetValue(cause, out var messages) ? messages.Length : 1;
+            return NormalMessages.TryGetValue(cause, out var messages) ? messages.Length : 1;
+        }
+
+        /// <summary>
+        /// 특정 사망 원인의 의태 멘트 개수
+        /// </summary>
+        public static int GetCamouflagedCount(DeathCause cause)
+        {
+            return CamouflagedMessages.TryGetValue(cause, out var messages) ? messages.Length : 0;
         }
     }
 }
