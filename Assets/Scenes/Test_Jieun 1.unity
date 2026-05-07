@@ -550,7 +550,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c65f0e55f9ecad49af10d62a57554cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Managers.GameManager
-  storyDatabase: {fileID: 11400000, guid: 832aaada58ef25c47a8d84b11cd61c38, type: 2}
+  storyDatabase: {fileID: 11400000, guid: 66ccb8b545465fa4ca0256b530423f74, type: 2}
   sfxManager: {fileID: 0}
   bgmManager: {fileID: 0}
   playPrologueOnStart: 0
@@ -10040,38 +10040,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 3941961476890629209, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -10151,26 +10119,6 @@ PrefabInstance:
     - target: {fileID: 3941961476890629209, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7192490771539216152, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
-      propertyPath: m_Enabled
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8002560091602375977, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       propertyPath: m_Name
@@ -11308,10 +11256,30 @@ PrefabInstance:
       propertyPath: canChargeWhileDuduFleeing
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4627533463234035377, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: idleDistance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4627533463234035377, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: walkStopDistance
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4627533463234035377, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: walkStartDistance
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5374365525194118893, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: walkSpeed
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 5374365525194118893, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
       propertyPath: duduTransform
       value: 
       objectReference: {fileID: 1164009004}
+    - target: {fileID: 5374365525194118893, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: guideMoveSpeed
+      value: 5
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -204,6 +204,9 @@ public class DialogueUIAdapter : MonoBehaviour
     /// </summary>
     private void OnDialogueLineChanged(string speaker, string text)
     {
+        // 인스펙터에서 입력한 \n을 실제 줄바꿈 문자로 변환
+        text = text.Replace("\\n", "\n");
+
         _isDialogueActive = true;
 
         // DialogeUI 활성화
@@ -318,13 +321,20 @@ public class DialogueUIAdapter : MonoBehaviour
     {
         if (textDialoge == null) yield break;
 
-        textDialoge.text = "";
-        int length = fullText.Length;
+        // 전체 텍스트를 미리 세팅하고, 보이는 글자 수를 0으로 설정
+        textDialoge.text = fullText;
+        textDialoge.maxVisibleCharacters = 0;
 
-        for (int i = 0; i < length; i++)
+        // TMP가 리치 텍스트와 줄바꿈 등을 계산하도록 강제 갱신
+        textDialoge.ForceMeshUpdate();
+        int totalCharacters = textDialoge.textInfo.characterCount;
+
+        for (int i = 0; i < totalCharacters; i++)
         {
-            char c = fullText[i];
-            textDialoge.text += c;
+            textDialoge.maxVisibleCharacters = i + 1;
+
+            // 딜레이 처리를 위해 현재 글자 확인
+            char c = textDialoge.textInfo.characterInfo[i].character;
 
             if (c == '.' || c == '?' || c == '!' || c == ',')
             {
@@ -352,7 +362,8 @@ public class DialogueUIAdapter : MonoBehaviour
 
     private void Update()
     {
-        if (!_isDialogueActive) return;
+        // 대화 중이 아니거나, 연출로 인해 입력이 차단된 상태면 리턴
+        if (!_isDialogueActive || StoryEvents.IsInputBlocked) return;
 
         if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
         {
@@ -368,6 +379,14 @@ public class DialogueUIAdapter : MonoBehaviour
         }
         else
         {
+            // 에필로그의 마지막 대사라면 UI를 끄기 전에 이벤트를 발생시켜 페이드아웃을 먼저 진행합니다.
+            if (_storyManager != null && _storyManager.CurrentSection == StorySection.Epilogue 
+                && _storyManager.CurrentLineIndex >= _storyManager.TotalLineCount - 1)
+            {
+                StoryEvents.InvokeEpilogueWillEnd();
+                return; // NextLine()을 호출하지 않고 대기합니다.
+            }
+
             _storyManager?.NextLine();
         }
     }
@@ -383,7 +402,10 @@ public class DialogueUIAdapter : MonoBehaviour
         _isCurrentlyTyping = false;
 
         if (textDialoge != null)
+        {
             textDialoge.text = _currentFullText;
+            textDialoge.maxVisibleCharacters = 99999; // 모든 글자 강제 표시
+        }
 
         if (endDialogueSign != null)
             endDialogueSign.SetActive(true);

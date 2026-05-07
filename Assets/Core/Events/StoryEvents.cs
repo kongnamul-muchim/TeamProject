@@ -21,6 +21,12 @@ namespace HideAndInk.Core.Events
         /// <summary> 대화가 종료될 때 발생 </summary>
         public static event Action OnDialogueEnd;
 
+        /// <summary> 에필로그의 마지막 대사에서 입력을 받았을 때 (UI가 꺼지기 직전) 발생 </summary>
+        public static event Action OnEpilogueWillEnd;
+
+        /// <summary> 페이드 연출 등 중요 연출 중 대사 스킵 입력을 막기 위한 플래그 </summary>
+        public static bool IsInputBlocked { get; set; } = false;
+
         /// <summary> 스토리 섹션이 시작될 때 발생 (매개변수: StorySection) </summary>
         public static event Action<StorySection> OnSectionStarted;
 
@@ -43,6 +49,9 @@ namespace HideAndInk.Core.Events
 
         internal static void InvokeDialogueEnd()
             => OnDialogueEnd?.Invoke();
+
+        public static void InvokeEpilogueWillEnd()
+            => OnEpilogueWillEnd?.Invoke();
 
         internal static void InvokeSectionStarted(StorySection section)
             => OnSectionStarted?.Invoke(section);
