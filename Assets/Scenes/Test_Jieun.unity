@@ -582,6 +582,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Managers.GameManager
   storyDatabase: {fileID: 0}
+  sfxManager: {fileID: 0}
+  bgmManager: {fileID: 0}
   playPrologueOnStart: 0
 --- !u!4 &70273540
 Transform:
@@ -591,12 +593,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 70273538}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.3522, y: 0.65944, z: -2.21}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.2137299, y: 0.076759994, z: -0.22000003}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 516912067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &73815072
 GameObject:
@@ -2652,6 +2654,61 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8406858668385835371, guid: 392e0183e1d2c3544a55cb87bf1c5e8c, type: 3}
   m_PrefabInstance: {fileID: 356515593}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &369137654
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 369137655}
+  - component: {fileID: 369137656}
+  m_Layer: 0
+  m_Name: TideManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &369137655
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369137654}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 516912067}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &369137656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369137654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bda178c44d110748bde5720feb122ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Environment.TideManager
+  tideForce: 10
+  playerPushForce: 5
+  camouflagePushMultiplier: 0.3
+  tideInterval: 5
+  tideDuration: 3
+  randomTideDirection: 0
+  seaUrchinPrefab: {fileID: 5182623623668998429, guid: ba46c243bf6831c4b89f2fb591942a1e, type: 3}
+  poolSize: 20
+  spawnInterval: 1
+  playerRigidbody: {fileID: 0}
+  camouflageAdapter: {fileID: 0}
 --- !u!1 &380804642
 GameObject:
   m_ObjectHideFlags: 0
@@ -4019,7 +4076,9 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 70273540}
   - {fileID: 1296253349}
+  - {fileID: 369137655}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &524662829
@@ -17351,7 +17410,6 @@ SceneRoots:
   - {fileID: 875207303}
   - {fileID: 504624085}
   - {fileID: 2053983079}
-  - {fileID: 70273540}
   - {fileID: 516912067}
   - {fileID: 888280795}
   - {fileID: 1708830171}
