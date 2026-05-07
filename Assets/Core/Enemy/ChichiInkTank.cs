@@ -29,11 +29,14 @@ namespace HideAndInk.Siyeon1
         public int RemainingChargeUses => remainingChargeUses;
         public bool CanSpendCharge => tankCurrentInk > 0f && remainingChargeUses > 0;
 
+        public static ChichiInkTank Instance { get; private set; }
+
         public event Action<float, float> TankChanged;
         public event Action<int, int> ChargeUsesChanged;
 
         private void Awake()
         {
+            Instance = this;
             tankCurrentInk = Mathf.Clamp(tankCurrentInk, 0f, tankMaxInk);
             remainingChargeUses = Mathf.Clamp(remainingChargeUses, 0, chargeUsesPerSection);
         }
