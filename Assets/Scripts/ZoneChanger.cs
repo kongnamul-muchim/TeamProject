@@ -497,6 +497,10 @@ public class ZoneChanger : MonoBehaviour
             if (toZoneNumber >= 0)
                 ExecuteBossTriggersInActivatedZones();
 
+            // Zone 1: 튜토리얼 트리거 순차 실행
+            if (toZoneNumber == 1)
+                ExecuteTutorialTriggersInOrder();
+
             // 구역 전환 효과음 재생
             _sfxService?.Play(SfxId.StageClear);
 
@@ -581,6 +585,49 @@ public class ZoneChanger : MonoBehaviour
                         Debug.LogWarning($"[ZoneChanger] {child.name}에 TutorialTrigger가 없습니다.");
                     }
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Zone 1 활성화 시 튜토리얼 트리거를 순서대로 자동 실행합니다.
+    /// Camouflage → Escape → InkLow → InkSupply 순서로 실행됩니다.
+    /// </summary>
+    private void ExecuteTutorialTriggersInOrder()
+    {
+        if (activateZones == null) return;
+
+        foreach (var zone in activateZones)
+        {
+            if (zone == null) continue;
+
+            // TutorialType enum 순서대로 정렬된 리스트
+            var tutorialTriggers = new List<(TutorialType type, HideAndInk.Gameplay.TutorialTrigger trigger)>();
+
+            foreach (Transform child in zone.transform)
+            {
+                if (child.name.StartsWith("Trigger_Tutorial_"))
+                {
+                    var trigger = child.GetComponent<HideAndInk.Gameplay.TutorialTrigger>();
+                    if (trigger != null)
+                    {
+                        tutorialTriggers.Add((trigger.tutorialType, trigger));
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[ZoneChanger] {child.name}에 TutorialTrigger가 없습니다.");
+                    }
+                }
+            }
+
+            // TutorialType enum 값 순서대로 정렬 (Camouflage=0, Escape=1, InkLow=2, InkSupply=3)
+            tutorialTriggers.Sort((a, b) => ((int)a.type).CompareTo((int)b.type));
+
+            // 순차적으로 실행
+            foreach (var item in tutorialTriggers)
+            {
+                Debug.Log($"[ZoneChanger] 튜토리얼 트리거 실행: {item.trigger.name} ({item.type})");
+                item.trigger.ExecuteTrigger();
             }
         }
     }
