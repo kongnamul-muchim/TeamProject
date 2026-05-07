@@ -174,6 +174,13 @@ namespace HideAndInk.Core.Perception
 
         private void Awake()
         {
+            // Awake에서는 UIManager 등록만 수행
+            // ZoneChanger 구독은 Start()에서 안전하게 처리
+            SuspicionUIManager.Instance?.Register(this);
+        }
+
+        private void Start()
+        {
             SubscribeToZoneChangers();
             UpdateZoneState(_currentZoneNumber);
         }
