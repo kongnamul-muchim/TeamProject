@@ -258,15 +258,11 @@ public class DialogueUIAdapter : MonoBehaviour
         }
         else
         {
-            // BG 없음: 컷씬 이미지 투명 처리, Panel 배경 이미지 복원
-            var c = storyCutscene.color;
-            c.a = 0f;
-            storyCutscene.color = c;
-            storyCutscene.gameObject.SetActive(true);
-            storyCutscene.enabled = true;
+            // 대화 종료: 컷씬 이미지 숨기고, Panel 배경 복원
+            storyCutscene.gameObject.SetActive(false);
             panelBgImage.enabled = true;
 
-            Debug.Log("[DialogueUIAdapter] 컷씬 배경 없음 → 투명 + Panel 표시");
+            Debug.Log("[DialogueUIAdapter] 컷씬 종료 → 숨김, Panel 복원");
         }
     }
 
