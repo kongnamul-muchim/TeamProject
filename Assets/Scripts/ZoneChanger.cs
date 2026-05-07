@@ -161,6 +161,12 @@ public class ZoneChanger : MonoBehaviour
             {
                 SyncGroundObjects(fromZoneNumber);
                 Debug.Log($"[ZoneChanger] '{name}' 초기 Ground 동기화: Zone_{fromZoneNumber} (Ground_{fromZoneNumber:D2} 활성화)");
+
+                // 게임 시작 시 Zone 1이면 튜토리얼 트리거 순차 실행
+                if (fromZoneNumber == 1)
+                {
+                    ExecuteTutorialTriggersInDeactivatedZones();
+                }
             }
 
             // 게임 시작 시 Fog Zone(1,2,3,6)이면 Underwater Effects 활성화
@@ -595,9 +601,25 @@ public class ZoneChanger : MonoBehaviour
     /// </summary>
     private void ExecuteTutorialTriggersInOrder()
     {
-        if (activateZones == null) return;
+        ExecuteTutorialTriggersInZones(activateZones);
+    }
 
-        foreach (var zone in activateZones)
+    /// <summary>
+    /// 게임 시작 시 Zone 1이 이미 활성화되어 있을 때 deactivateZones에서 튜토리얼 트리거를 실행합니다.
+    /// </summary>
+    private void ExecuteTutorialTriggersInDeactivatedZones()
+    {
+        ExecuteTutorialTriggersInZones(deactivateZones);
+    }
+
+    /// <summary>
+    /// 지정된 Zone 배열에서 튜토리얼 트리거를 찾아 순서대로 실행합니다.
+    /// </summary>
+    private void ExecuteTutorialTriggersInZones(GameObject[] zones)
+    {
+        if (zones == null) return;
+
+        foreach (var zone in zones)
         {
             if (zone == null) continue;
 
