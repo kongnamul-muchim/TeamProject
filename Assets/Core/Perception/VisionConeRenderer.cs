@@ -339,6 +339,19 @@ namespace HideAndInk.Core.Perception
             }
         }
 
+        private void OnDisable()
+        {
+            // 보스 오브젝트가 비활성화되면 시야 원뿔도 숨김
+            if (_renderObject != null)
+                _renderObject.SetActive(false);
+        }
+
+        private void OnEnable()
+        {
+            // 보스 오브젝트가 활성화되면 시야 원뿔 상태 갱신
+            UpdateVisibility();
+        }
+
         private void OnDestroy()
         {
             if (_coneMaterial != null) DestroyImmediate(_coneMaterial);
