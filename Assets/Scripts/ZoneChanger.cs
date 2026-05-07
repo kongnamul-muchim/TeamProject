@@ -453,6 +453,9 @@ public class ZoneChanger : MonoBehaviour
 
                     // 자식 중 BoundaryWall 태그를 가진 오브젝트 자동 활성화
                     ActivateBoundaryWallsInZone(zone.transform);
+
+                    // 자식 중 보스 트리거 자동 활성화
+                    ActivateBossTriggersInZone(zone.transform);
                 }
             }
             changed = true;
@@ -799,6 +802,23 @@ public class ZoneChanger : MonoBehaviour
             {
                 child.gameObject.SetActive(true);
                 Debug.Log($"[ZoneChanger] 경계 벽 자동 활성화 (이름): {child.name}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Zone의 자식 중 보스 트리거(Trigger_Boss_*)를 찾아 활성화합니다.
+    /// </summary>
+    private void ActivateBossTriggersInZone(Transform zoneTransform)
+    {
+        if (zoneTransform == null) return;
+
+        foreach (Transform child in zoneTransform)
+        {
+            if (child.name.StartsWith("Trigger_Boss_"))
+            {
+                child.gameObject.SetActive(true);
+                Debug.Log($"[ZoneChanger] 보스 트리거 자동 활성화: {child.name}");
             }
         }
     }
