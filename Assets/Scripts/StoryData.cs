@@ -51,12 +51,14 @@ public struct DialogueLine
     public string speaker;   // 화자 이름
     public string text;      // 대사 내용
     public string sceneId;   // 컷신-순번 (예: "1-1"), 없으면 빈 문자열
+    public Sprite cutsceneBg; // 컷신 배경 이미지 (null = 이전 이미지 유지)
 
-    public DialogueLine(string speaker, string text, string sceneId = "")
+    public DialogueLine(string speaker, string text, string sceneId = "", Sprite cutsceneBg = null)
     {
         this.speaker = speaker;
         this.text = text;
         this.sceneId = sceneId;
+        this.cutsceneBg = cutsceneBg;
     }
 }
 
