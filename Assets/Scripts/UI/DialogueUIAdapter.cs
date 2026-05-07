@@ -45,6 +45,10 @@ public class DialogueUIAdapter : MonoBehaviour
         if (dialogeUIRoot != null)
             dialogeUIRoot.SetActive(false);
 
+        // StoryCutScene 강제 비활성화 (프리팹 기본값 보정)
+        if (storyCutscene != null)
+            storyCutscene.gameObject.SetActive(false);
+
         // Panel 배경 이미지 기본 활성화 (프리팹 기본값 보정)
         if (panelBgImage != null)
             panelBgImage.enabled = true;
