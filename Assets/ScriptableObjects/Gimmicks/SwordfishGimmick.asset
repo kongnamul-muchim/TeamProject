@@ -20,9 +20,10 @@ MonoBehaviour:
   stunDuration: 0.5
   minPredictionFactor: 0.3
   maxPredictionFactor: 0.9
-  chargeTargetDistance: 20
+  chargeTargetDistance: 10
   chargeRange: 12
   wallCheckRadius: 0.8
   wallLayerName: Wall
+  groundLayerName: Ground
   wallPushbackDistance: 0.2
   wallCooldownDuration: 1.5

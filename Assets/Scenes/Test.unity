@@ -148,6 +148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c65f0e55f9ecad49af10d62a57554cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Managers.GameManager
+  storyDatabase: {fileID: 0}
+  playPrologueOnStart: 0
 --- !u!4 &70273540
 Transform:
   m_ObjectHideFlags: 0
@@ -295,11 +297,24 @@ PrefabInstance:
       propertyPath: m_Name
       value: Chichi_Robot
       objectReference: {fileID: 0}
+    - target: {fileID: 4627533463234035377, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: duduTransform
+      value: 
+      objectReference: {fileID: 388713252}
+    - target: {fileID: 5374365525194118893, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: duduTransform
+      value: 
+      objectReference: {fileID: 388713252}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+--- !u!4 &388713252 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+  m_PrefabInstance: {fileID: 1149871083}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &400642630
 GameObject:
   m_ObjectHideFlags: 0
@@ -1318,7 +1333,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2882860118672073844, guid: 8dba1d8f00e18654cb0c65a82bd0e4de, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1703,7 +1718,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5827043790813666054, guid: 960214871b2109943a026a255045aa19, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
