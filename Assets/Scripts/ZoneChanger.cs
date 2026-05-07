@@ -493,6 +493,10 @@ public class ZoneChanger : MonoBehaviour
             if (toZoneNumber >= 0)
                 onZoneChanged?.Invoke(toZoneNumber);
 
+            // Zone 활성화 시 보스 트리거 자동 실행
+            if (toZoneNumber >= 0)
+                ExecuteBossTriggersInActivatedZones();
+
             // 구역 전환 효과음 재생
             _sfxService?.Play(SfxId.StageClear);
 
@@ -547,6 +551,37 @@ public class ZoneChanger : MonoBehaviour
         {
             canvasIngame.SetActive(shouldBeActive);
             Debug.Log($"[ZoneChanger] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
+        }
+    }
+
+    /// <summary>
+    /// 활성화된 Zone들의 자식 중 보스 트리거(Trigger_Boss_*)를 찾아 자동 실행합니다.
+    /// Zone 전환 완료 시 바로 보스 이벤트가 시작됩니다.
+    /// </summary>
+    private void ExecuteBossTriggersInActivatedZones()
+    {
+        if (activateZones == null) return;
+
+        foreach (var zone in activateZones)
+        {
+            if (zone == null) continue;
+
+            foreach (Transform child in zone.transform)
+            {
+                if (child.name.StartsWith("Trigger_Boss_"))
+                {
+                    var trigger = child.GetComponent<HideAndInk.Gameplay.TutorialTrigger>();
+                    if (trigger != null)
+                    {
+                        Debug.Log($"[ZoneChanger] 보스 트리거 자동 실행: {child.name}");
+                        trigger.ExecuteTrigger();
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[ZoneChanger] {child.name}에 TutorialTrigger가 없습니다.");
+                    }
+                }
+            }
         }
     }
 
