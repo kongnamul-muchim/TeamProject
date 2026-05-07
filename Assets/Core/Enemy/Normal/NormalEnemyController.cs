@@ -3,6 +3,7 @@ using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 

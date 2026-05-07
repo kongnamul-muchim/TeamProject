@@ -6,6 +6,7 @@ using HideAndInk.Core.Perception;
 using HideAndInk.Core.Enemy.Boss.Gimmicks;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Managers;
