@@ -1,4 +1,5 @@
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using UnityEngine;
