@@ -23,8 +23,6 @@ namespace HideAndInk.Core.Audio
         GameOver,
 
         // ===== Predator (포식자) =====
-        PredatorDetected,
-        PredatorUnderwaterPass,
         PredatorChase,
     }
 }
