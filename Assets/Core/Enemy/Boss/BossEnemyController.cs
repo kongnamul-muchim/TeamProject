@@ -165,6 +165,18 @@ namespace HideAndInk.Core.Enemy.Boss
             UpdateZoneState(_currentZoneNumber);
         }
 
+        private void Update()
+        {
+            // Zone이 비활성화되면 매 프레임 시각적 요소 강제 숨김
+            if (!_isZoneActive)
+            {
+                if (visionConeRenderer != null && visionConeRenderer.enabled)
+                    visionConeRenderer.enabled = false;
+                HideChargeIndicator();
+                return;
+            }
+        }
+
         protected override void ScanGroundBounds()
         {
             base.ScanGroundBounds();
