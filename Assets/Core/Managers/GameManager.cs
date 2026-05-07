@@ -89,10 +89,18 @@ namespace HideAndInk.Core.Managers
             // LogModule 초기화
             _ = LogModule.Instance;
 
-            // StoryDatabaseSO 미할당 시 기본 데이터로 생성
+            // StoryDatabaseSO 미할당 시 Resources에서 자동 로드
             if (storyDatabase == null)
             {
-                Debug.LogWarning("[GameManager] StoryDatabaseSO not assigned. Creating default instance from static data.");
+                storyDatabase = Resources.Load<StoryDatabaseSO>("StoryData/StoryDatabase");
+                if (storyDatabase != null)
+                    Debug.Log($"[GameManager] StoryDatabaseSO loaded from Resources: {storyDatabase.name}");
+            }
+
+            // 그래도 없으면 기본 데이터로 생성 (cutsceneBg 없음)
+            if (storyDatabase == null)
+            {
+                Debug.LogWarning("[GameManager] StoryDatabaseSO not assigned and not found in Resources. Creating default instance (no cutscene sprites). Assign StoryDatabase.asset to Inspector for cutscene support.");
                 storyDatabase = ScriptableObject.CreateInstance<StoryDatabaseSO>();
                 StoryDatabase.PopulateDefaults(storyDatabase);
             }

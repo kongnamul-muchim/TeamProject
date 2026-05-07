@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace HideAndInk.Core.Events
 {
@@ -26,6 +27,9 @@ namespace HideAndInk.Core.Events
         /// <summary> 스토리 섹션이 완전히 종료되었을 때 발생 (매개변수: StorySection) </summary>
         public static event Action<StorySection> OnSectionCompleted;
 
+        /// <summary> 컷씬 배경 이미지가 변경될 때 발생 (null = 이미지 제거) </summary>
+        public static event Action<Sprite> OnCutsceneBackgroundChanged;
+
         // ─── 내부 호출 메서드 ────────────────────────────────────
 
         internal static void InvokeDialogueStart(string speaker, string text)
@@ -45,5 +49,8 @@ namespace HideAndInk.Core.Events
 
         internal static void InvokeSectionCompleted(StorySection section)
             => OnSectionCompleted?.Invoke(section);
+
+        internal static void InvokeCutsceneBackgroundChanged(Sprite sprite)
+            => OnCutsceneBackgroundChanged?.Invoke(sprite);
     }
 }

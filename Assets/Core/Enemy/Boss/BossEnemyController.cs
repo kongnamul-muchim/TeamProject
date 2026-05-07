@@ -40,6 +40,8 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private float searchDistance = 3f;
         [Tooltip("수색 상태 지속 시간")]
         [SerializeField] private float searchDuration = 5f;
+        [Tooltip("순찰 시 Player 기준 최대 이동 반경 (0 = 제한 없음)")]
+        [SerializeField] private float patrolRadius = 8f;
 
         [Header("기믹 설정")]
         [Tooltip("보스 기믹 에셋 (ScriptableObject)")]
@@ -416,6 +418,12 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _patrolBehavior.SetGroundBounds(_groundBounds);
                 _searchBehavior.SetGroundBounds(_groundBounds);
+            }
+
+            // Player 기준 순찰 반경 제한 (멀리 벗어나지 않도록)
+            if (_playerTransform != null && patrolRadius > 0f)
+            {
+                _patrolBehavior.SetPlayerPatrolRadius(_playerTransform, patrolRadius);
             }
         }
 
@@ -821,6 +829,13 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateMovement(float deltaTime)
         {
+            // 💥 기절 중(Swordfish Stunned)에는 모든 이동 차단
+            if (_activeGimmick is SwordfishGimmick swordfish && swordfish.IsStunned)
+            {
+                _movement?.Stop();
+                return;
+            }
+
             bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
 
             if (isMorayChase)
@@ -1137,9 +1152,15 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (_activeGimmick is RelentlessChaseGimmick)
                     return false;
 
-                // Swordfish (청새치): Charging 위상에서만 피격
+                // Swordfish (청새치): Chase 상태에서도 접촉 피격 + Charging 위상 피격
+                if (_activeGimmick is SwordfishGimmick)
+                {
+                    // Charging 중이거나 Chase 상태에서 접촉 시 데미지
+                    return _combatCycle != null && _combatCycle.IsCharging
+                        || _stateMachine.CurrentState == EnemyAIState.Chase;
+                }
+
                 // DashCharge (백상아리): 자체 OverlapSphere + IsCharging에서만
-                // → IGimmickCombatCycle.IsCharging으로 통일 판정
                 if (_combatCycle != null)
                     return _combatCycle.IsCharging;
             }
