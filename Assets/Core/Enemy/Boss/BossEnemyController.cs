@@ -167,12 +167,16 @@ namespace HideAndInk.Core.Enemy.Boss
 
         private void Update()
         {
-            // Zone이 비활성화되면 매 프레임 시각적 요소 강제 숨김
+            // Zone이 비활성화되면 보스 오브젝트 전체 비활성화
             if (!_isZoneActive)
             {
-                if (visionConeRenderer != null && visionConeRenderer.enabled)
-                    visionConeRenderer.enabled = false;
-                HideChargeIndicator();
+                if (gameObject.activeSelf)
+                {
+                    gameObject.SetActive(false);
+#if UNITY_EDITOR
+                    Debug.Log($"[BossEnemyController] {name} 오브젝트 비활성화 (Zone {_currentZoneNumber} != {targetZoneNumber})");
+#endif
+                }
                 return;
             }
         }
