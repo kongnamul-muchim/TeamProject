@@ -595,6 +595,10 @@ public class ZoneChanger : MonoBehaviour
         }
     }
 
+    // ─── 튜토리얼 순차 실행 큐 ─────────────────────────────────
+    private Queue<HideAndInk.Gameplay.TutorialTrigger> _tutorialQueue;
+    private bool _isExecutingTutorials = false;
+
     /// <summary>
     /// Zone 1 활성화 시 튜토리얼 트리거를 순서대로 자동 실행합니다.
     /// Camouflage → Escape → InkLow → InkSupply 순서로 실행됩니다.
@@ -614,10 +618,13 @@ public class ZoneChanger : MonoBehaviour
 
     /// <summary>
     /// 지정된 Zone 배열에서 튜토리얼 트리거를 찾아 순서대로 실행합니다.
+    /// StoryManager의 대사가 끝날 때마다 다음 튜토리얼을 실행합니다.
     /// </summary>
     private void ExecuteTutorialTriggersInZones(GameObject[] zones)
     {
         if (zones == null) return;
+
+        _tutorialQueue = new Queue<HideAndInk.Gameplay.TutorialTrigger>();
 
         foreach (var zone in zones)
         {
@@ -645,13 +652,47 @@ public class ZoneChanger : MonoBehaviour
             // TutorialType enum 값 순서대로 정렬 (Camouflage=0, Escape=1, InkLow=2, InkSupply=3)
             tutorialTriggers.Sort((a, b) => ((int)a.type).CompareTo((int)b.type));
 
-            // 순차적으로 실행
+            // 큐에 추가
             foreach (var item in tutorialTriggers)
             {
-                Debug.Log($"[ZoneChanger] 튜토리얼 트리거 실행: {item.trigger.name} ({item.type})");
-                item.trigger.ExecuteTrigger();
+                _tutorialQueue.Enqueue(item.trigger);
             }
         }
+
+        // 첫 번째 튜토리얼 실행 시작
+        if (_tutorialQueue.Count > 0 && !_isExecutingTutorials)
+        {
+            _isExecutingTutorials = true;
+            StoryEvents.OnDialogueEnd += OnTutorialDialogueEnd;
+            ExecuteNextTutorial();
+        }
+    }
+
+    /// <summary>
+    /// 큐에서 다음 튜토리얼 트리거를 실행합니다.
+    /// </summary>
+    private void ExecuteNextTutorial()
+    {
+        if (_tutorialQueue == null || _tutorialQueue.Count == 0)
+        {
+            // 모든 튜토리얼 실행 완료
+            StoryEvents.OnDialogueEnd -= OnTutorialDialogueEnd;
+            _isExecutingTutorials = false;
+            Debug.Log("[ZoneChanger] 모든 튜토리얼 트리거 실행 완료");
+            return;
+        }
+
+        var trigger = _tutorialQueue.Dequeue();
+        Debug.Log($"[ZoneChanger] 튜토리얼 트리거 실행: {trigger.name} ({trigger.tutorialType})");
+        trigger.ExecuteTrigger();
+    }
+
+    /// <summary>
+    /// 대사가 종료되면 다음 튜토리얼을 실행합니다.
+    /// </summary>
+    private void OnTutorialDialogueEnd()
+    {
+        ExecuteNextTutorial();
     }
 
     /// <summary>
