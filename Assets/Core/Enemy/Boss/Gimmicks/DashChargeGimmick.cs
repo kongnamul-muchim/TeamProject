@@ -23,15 +23,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         [Header("의심도 단계별 상승률 (%/s)")]
         [SerializeField, Tooltip("의심도 0~30%일 때 초당 상승량")]
-        private float suspicionRateStage1 = 3f;
+        private float suspicionRateStage1 = 5f;
         [SerializeField, Tooltip("의심도 30~60%일 때 초당 상승량")]
-        private float suspicionRateStage2 = 8f;
+        private float suspicionRateStage2 = 12f;
         [SerializeField, Tooltip("의심도 60~90%일 때 초당 상승량")]
-        private float suspicionRateStage3 = 15f;
+        private float suspicionRateStage3 = 22f;
         [SerializeField, Tooltip("의심도 90~100%일 때 초당 상승량")]
-        private float suspicionRateStage4 = 25f;
+        private float suspicionRateStage4 = 35f;
         [SerializeField, Tooltip("의태 중 초당 의심도 하락량")]
-        private float suspicionDecreaseRateCamouflage = 10f;
+        private float suspicionDecreaseRateCamouflage = 5f;
         [SerializeField, Tooltip("Chase 종료 후 설정될 의심도")]
         private float postChaseSuspicion = 0f;
 
@@ -39,19 +39,19 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField, Tooltip("일반 순찰 속도")]
         private float patrolSpeed = 3f;
         [SerializeField, Tooltip("Patrol 중 의태 트리거 돌진 속도")]
-        private float chargeSpeedPatrol = 15f;
+        private float chargeSpeedPatrol = 18f;
         [SerializeField, Tooltip("Chase 폭주 모드 돌진 속도")]
-        private float chargeSpeedChase = 22f;
+        private float chargeSpeedChase = 28f;
         [SerializeField, Tooltip("돌진 판정 너비 (m)")]
-        private float chargeWidth = 2.5f;
+        private float chargeWidth = 3.0f;
         [SerializeField, Tooltip("최대 돌진 거리 (m)")]
         private float maxDashDistance = 25f;
         [SerializeField, Tooltip("Chase 중 돌진 사이 쿨타임 (초)")]
-        private float chargeCooldownChase = 1.5f;
+        private float chargeCooldownChase = 1.0f;
 
         [Header("의태 타겟팅")]
         [SerializeField, Tooltip("의태 → 오브젝트 선정까지 딜레이 (초)")]
-        private float camouflageLockDelay = 0.5f;
+        private float camouflageLockDelay = 0.3f;
         [SerializeField, Tooltip("오브젝트 머리 위 공격 표식 지속 시간 (초)")]
         private float indicatorDuration = 0.8f;
         [SerializeField, Tooltip("Player 기준 오브젝트 탐색 반경 (m)")]
@@ -267,7 +267,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isChaseMode = true;
             _chasePhase = ChasePhase.Locking;
-            _phaseTimer = 0.3f; // Lock-On 시간
+            _phaseTimer = 0.2f; // Lock-On 시간
             _chaseCooldownTimer = 0f;
             OnSpeedOverride?.Invoke(0f); // Lock-On 중 정지
         }
@@ -621,7 +621,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private void StartPatrolCooldown()
         {
             _currentPhase = GimmickPhase.Cooldown;
-            _phaseTimer = 0.5f; // 0.5초 쿨다운
+            _phaseTimer = 0.3f; // 0.3초 쿨다운
             OnSpeedOverride?.Invoke(0f);
         }
 
