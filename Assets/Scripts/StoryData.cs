@@ -113,13 +113,13 @@ public static class StoryDatabase
         so.bossDialogues = new StoryDatabaseSO.BossDialogueEntry[]
         {
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.Swordfish, line = new DialogueLine("두두", "저 뾰족한 코에 찔리면 무사하지 못할 거야. 내가 불안해할수록 더 빨리 돌진해오겠지? 여차하면 바위에 부딪히게 유인해보자!") },
+            { type = BossType.Swordfish, lines = new DialogueLine[] { new DialogueLine("두두", "저 뾰족한 코에 찔리면 무사하지 못할 거야. 내가 불안해할수록 더 빨리 돌진해오겠지? 여차하면 바위에 부딪히게 유인핬보자!") } },
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.Flounder, line = new DialogueLine("두두", "모래바닥이 미세하게 떨리고 있어... 혹시 박스 가자미가 주변에 있는걸까? 녀석의 근처에 가면 튀어나와서 덮칠 거야. 저 모래구덩이에 빠지면 발이 묶이니 조심해야 해!") },
+            { type = BossType.Flounder, lines = new DialogueLine[] { new DialogueLine("두두", "모래바닥이 미세하게 떨리고 있어... 혹시 박스 가자미가 주변에 있는걸까? 녀석의 근처에 가면 튀어나와서 덮칠 거야. 저 모래구덩이에 빠지면 발이 묶이니 조심해야 해!") } },
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.Moray, line = new DialogueLine("두두", "저 녀석, 내 주변을 맴돌며 기회를 엿보고 있어. 가만히 있으면 의심만 살 뿐이야. 차라리 돌진을 유도하고 그 틈에 도망치자!") },
+            { type = BossType.Moray, lines = new DialogueLine[] { new DialogueLine("두두", "저 녀석, 내 주변을 맘돌며 기회를 엿보고 있어. 가만히 있으면 의심만 살 뿐이야. 차라리 돌진을 유도하고 그 틈에 도망치자!") } },
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.GreatWhite, line = new DialogueLine("두두", "백상아리야... 숨을 곳을 무작위로 부수고 있어! 은신처가 사라지기 전에 지나가야 해. 들키는 순간 끝장이야!") },
+            { type = BossType.GreatWhite, lines = new DialogueLine[] { new DialogueLine("두두", "백상아리야... 숨을 곳을 무작위로 부수고 있어! 은신처가 사라지기 전에 지나가야 해. 들키는 순간 끝장이야!") } },
         };
 
         // ─── 에필로그 ───────────────────────────────────────────────

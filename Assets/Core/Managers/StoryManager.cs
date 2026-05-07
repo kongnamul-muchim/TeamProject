@@ -63,12 +63,19 @@ namespace HideAndInk.Core.Managers
             }
         }
 
-        // ─── 보스 조우 대사 (단발성) ──────────────────────────────
+        // ─── 보스 조우 대사 (여러 페이지 지원) ──────────────────────
         public void ShowBossDialogue(BossType type)
         {
             if (_isPlaying) return;
-            var line = _database.GetBossDialogue(type);
-            BeginSingleLine(line);
+            var lines = _database.GetBossDialogue(type);
+            if (lines.Length == 1)
+            {
+                BeginSingleLine(lines[0]);
+            }
+            else if (lines.Length > 1)
+            {
+                BeginSection(StorySection.Tutorial, lines);
+            }
         }
 
         // ─── 다음 대사 진행 ─────────────────────────────────────

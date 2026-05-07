@@ -21,7 +21,7 @@ public class StoryDatabaseSO : ScriptableObject
     public class BossDialogueEntry
     {
         public BossType type;
-        public DialogueLine line;
+        public DialogueLine[] lines;
     }
 
     // ─── 데이터 필드 ────────────────────────────────────────────
@@ -61,18 +61,18 @@ public class StoryDatabaseSO : ScriptableObject
         return new DialogueLine[] { new DialogueLine("?", "") };
     }
 
-    /// <summary> 특정 보스 조우 대사 조회 </summary>
-    public DialogueLine GetBossDialogue(BossType type)
+    /// <summary> 특정 보스 조우 대사 배열 조회 </summary>
+    public DialogueLine[] GetBossDialogue(BossType type)
     {
         if (bossDialogues != null)
         {
             for (int i = 0; i < bossDialogues.Length; i++)
             {
                 if (bossDialogues[i].type == type)
-                    return bossDialogues[i].line;
+                    return bossDialogues[i].lines ?? new DialogueLine[0];
             }
         }
         Debug.LogWarning($"[StoryDatabaseSO] BossDialogue '{type}' not found. Check Inspector.");
-        return new DialogueLine("?", "");
+        return new DialogueLine[] { new DialogueLine("?", "") };
     }
 }
