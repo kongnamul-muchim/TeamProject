@@ -366,10 +366,21 @@ MonoBehaviour:
   activateZones: []
   fromZoneNumber: 1
   toZoneNumber: 2
+  canvasIngame: {fileID: 0}
   useTransition: 1
   enableCameraMove: 0
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
+  createInvisibleWall: 1
+  wallSize: {x: 0, y: 0, z: 0}
+  wallOffset: {x: 0, y: 0, z: 0}
+  invisibleWalls: []
+  createLeftBoundaryWall: 1
+  leftBoundaryWallSize: {x: 2, y: 20}
+  leftBoundaryOffset: -5
+  leftBoundaryWalls: []
+  wallContainer: {fileID: 0}
+  activeWallName: 
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -526,6 +537,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c65f0e55f9ecad49af10d62a57554cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HideAndInk.Core.Managers.GameManager
+  storyDatabase: {fileID: 11400000, guid: 832aaada58ef25c47a8d84b11cd61c38, type: 2}
+  playPrologueOnStart: 0
 --- !u!4 &70273540
 Transform:
   m_ObjectHideFlags: 0
@@ -534,12 +547,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 70273538}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.3522, y: 0.65944, z: -2.21}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.2137299, y: 0.076759994, z: -0.22000003}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 516912067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &73815072
 GameObject:
@@ -3007,6 +3020,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 70273540}
   - {fileID: 1296253349}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -4182,6 +4196,7 @@ MonoBehaviour:
   searchSpeed: 3
   searchDistance: 3
   searchDuration: 5
+  patrolRadius: 8
   gimmickAsset: {fileID: 0}
   customGimmick: {fileID: 0}
   chaseSuspicionDecayMultiplier: 0.5
@@ -6645,10 +6660,21 @@ MonoBehaviour:
   activateZones: []
   fromZoneNumber: 5
   toZoneNumber: 6
+  canvasIngame: {fileID: 0}
   useTransition: 1
   enableCameraMove: 0
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
+  createInvisibleWall: 1
+  wallSize: {x: 0, y: 0, z: 0}
+  wallOffset: {x: 0, y: 0, z: 0}
+  invisibleWalls: []
+  createLeftBoundaryWall: 1
+  leftBoundaryWallSize: {x: 2, y: 20}
+  leftBoundaryOffset: -5
+  leftBoundaryWalls: []
+  wallContainer: {fileID: 0}
+  activeWallName: 
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -7318,10 +7344,21 @@ MonoBehaviour:
   activateZones: []
   fromZoneNumber: 3
   toZoneNumber: 4
+  canvasIngame: {fileID: 0}
   useTransition: 1
   enableCameraMove: 0
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
+  createInvisibleWall: 1
+  wallSize: {x: 0, y: 0, z: 0}
+  wallOffset: {x: 0, y: 0, z: 0}
+  invisibleWalls: []
+  createLeftBoundaryWall: 1
+  leftBoundaryWallSize: {x: 2, y: 20}
+  leftBoundaryOffset: -5
+  leftBoundaryWalls: []
+  wallContainer: {fileID: 0}
+  activeWallName: 
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -7743,10 +7780,21 @@ MonoBehaviour:
   activateZones: []
   fromZoneNumber: 4
   toZoneNumber: 5
+  canvasIngame: {fileID: 0}
   useTransition: 1
   enableCameraMove: 0
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
+  createInvisibleWall: 1
+  wallSize: {x: 0, y: 0, z: 0}
+  wallOffset: {x: 0, y: 0, z: 0}
+  invisibleWalls: []
+  createLeftBoundaryWall: 1
+  leftBoundaryWallSize: {x: 2, y: 20}
+  leftBoundaryOffset: -5
+  leftBoundaryWalls: []
+  wallContainer: {fileID: 0}
+  activeWallName: 
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -9938,6 +9986,38 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2567301076045056510, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2915318032624313481, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3941961476890629209, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -10017,6 +10097,26 @@ PrefabInstance:
     - target: {fileID: 3941961476890629209, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5653697620046762241, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7192490771539216152, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8002560091602375977, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       propertyPath: m_Name
@@ -10798,10 +10898,21 @@ MonoBehaviour:
   activateZones: []
   fromZoneNumber: 2
   toZoneNumber: 3
+  canvasIngame: {fileID: 0}
   useTransition: 1
   enableCameraMove: 0
   moveCameraTo: {x: 0, y: 0, z: 0}
   snapToTargetAfterMove: 1
+  createInvisibleWall: 1
+  wallSize: {x: 0, y: 0, z: 0}
+  wallOffset: {x: 0, y: 0, z: 0}
+  invisibleWalls: []
+  createLeftBoundaryWall: 1
+  leftBoundaryWallSize: {x: 2, y: 20}
+  leftBoundaryOffset: -5
+  leftBoundaryWalls: []
+  wallContainer: {fileID: 0}
+  activeWallName: 
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -13252,7 +13363,6 @@ SceneRoots:
   - {fileID: 875207303}
   - {fileID: 710864465}
   - {fileID: 2053983079}
-  - {fileID: 70273540}
   - {fileID: 516912067}
   - {fileID: 888280795}
   - {fileID: 1708830171}
