@@ -110,8 +110,9 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
-    private ISfxService _sfxService;
-    private bool _alreadyTriggered = false;
+        private ISfxService _sfxService;
+        private IBgmService _bgmService;
+        private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
     private GameObject _autoCreatedLeftBoundaryWall;
 
@@ -134,11 +135,13 @@ public class ZoneChanger : MonoBehaviour
             cameraFollow = FindObjectOfType<CameraFollow>();
         }
 
-        // SFX 서비스 해결
-        if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
-        {
-            _sfxService = GameManager.Container.Resolve<ISfxService>();
-        }
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+                _sfxService = GameManager.Container.Resolve<ISfxService>();
+
+            // BGM 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IBgmService>())
+                _bgmService = GameManager.Container.Resolve<IBgmService>();
 
         // 게임 시작 시 현재 활성 Zone의 Ground 동기화
         // (deactivateZones[0]이 활성화되어 있으면 fromZoneNumber가 현재 활성 Zone)
@@ -489,6 +492,10 @@ public class ZoneChanger : MonoBehaviour
 
             // 구역 전환 효과음 재생
             _sfxService?.Play(SfxId.StageClear);
+
+            // BGM 전환 (Zone 1~5 → BgmId)
+            if (_bgmService != null && toZoneNumber >= 1 && toZoneNumber <= 5)
+                _bgmService.Play((BgmId)toZoneNumber);
         }
         else
         {

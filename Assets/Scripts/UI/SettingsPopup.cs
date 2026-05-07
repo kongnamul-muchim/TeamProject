@@ -1,4 +1,6 @@
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using HideAndInk.Core.Transition;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -37,11 +39,18 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("타이틀 복귀 시 PatternTransition 사용 (2순위)")]
         [SerializeField] private bool useSceneTransition = true;
 
-        private AudioManager _audio;
+        private ISfxService _sfx;
+        private IBgmService _bgm;
 
         private void Awake()
         {
-            _audio = AudioManager.Instance;
+            if (GameManager.Container != null)
+            {
+                if (GameManager.Container.IsRegistered<ISfxService>())
+                    _sfx = GameManager.Container.Resolve<ISfxService>();
+                if (GameManager.Container.IsRegistered<IBgmService>())
+                    _bgm = GameManager.Container.Resolve<IBgmService>();
+            }
         }
 
         /// <summary>
@@ -50,7 +59,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnGoTitleClicked()
         {
-            _audio.Play(SfxId.ButtonClick2);
+            _sfx?.Play(SfxId.ButtonClick);
             Time.timeScale = 1f;
 
             // 1순위: FadeInObj 프리팹 (TitleController와 동일한 2페이즈 전환)
@@ -126,9 +135,9 @@ namespace HideAndInk.Scripts.UI
         // 아래 메서드들은 Toggle/Slider → 인스펙터 OnValueChanged 연결용
         // =====================================================
 
-        public void SetBgmMute(bool isOn) { if (_audio != null) _audio.BgmMute = !isOn; }
-        public void SetSfxMute(bool isOn) { if (_audio != null) _audio.SfxMute = !isOn; }
-        public void SetBgmVolume(float value) { if (_audio != null) _audio.BgmVolume = value; }
-        public void SetSfxVolume(float value) { if (_audio != null) _audio.SfxVolume = value; }
+        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = !isOn; }
+        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = !isOn; }
+        public void SetBgmVolume(float value) { if (_bgm != null) _bgm.Volume = value; }
+        public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
     }
 }

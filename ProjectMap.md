@@ -17,8 +17,7 @@ TeamProject/
 │   ├── _Recovery/        # 복구용 백업
 │   └── TutorialInfo/     # 기본 튜토리얼
 ├── Logs/                 # 플레이 로그 (자동 생성)
-├── docs/                 # 문서 (TaskList, ProjectMap)
-├── plans/                # 기획 문서
+├── Plans/                # 기획 문서 (설계, 태스크, 가이드)
 ├── reports/              # 작업 완료 보고서
 └── [설정 파일들]
 ```
@@ -111,8 +110,8 @@ TeamProject/
 | Spec | `Spec.md` | 프로젝트 설계도 |
 | Agents | `Agents.md` | AI 작업 규칙 |
 | ProjectMap | `ProjectMap.md` | AI용 파일 길찾기 지도 |
-| TaskList | `docs/TaskList_*.md` | 작업 목록 (개인 문서) |
-| Plans | `plans/*.md` | 기획 문서 |
+| TaskList | `Plans/TaskList_*.md` | 작업 목록 (개인 문서) |
+| Plans | `Plans/*.md` | 기획 문서 |
 | Milestone | `plans/milestone_ai_assisted.md` | 마일스톤 및 역할 분배 |
 | Reports | `reports/*.md` | 완료 보고서 |
 

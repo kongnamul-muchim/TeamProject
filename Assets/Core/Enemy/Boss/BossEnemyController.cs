@@ -6,6 +6,7 @@ using HideAndInk.Core.Perception;
 using HideAndInk.Core.Enemy.Boss.Gimmicks;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Managers;
@@ -86,6 +87,7 @@ namespace HideAndInk.Core.Enemy.Boss
         private PlayerLives _playerLives;
         private Rigidbody _playerRigidbody;
         private IEventBus _eventBus;
+        private ISfxService _sfxService;
 
         // 기믹 인터페이스 캐싱 (SOLID - ISP)
         private IGimmickPlayerAware _playerAware;
@@ -132,6 +134,10 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _eventBus = GameManager.Container.Resolve<IEventBus>();
             }
+
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+                _sfxService = GameManager.Container.Resolve<ISfxService>();
 
             _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
             CacheCamouflageAdapter();
@@ -767,6 +773,8 @@ namespace HideAndInk.Core.Enemy.Boss
                             suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
                         }
                     }
+                    // 추격 효과음
+                    _sfxService?.Play(SfxId.PredatorChase);
                     // 애니메이션: Chase
                     if (_animator != null) _animator.SetBool("IsChase", true);
                     PlayerInk.Instance?.SetThreat(true);

@@ -3,6 +3,9 @@ using HideAndInk.Core.Enemy.Interfaces;
 using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Events;
+using HideAndInk.Core.Audio;
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Core.Enemy.Normal
 {
@@ -63,6 +66,7 @@ namespace HideAndInk.Core.Enemy.Normal
         private Rigidbody _rigidbody;
         private PlayerLives _playerLives;
         private Rigidbody _playerRigidbody;
+        private ISfxService _sfx;
         // _camouflageAdapter는 부모 클래스에 이미 있음
 
         protected override void InitializeMovement()
@@ -108,6 +112,10 @@ namespace HideAndInk.Core.Enemy.Normal
 
             // CamouflageAdapter 캐싱 (부모에서 제공)
             CacheCamouflageAdapter();
+
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+                _sfx = GameManager.Container.Resolve<ISfxService>();
 
             // PlayerLives + Player Rigidbody 캐싱
             CachePlayerComponents();
@@ -306,6 +314,7 @@ namespace HideAndInk.Core.Enemy.Normal
         {
             _currentState = State.Chase;
             _movement.Stop(); // 순찰 이동 중지
+            _sfx?.Play(SfxId.PredatorChase);
         }
 
         /// <summary>

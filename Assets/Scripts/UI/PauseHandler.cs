@@ -57,7 +57,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void TogglePause()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             EnsureStateMachine();
             _stateMachine?.TogglePause();
         }
@@ -67,7 +67,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void ResumeGame()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             EnsureStateMachine();
             if (_stateMachine == null) return;
             if (_stateMachine.CurrentState == GameState.Paused)
