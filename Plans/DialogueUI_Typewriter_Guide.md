@@ -140,7 +140,7 @@ public void SetTypewriterSpeed(float delay)
    - `Atlas Population Mode`: 반드시 **Static**
    - `Padding`: **10~15** 권장
    - `Atlas Resolution`: **4096×4096**
-   - 자세한 설정: `docs/` 폰트 관련 문서 참고
+   - 자세한 설정: `Plans/` 폰트 관련 문서 참고
 
 2. **한글 처리**
    - 완성형 한글(U+AC00~U+D7AF) 기준, 한 음절 = 1char
@@ -163,7 +163,7 @@ Assets/
     ├── Fonts/
     │   └── BMKkubulim.otf          ← 원본 폰트
     └── BMKkubulim SDF.asset        ← TMP SDF 폰트 에셋
-docs/
+Plans/
 └── DialogueUI_Typewriter_Guide.md  ← 본 문서
 ```
 
