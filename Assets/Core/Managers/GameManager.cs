@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Perception;
 using HideAndInk.Core.Player;
@@ -44,6 +45,26 @@ namespace HideAndInk.Core.Managers
         // 사망 카운터 (로그용)
         private int _deathCount;
 
+        // 스토리 데이터베이스 (Inspector에서 할당)
+        [SerializeField] private StoryDatabaseSO storyDatabase;
+
+        // ─── 프롤로그 트리거 ──────────────────────────────────────
+        private bool _pendingPrologue;      // Title → NewGame 시 예약됨
+
+        /// <summary>
+        /// TitleController.OnNewGameClicked()에서 호출
+        /// 다음 씬 로드 완료 시 프롤로그를 자동 실행하도록 예약
+        /// </summary>
+        public static void SchedulePrologue()
+        {
+            if (Instance != null)
+                Instance._pendingPrologue = true;
+        }
+
+        // 테스트: Play 누르면 바로 프롤로그 실행 (에디터 전용)
+        [Header("Debug")]
+        [SerializeField] private bool playPrologueOnStart = false;
+
         private void Awake()
         {
             if (_instance != null && _instance != this)
@@ -68,8 +89,63 @@ namespace HideAndInk.Core.Managers
             // LogModule 초기화
             _ = LogModule.Instance;
 
+            // StoryDatabaseSO 미할당 시 Resources에서 자동 로드
+            if (storyDatabase == null)
+            {
+                storyDatabase = Resources.Load<StoryDatabaseSO>("StoryData/StoryDatabase");
+                if (storyDatabase != null)
+                    Debug.Log($"[GameManager] StoryDatabaseSO loaded from Resources: {storyDatabase.name}");
+            }
+
+            // 그래도 없으면 기본 데이터로 생성 (cutsceneBg 없음)
+            if (storyDatabase == null)
+            {
+                Debug.LogWarning("[GameManager] StoryDatabaseSO not assigned and not found in Resources. Creating default instance (no cutscene sprites). Assign StoryDatabase.asset to Inspector for cutscene support.");
+                storyDatabase = ScriptableObject.CreateInstance<StoryDatabaseSO>();
+                StoryDatabase.PopulateDefaults(storyDatabase);
+            }
+
+            // 씬 로드 완료 시 프롤로그 트리거 감지
+            SceneManager.sceneLoaded += OnSceneLoadedForPrologue;
+
             InitializeContainer();
             SubscribeToEvents();
+        }
+
+        private void Start()
+        {
+            // 에디터 테스트용: Inspector에서 playPrologueOnStart = true
+            if (playPrologueOnStart)
+            {
+                StartCoroutine(PlayPrologueDelayed());
+            }
+        }
+
+        /// <summary>
+        /// 씬 로드 완료 시 프롤로그 예약이 있으면 실행
+        /// Title → NewGame → 씬 전환 완료 시 자동 호출됨
+        /// </summary>
+        private void OnSceneLoadedForPrologue(Scene scene, LoadSceneMode mode)
+        {
+            if (_pendingPrologue)
+            {
+                _pendingPrologue = false;
+                Debug.Log("[GameManager] 씬 로드 완료 → 프롤로그 예약 감지, 실행합니다.");
+                StartCoroutine(PlayPrologueDelayed());
+            }
+        }
+
+        private System.Collections.IEnumerator PlayPrologueDelayed()
+        {
+            // 한 프레임 대기 → 모든 Start()가 실행된 후 안전하게 호출
+            yield return null;
+
+            var story = Container.Resolve<IStoryManager>();
+            if (story != null)
+            {
+                Debug.Log("[GameManager] PlayPrologueOnStart: 프롤로그를 시작합니다.");
+                story.PlayPrologue();
+            }
         }
 
         /// <summary>
@@ -101,6 +177,14 @@ namespace HideAndInk.Core.Managers
 
             // 의태 상태 머신 (Transient)
             _rootContainer.Register<ICamouflageStateMachine, CamouflageStateMachine>(ServiceLifetime.Transient);
+
+            // 스토리 데이터베이스 (Singleton — Inspector에서 할당한 SO 인스턴스)
+            if (storyDatabase == null)
+                storyDatabase = ScriptableObject.CreateInstance<StoryDatabaseSO>();
+            _rootContainer.RegisterInstance<StoryDatabaseSO>(storyDatabase, ServiceLifetime.Singleton);
+
+            // 스토리 매니저 (Singleton — 생성자에서 StoryDatabaseSO 자동 주입)
+            _rootContainer.Register<IStoryManager, StoryManager>(ServiceLifetime.Singleton);
 
             // 오디오 서비스 등록
             RegisterAudioServices();
@@ -288,6 +372,8 @@ namespace HideAndInk.Core.Managers
         private void OnDestroy()
         {
             // 이벤트 구독 해제
+            SceneManager.sceneLoaded -= OnSceneLoadedForPrologue;
+
             if (_gameStateMachine != null)
             {
                 _gameStateMachine.OnStateChanged -= OnGameStateChanged;

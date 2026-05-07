@@ -172,6 +172,9 @@ namespace HideAndInk.Scripts.UI
             SaveManager.DeleteSave();
             SaveManager.ClearContinueZone();
 
+            // 다음 씬 로드 완료 시 프롤로그 자동 재생 예약
+            GameManager.SchedulePrologue();
+
             StartSceneTransition(newGameSceneIndex);
         }
 

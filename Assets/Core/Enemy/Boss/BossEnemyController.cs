@@ -40,6 +40,8 @@ namespace HideAndInk.Core.Enemy.Boss
         [SerializeField] private float searchDistance = 3f;
         [Tooltip("수색 상태 지속 시간")]
         [SerializeField] private float searchDuration = 5f;
+        [Tooltip("순찰 시 Player 기준 최대 이동 반경 (0 = 제한 없음)")]
+        [SerializeField] private float patrolRadius = 8f;
 
         [Header("기믹 설정")]
         [Tooltip("보스 기믹 에셋 (ScriptableObject)")]
@@ -417,6 +419,12 @@ namespace HideAndInk.Core.Enemy.Boss
                 _patrolBehavior.SetGroundBounds(_groundBounds);
                 _searchBehavior.SetGroundBounds(_groundBounds);
             }
+
+            // Player 기준 순찰 반경 제한 (멀리 벗어나지 않도록)
+            if (_playerTransform != null && patrolRadius > 0f)
+            {
+                _patrolBehavior.SetPlayerPatrolRadius(_playerTransform, patrolRadius);
+            }
         }
 
         private void InitializeStateMachine()
@@ -447,7 +455,6 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (bossSprite != null)
                     bossSprite.flipX = flip;
 
-                // localEulerAngles.y 재적용 (Animator가 Y회전을 덮어쓸 수 있으므로)
                 float spriteY = isDefaultFacingLeft
                     ? (flip ? 180f : 0f)
                     : (flip ? 0f : 180f);
@@ -458,6 +465,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 {
                     float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
                     visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
+#if UNITY_EDITOR
+                    Debug.Log($"[BossEnemyController] LateUpdate _lastFacingDir=({_lastFacingDir.x:F2},{_lastFacingDir.z:F2}) flip={flip} → SetCustomViewDirection({facingX:F2},0,0)");
+#endif
                 }
             }
         }
@@ -819,6 +829,13 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateMovement(float deltaTime)
         {
+            // 💥 기절 중(Swordfish Stunned)에는 모든 이동 차단
+            if (_activeGimmick is SwordfishGimmick swordfish && swordfish.IsStunned)
+            {
+                _movement?.Stop();
+                return;
+            }
+
             bool isMorayChase = _activeGimmick is RelentlessChaseGimmick && _stateMachine != null && _stateMachine.IsChase;
 
             if (isMorayChase)
@@ -877,6 +894,9 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_viewDir != null && _viewDir.OverridesViewDirection && _playerTransform != null)
             {
                 facingDir = _viewDir.GetViewDirectionVector();
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] UpdateViewDirection OVERRIDE path: facingDir=({facingDir.Value.x:F2},{facingDir.Value.z:F2})");
+#endif
 
                 if (_viewDir.ShowChargeIndicator)
                     UpdateChargeIndicator(facingDir.Value);
@@ -900,12 +920,14 @@ namespace HideAndInk.Core.Enemy.Boss
                         ApplyFacingDirection(_morayFacingDirection);
                         return;
                     }
+#if UNITY_EDITOR
+                    Debug.Log($"[BossEnemyController] UpdateViewDirection MOVEMENT path: NOT MOVING → early return");
+#endif
                     return;
                 }
 
                 if (!isMorayChase)
                 {
-                    // 일반 Chase: 쿨타임 적용
                     if (_directionChangeTimer > 0f) return;
                 }
 
@@ -913,8 +935,10 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (Mathf.Abs(vx) < 0.01f) return;
 
                 facingDir = vx > 0f ? Vector3.right : Vector3.left;
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] UpdateViewDirection MOVEMENT path: vx={vx:F2} → facingDir=({facingDir.Value.x:F2},{facingDir.Value.z:F2})");
+#endif
 
-                // 방향 변경 쿨타임 (Moray는 항상 통과)
                 MoveDirection newDir = vx > 0f ? MoveDirection.Right : MoveDirection.Left;
                 if (newDir != _lastAppliedDirection || isMorayChase)
                 {
@@ -938,31 +962,33 @@ namespace HideAndInk.Core.Enemy.Boss
             _lastFacingDir = dir;
             _hasFacingDir = true;
 
-            // ★ Animator가 flipX를 덮어쓰므로, localScale로 flip하여 우회
             bool flip = isDefaultFacingLeft ? dir.x > 0f : dir.x < 0f;
 
-            // localScale.x를 반전시켜 SpriteRenderer 방향 전환 (Animator가 건드리지 않음)
+#if UNITY_EDITOR
+            Debug.Log($"[BossEnemyController] ApplyFacingDirection dir=({dir.x:F2},{dir.z:F2}) flip={flip} isDefaultFacingLeft={isDefaultFacingLeft}");
+#endif
+
             Vector3 scale = transform.localScale;
             scale.x = Mathf.Abs(scale.x) * (flip ? -1f : 1f);
             transform.localScale = scale;
 
-            // flipX도 함께 설정 (다른 시스템 호환용)
             if (bossSprite != null)
             {
                 bossSprite.flipX = flip;
             }
 
-            // localEulerAngles.y 동기화 (ConeVisionSensor의 viewDirectionRef.forward 방향 보정)
             float spriteY = isDefaultFacingLeft
                 ? (flip ? 180f : 0f)
                 : (flip ? 0f : 180f);
             transform.localEulerAngles = new Vector3(0f, spriteY, 0f);
 
-            // Vision cone 방향 동기화 — flip 기준으로 강제 설정 (dir.x가 0이어도 안전)
             if (visionSensor != null)
             {
                 float facingX = isDefaultFacingLeft ? (flip ? 1f : -1f) : (flip ? -1f : 1f);
                 visionSensor.SetCustomViewDirection(new Vector3(facingX, 0f, 0f));
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] ApplyFacingDirection → SetCustomViewDirection({facingX:F2},0,0)");
+#endif
             }
         }
 
@@ -1126,9 +1152,15 @@ namespace HideAndInk.Core.Enemy.Boss
                 if (_activeGimmick is RelentlessChaseGimmick)
                     return false;
 
-                // Swordfish (청새치): Charging 위상에서만 피격
+                // Swordfish (청새치): Chase 상태에서도 접촉 피격 + Charging 위상 피격
+                if (_activeGimmick is SwordfishGimmick)
+                {
+                    // Charging 중이거나 Chase 상태에서 접촉 시 데미지
+                    return _combatCycle != null && _combatCycle.IsCharging
+                        || _stateMachine.CurrentState == EnemyAIState.Chase;
+                }
+
                 // DashCharge (백상아리): 자체 OverlapSphere + IsCharging에서만
-                // → IGimmickCombatCycle.IsCharging으로 통일 판정
                 if (_combatCycle != null)
                     return _combatCycle.IsCharging;
             }

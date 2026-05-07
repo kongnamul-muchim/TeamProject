@@ -79,6 +79,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool _hasHitWall;
         private float _wallCooldownTimer;
 
+        /// <summary>기절 상태 여부 (BossEnemyController에서 이동 차단용)</summary>
+        public bool IsStunned => _currentPhase == Phase.Stunned;
+
         // 의심도 (0~1, IGimmickPlayerAware.SetSuspicionLevel에서 설정)
         private float _normalizedSuspicion;
 
@@ -148,9 +151,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                     if (_wallCooldownTimer > 0f)
                         return;
 
-                    // Player가 시야에 보이고 + 돌진 발동 범위 내에 있을 때만 Aim 시작
+                    // Player가 시야에 보이고 + 돌진 발동 범위 내에 있을 때 Aim 시작
                     if (_isPlayerVisible && IsPlayerInChargeRange())
+                    {
                         StartAiming();
+                        break;
+                    }
+
+                    // 시야 밖이라도 Player와 겹쳐있으면 Aim 시작 (근접 돌진)
+                    if (!_isPlayerVisible && IsPlayerOverlapping())
+                    {
+                        StartAiming();
+                    }
                     break;
                 case Phase.Aiming:
                     UpdateAiming(deltaTime);
@@ -248,27 +260,34 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         Vector3 IGimmickViewDirection.GetViewDirectionVector()
         {
+            Vector3 result;
             switch (_currentPhase)
             {
                 case Phase.Aiming:
-                    // Aim 중: 돌진 방향 미리 계산해서 그 방향을 바라봄
                     if (_chargeDirection.sqrMagnitude > 0.01f)
-                        return _chargeDirection;
-                    // fallback: Player 방향
-                    if (_playerTransform != null && _bossTransform != null)
+                        result = _chargeDirection;
+                    else if (_playerTransform != null && _bossTransform != null)
                     {
                         Vector3 dir = _playerTransform.position - _bossTransform.position;
                         dir.y = 0f;
-                        return dir.normalized;
+                        result = dir.normalized;
                     }
-                    return Vector3.right;
+                    else
+                        result = Vector3.right;
+                    break;
 
                 case Phase.Charging:
-                    return _chargeDirection;
+                    result = _chargeDirection;
+                    break;
 
                 default:
-                    return Vector3.right;
+                    result = Vector3.right;
+                    break;
             }
+#if UNITY_EDITOR
+            Debug.Log($"[SwordfishGimmick] GetViewDirectionVector phase={_currentPhase} result=({result.x:F2},{result.y:F2},{result.z:F2}) chargeDir=({_chargeDirection.x:F2},{_chargeDirection.y:F2})");
+#endif
+            return result;
         }
 
         bool IGimmickViewDirection.ShowChargeIndicator => _currentPhase == Phase.Aiming;
@@ -339,11 +358,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _currentPhase = Phase.Stunned;
                 _phaseTimer = stunDuration;
 
+                // 기절 중 ChaseBehavior 완전 차단
+                OnChasePauseRequest?.Invoke(true);
+
                 if (_bossTransform != null)
                 {
                     Vector3 pushbackPos = _bossTransform.position + (-_chargeDirection) * wallPushbackDistance;
                     pushbackPos.y = _bossTransform.position.y;
-                    // Ground 위에 있는지 확인하고, 없으면 현재 위치 유지
                     if (!IsGroundAtPosition(pushbackPos))
                         pushbackPos = _bossTransform.position;
                     _bossTransform.position = pushbackPos;
@@ -356,7 +377,6 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 // 타이머 만료 (노히트) → Stun 없이 Idle 복귀
                 _currentPhase = Phase.Idle;
                 OnChasePauseRequest?.Invoke(false);
-                // Speed 복원은 RestoreSpeedAfterGimmick에서 처리
             }
         }
 
@@ -408,12 +428,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private void UpdateStunned(float deltaTime)
         {
+            // 기절 중 매 프레임 이동/속도 강제 정지 (ChaseBehavior 우회 방어)
+            OnMovementStop?.Invoke();
+            OnSpeedOverride?.Invoke(0f);
+
             _phaseTimer -= deltaTime;
             if (_phaseTimer <= 0f)
             {
                 _currentPhase = Phase.Idle;
                 OnChasePauseRequest?.Invoke(false);
-                // Speed 복원은 RestoreSpeedAfterGimmick에서 처리
             }
         }
 
@@ -520,9 +543,20 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private bool IsPlayerInChargeRange()
         {
             if (_bossTransform == null || _playerTransform == null) return false;
-            if (_isPlayerCamouflaged) return false; // 의태 중엔 돌진 안 함
+            if (_isPlayerCamouflaged) return false;
             float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
             return dist <= chargeRange;
+        }
+
+        /// <summary>
+        /// Player와 겹쳐있는지 확인 (시야각 무시, 근접 거리)
+        /// </summary>
+        private bool IsPlayerOverlapping()
+        {
+            if (_bossTransform == null || _playerTransform == null) return false;
+            if (_isPlayerCamouflaged) return false;
+            float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
+            return dist <= 1.5f; // Collider 크기 기반 근접 거리
         }
 
         #endregion
