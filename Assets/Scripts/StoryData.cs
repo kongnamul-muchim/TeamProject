@@ -100,13 +100,13 @@ public static class StoryDatabase
         so.tutorialHints = new StoryDatabaseSO.TutorialHintEntry[]
         {
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.Camouflage, line = new DialogueLine("치치", "[시스템] 주변 사물과 색상을 동화시키세요. 포식자의 의심을 피할 수 있습니다. (C키: 의태)") },
+            { type = TutorialType.Camouflage, lines = new DialogueLine[] { new DialogueLine("치치", "[시스템] 주변 사물과 색상을 동화시키세요. 포식자의 의심을 피할 수 있습니다. (C키: 의태)") } },
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.Escape, line = new DialogueLine("두두", "위험해! 먹물을 내뿜어서 빨리 빠져나가야겠어! (Space: 고속 도주 - 무적 상태)") },
+            { type = TutorialType.Escape, lines = new DialogueLine[] { new DialogueLine("두두", "위험해! 먹물을 낻요어서 빨리 빠져나가야겠어! (Space: 고속 도주 - 무적 상태)") } },
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.InkLow, line = new DialogueLine("두두", "먹물이 다 떨어졌어... 움직이기가 너무 힘들어... 치치, 도와줘!") },
+            { type = TutorialType.InkLow, lines = new DialogueLine[] { new DialogueLine("두두", "먹물이 다 떨어졌어... 움직이기가 너무 힘들어... 치치, 도와줘!") } },
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.InkSupply, line = new DialogueLine("치치", "[보급] 잉크 게이지를 재충전합니다. (X키: 치치 호출)") },
+            { type = TutorialType.InkSupply, lines = new DialogueLine[] { new DialogueLine("치치", "[보급] 잉크 게이지를 재충전합니다. (X키: 치치 호출)") } },
         };
 
         // ─── 보스 정보 ──────────────────────────────────────────────
