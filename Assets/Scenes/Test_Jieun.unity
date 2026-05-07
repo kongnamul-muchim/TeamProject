@@ -13967,6 +13967,10 @@ PrefabInstance:
       propertyPath: m_TagString
       value: Enemy
       objectReference: {fileID: 0}
+    - target: {fileID: 5321813548398202562, guid: 8dba1d8f00e18654cb0c65a82bd0e4de, type: 3}
+      propertyPath: targetZoneNumber
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 8042631673233397286, guid: 8dba1d8f00e18654cb0c65a82bd0e4de, type: 3}
       propertyPath: m_SortingLayer
       value: 4
