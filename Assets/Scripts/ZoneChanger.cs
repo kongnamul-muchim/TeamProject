@@ -52,7 +52,7 @@ public class ZoneChanger : MonoBehaviour
     public int toZoneNumber = -1;
 
     [Header("UI - Canvas_Ingame")]
-    [Tooltip("Zone 1~5에서만 활성화, Zone 6에서는 비활성화할 Canvas_Ingame 오브젝트. 미할당 시 자동 탐색")]
+    [Tooltip("Zone 1~6에서 활성화할 Canvas_Ingame 오브젝트. 미할당 시 자동 탐색")]
     public GameObject canvasIngame;
 
     [Header("트랜지션 설정")]
@@ -527,19 +527,19 @@ public class ZoneChanger : MonoBehaviour
             ActivateSingleWallInContainer();
         }
 
-        // ── Canvas_Ingame: Zone 1~5 활성화, Zone 6 비활성화 ──
+        // ── Canvas_Ingame: Zone 1~6 활성화 ──
         UpdateCanvasIngame(toZoneNumber);
     }
 
     /// <summary>
     /// Canvas_Ingame의 활성화 상태를 Zone 번호에 따라 설정합니다.
-    /// Zone 1~5에서는 활성화, Zone 6에서는 비활성화합니다.
+    /// Zone 1~6에서는 활성화합니다.
     /// </summary>
     private void UpdateCanvasIngame(int zoneNumber)
     {
         if (canvasIngame == null) return;
 
-        bool shouldBeActive = (zoneNumber >= 1 && zoneNumber <= 5);
+        bool shouldBeActive = (zoneNumber >= 1 && zoneNumber <= 6);
         if (canvasIngame.activeSelf != shouldBeActive)
         {
             canvasIngame.SetActive(shouldBeActive);
