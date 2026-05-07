@@ -1,3 +1,4 @@
+using System;
 using HideAndInk.Core.Audio;
 
 namespace HideAndInk.Core.Interfaces
@@ -28,5 +29,17 @@ namespace HideAndInk.Core.Interfaces
 
         /// <summary>볼륨 설정 (0.0 ~ 1.0)</summary>
         void SetVolume(float volume);
+
+        /// <summary>BGM 볼륨 (0.0 ~ 1.0)</summary>
+        float Volume { get; set; }
+
+        /// <summary>BGM 음소거 여부</summary>
+        bool Muted { get; set; }
+
+        /// <summary>볼륨 변경 이벤트</summary>
+        event Action<float> OnVolumeChanged;
+
+        /// <summary>음소거 변경 이벤트</summary>
+        event Action<bool> OnMutedChanged;
     }
 }

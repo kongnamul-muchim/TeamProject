@@ -173,7 +173,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnRestartClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             HideDeathScreen();
             _stateMachine?.Restart();
         }
@@ -183,7 +183,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnTitleClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             HideDeathScreen();
             Time.timeScale = 1f;
             UnityEngine.SceneManagement.SceneManager.LoadScene(0);
