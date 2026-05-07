@@ -572,9 +572,36 @@ namespace HideAndInk.Core.Perception
 
         /// <summary>
         /// 시작 시 현재 Zone 감지
+        /// 1. 부모 오브젝트 이름에서 Zone 번호 추출 (예: Zone_2_Object → 2)
+        /// 2. 실패 시 ZoneChanger의 활성화된 Zone 검색
         /// </summary>
         private void DetectInitialZone()
         {
+            // 1. 부모 오브젝트 이름에서 Zone 번호 추출
+            Transform parent = transform.parent;
+            while (parent != null)
+            {
+                string name = parent.name;
+                if (name.StartsWith("Zone_"))
+                {
+                    string numberStr = name.Substring(5); // "Zone_" 이후
+                    int underscoreIndex = numberStr.IndexOf('_');
+                    if (underscoreIndex > 0)
+                        numberStr = numberStr.Substring(0, underscoreIndex);
+
+                    if (int.TryParse(numberStr, out int zoneNumber))
+                    {
+                        _currentZoneNumber = zoneNumber;
+#if UNITY_EDITOR
+                        Debug.Log($"[BossSuspicionSystem] 부모 오브젝트에서 Zone 감지: {name} → Zone {zoneNumber}");
+#endif
+                        return;
+                    }
+                }
+                parent = parent.parent;
+            }
+
+            // 2. 부모에서 찾지 못하면 ZoneChanger의 활성화된 Zone 검색
             ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
             foreach (var changer in zoneChangers)
             {
