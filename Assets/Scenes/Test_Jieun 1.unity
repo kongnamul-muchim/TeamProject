@@ -553,7 +553,7 @@ MonoBehaviour:
   storyDatabase: {fileID: 11400000, guid: 66ccb8b545465fa4ca0256b530423f74, type: 2}
   sfxManager: {fileID: 0}
   bgmManager: {fileID: 0}
-  playPrologueOnStart: 0
+  playPrologueOnStart: 1
 --- !u!4 &70273540
 Transform:
   m_ObjectHideFlags: 0
