@@ -133,6 +133,22 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void OnSceneLoadedForPrologue(Scene scene, LoadSceneMode mode)
         {
+            // 씬 전환 후 SfxManager가 파괴 상태면 재생성
+            if (sfxManager == null)
+            {
+                var sfxPrefab = Resources.Load<GameObject>("Prefabs/SfxManager");
+                if (sfxPrefab != null)
+                {
+                    var sfxGo = Instantiate(sfxPrefab);
+                    sfxGo.name = "SfxManager";
+                    sfxManager = sfxGo.GetComponent<SfxManager>();
+                    if (_rootContainer.IsRegistered<ISfxService>())
+                        _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
+                    else
+                        _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
+                }
+            }
+
             if (_pendingPrologue)
             {
                 Debug.Log("[GameManager] 씬 로드 완료 → 프롤로그 예약 감지, 실행합니다.");
