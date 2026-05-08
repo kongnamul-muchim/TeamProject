@@ -131,6 +131,14 @@ namespace HideAndInk.Core.Audio
 
         public void Play(SfxId id)
         {
+            Debug.Log($"[SfxManager] Play({id}) called. _source={_source != null}, _volume={_volume}, _muted={_muted}");
+
+            if (_muted)
+            {
+                Debug.Log($"[SfxManager] Play({id}) skipped because muted.");
+                return;
+            }
+
             if (_source == null)
             {
                 if (!_warnedSourceNull)
@@ -142,12 +150,18 @@ namespace HideAndInk.Core.Audio
             }
 
             var clip = GetRandomClip(id);
+            Debug.Log($"[SfxManager] Play({id}) clip={clip != null}");
             if (clip != null)
+            {
                 _source.PlayOneShot(clip, _volume);
+                Debug.Log($"[SfxManager] PlayOneShot executed: {clip.name}, volume={_volume}");
+            }
         }
 
         public void Play(SfxId id, float volumeScale)
         {
+            if (_muted) return;
+
             if (_source == null)
             {
                 if (!_warnedSourceNull)
@@ -165,6 +179,8 @@ namespace HideAndInk.Core.Audio
 
         public void PlayAtPoint(SfxId id, Vector3 position)
         {
+            if (_muted) return;
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 AudioSource.PlayClipAtPoint(clip, position, _volume);
@@ -172,6 +188,8 @@ namespace HideAndInk.Core.Audio
 
         public void PlayAtPoint(SfxId id, Vector3 position, float volumeScale)
         {
+            if (_muted) return;
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 AudioSource.PlayClipAtPoint(clip, position, _volume * Mathf.Clamp01(volumeScale));
