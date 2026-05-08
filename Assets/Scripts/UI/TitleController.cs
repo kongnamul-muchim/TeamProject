@@ -53,6 +53,9 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("FadeInObjController (출구 전환 - 화면 덮기, FadeInObj 프리팹 루트에 부착)")]
         [SerializeField] private FadeInObjController fadeExit;
 
+        [Tooltip("SFX 매니저 (버튼 효과음용, TitleScene에 직접 배치된 SfxManager 연결)")]
+        [SerializeField] private SfxManager sfxManager;
+
         [Header("Transition Settings")]
         [Tooltip("씬 진입 시 PatternTransitionController로 PlayOut (권장)")]
         [SerializeField] private bool useEntryTransition = true;
@@ -80,8 +83,12 @@ namespace HideAndInk.Scripts.UI
             if (popupSetting != null)
                 popupSetting.SetActive(false);
 
-            // SFX 서비스 해결
-            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+            // SFX 서비스 해결 (DI 컨테이너 또는 Inspector 직접 할당)
+            if (sfxManager != null)
+            {
+                _sfxService = sfxManager;
+            }
+            else if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
             {
                 _sfxService = GameManager.Container.Resolve<ISfxService>();
             }
