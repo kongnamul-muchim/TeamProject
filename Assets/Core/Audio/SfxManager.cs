@@ -60,6 +60,7 @@ namespace HideAndInk.Core.Audio
         {
             if (Instance != null && Instance != this)
             {
+                Debug.LogWarning($"[SfxManager] Instance already exists. Destroying duplicate on '{gameObject.name}'.");
                 Destroy(gameObject);
                 return;
             }
@@ -71,6 +72,11 @@ namespace HideAndInk.Core.Audio
             _source.loop = false;
             _source.playOnAwake = false;
             _source.spatialBlend = 0f;
+
+            if (sfxClips == null || sfxClips.Length == 0)
+            {
+                Debug.LogWarning($"[SfxManager] sfxClips is empty on '{gameObject.name}'. No sounds will play.");
+            }
 
             BuildClipMap();
             LoadSettings();
@@ -84,6 +90,7 @@ namespace HideAndInk.Core.Audio
                 if (entry.clips != null && entry.clips.Length > 0 && !_clipMap.ContainsKey(entry.id))
                     _clipMap.Add(entry.id, entry.clips);
             }
+            Debug.Log($"[SfxManager] BuildClipMap: registered {_clipMap.Count} entries.");
         }
 
         private void LoadSettings()
@@ -100,12 +107,21 @@ namespace HideAndInk.Core.Audio
         private AudioClip GetRandomClip(SfxId id)
         {
             if (!_clipMap.TryGetValue(id, out var clips) || clips == null || clips.Length == 0)
+            {
+                Debug.LogWarning($"[SfxManager] No clips registered for SfxId.{id}. Check the sfxClips array in the inspector.");
                 return null;
+            }
             return clips[UnityEngine.Random.Range(0, clips.Length)];
         }
 
         public void Play(SfxId id)
         {
+            if (_source == null)
+            {
+                Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                return;
+            }
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 _source.PlayOneShot(clip, _volume);
@@ -113,6 +129,12 @@ namespace HideAndInk.Core.Audio
 
         public void Play(SfxId id, float volumeScale)
         {
+            if (_source == null)
+            {
+                Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                return;
+            }
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 _source.PlayOneShot(clip, _volume * Mathf.Clamp01(volumeScale));
