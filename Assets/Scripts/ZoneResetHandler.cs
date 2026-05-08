@@ -32,7 +32,8 @@ public class ZoneResetHandler : MonoBehaviour
         if (PlayerInk.Instance != null)
             PlayerInk.Instance.AddInk(PlayerInk.Instance.MaxInk);
 
-        if (ChichiInkTank.Instance != null)
-            ChichiInkTank.Instance.ResetSectionUses();
+        var tanks = FindObjectsByType<ChichiInkTank>(FindObjectsSortMode.None);
+        foreach (var tank in tanks)
+            tank.ResetSectionUses();
     }
 }
