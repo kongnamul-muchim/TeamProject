@@ -63,9 +63,9 @@ namespace HideAndInk.Core.Audio
         {
             if (Instance != null && Instance != this)
             {
-                Debug.LogWarning($"[SfxManager] Instance already exists. Destroying duplicate on '{gameObject.name}'.");
-                Destroy(gameObject);
-                return;
+                // 기존 Instance를 새 씬의 SfxManager로 교체
+                Debug.LogWarning($"[SfxManager] Replacing existing Instance with new SfxManager on '{gameObject.name}'.");
+                Destroy(Instance.gameObject);
             }
 
             Instance = this;
