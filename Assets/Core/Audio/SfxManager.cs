@@ -24,6 +24,9 @@ namespace HideAndInk.Core.Audio
         private float _volume;
         private bool _muted;
 
+        private readonly HashSet<SfxId> _warnedMissingIds = new HashSet<SfxId>();
+        private bool _warnedSourceNull;
+
         private const string PREFS_VOLUME = "Audio_SFX_Volume";
         private const string PREFS_MUTE = "Audio_SFX_Mute";
 
@@ -90,7 +93,6 @@ namespace HideAndInk.Core.Audio
                 if (entry.clips != null && entry.clips.Length > 0 && !_clipMap.ContainsKey(entry.id))
                     _clipMap.Add(entry.id, entry.clips);
             }
-            Debug.Log($"[SfxManager] BuildClipMap: registered {_clipMap.Count} entries.");
         }
 
         private void LoadSettings()
@@ -108,7 +110,10 @@ namespace HideAndInk.Core.Audio
         {
             if (!_clipMap.TryGetValue(id, out var clips) || clips == null || clips.Length == 0)
             {
-                Debug.LogWarning($"[SfxManager] No clips registered for SfxId.{id}. Check the sfxClips array in the inspector.");
+                if (_warnedMissingIds.Add(id))
+                {
+                    Debug.LogWarning($"[SfxManager] No clips registered for SfxId.{id}. Check the sfxClips array in the inspector.");
+                }
                 return null;
             }
             return clips[UnityEngine.Random.Range(0, clips.Length)];
@@ -118,7 +123,11 @@ namespace HideAndInk.Core.Audio
         {
             if (_source == null)
             {
-                Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                if (!_warnedSourceNull)
+                {
+                    _warnedSourceNull = true;
+                    Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                }
                 return;
             }
 
@@ -131,7 +140,11 @@ namespace HideAndInk.Core.Audio
         {
             if (_source == null)
             {
-                Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                if (!_warnedSourceNull)
+                {
+                    _warnedSourceNull = true;
+                    Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                }
                 return;
             }
 
