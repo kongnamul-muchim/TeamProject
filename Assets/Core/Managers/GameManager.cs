@@ -133,19 +133,25 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void OnSceneLoadedForPrologue(Scene scene, LoadSceneMode mode)
         {
-            // 씬 전환 후 SfxManager가 파괴 상태면 재생성
+            // 씬 전환 후 SfxManager가 파괴 상태면 재찾거나 재생성 후 DI 갱신
             if (sfxManager == null)
             {
-                var sfxPrefab = Resources.Load<GameObject>("Prefabs/SfxManager");
-                if (sfxPrefab != null)
+                sfxManager = FindObjectOfType<SfxManager>();
+
+                if (sfxManager == null)
                 {
-                    var sfxGo = Instantiate(sfxPrefab);
-                    sfxGo.name = "SfxManager";
-                    sfxManager = sfxGo.GetComponent<SfxManager>();
-                    if (_rootContainer.IsRegistered<ISfxService>())
-                        _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
-                    else
-                        _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
+                    var sfxPrefab = Resources.Load<GameObject>("Prefabs/SfxManager");
+                    if (sfxPrefab != null)
+                    {
+                        var sfxGo = Instantiate(sfxPrefab);
+                        sfxGo.name = "SfxManager";
+                        sfxManager = sfxGo.GetComponent<SfxManager>();
+                    }
+                }
+
+                if (sfxManager != null)
+                {
+                    _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
                 }
             }
 
@@ -218,7 +224,13 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void RegisterAudioServices()
         {
-            // sfxManager가 null이거나 파괴 상태면 Resources에서 Prefab 로드
+            // sfxManager가 null이거나 파괴 상태면 씬에서 먼저 찾기
+            if (sfxManager == null)
+            {
+                sfxManager = FindObjectOfType<SfxManager>();
+            }
+
+            // 그래도 없으면 Resources에서 Prefab 로드
             if (sfxManager == null)
             {
                 var sfxPrefab = Resources.Load<GameObject>("Prefabs/SfxManager");
