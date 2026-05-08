@@ -29,6 +29,7 @@ public class DialogueUIAdapter : MonoBehaviour
     [SerializeField] private float punctuationDelay = 0.15f; // 마침표/물음표/느낌표 지연 시간
 
     // ─── 상태 ──────────────────────────────────────────────────
+    private static DialogueUIAdapter _instance;
     private IStoryManager _storyManager;
     private Coroutine _typewriterCoroutine;
     private bool _isCurrentlyTyping;
@@ -38,20 +39,21 @@ public class DialogueUIAdapter : MonoBehaviour
     // ─── 초기화 ────────────────────────────────────────────────
     private void Awake()
     {
-        Debug.Log("[DialogueUIAdapter] Awake called");
+        // 중복 인스턴스 방지: 이미 존재하면 자신을 비활성화
+        if (_instance != null && _instance != this)
+        {
+            Debug.LogWarning("[DialogueUIAdapter] 중복 인스턴스 감지. 자신을 비활성화합니다.");
+            enabled = false;
+            return;
+        }
+        _instance = this;
+
         TryFindReferences();
         SubscribeToEvents();
 
         // 시작 시 DialogeUI 비활성화
         if (dialogeUIRoot != null)
-        {
             dialogeUIRoot.SetActive(false);
-            Debug.Log("[DialogueUIAdapter] dialogeUIRoot found and deactivated");
-        }
-        else
-        {
-            Debug.LogError("[DialogueUIAdapter] dialogeUIRoot is NULL after TryFindReferences!");
-        }
 
         // StoryCutScene 강제 비활성화 (프리팹 기본값 보정)
         if (storyCutscene != null)
@@ -64,7 +66,6 @@ public class DialogueUIAdapter : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("[DialogueUIAdapter] Start called");
         ResolveStoryManager();
     }
 
@@ -156,8 +157,6 @@ public class DialogueUIAdapter : MonoBehaviour
         if (panelBgImage == null) Debug.LogWarning("[DialogueUIAdapter] Panel > Image를 찾을 수 없습니다.");
         if (playerInfoPanel == null) Debug.LogWarning("[DialogueUIAdapter] Panel_PlayerInfo를 찾을 수 없습니다.");
         if (pauseButton == null) Debug.LogWarning("[DialogueUIAdapter] Btn_Pause를 찾을 수 없습니다.");
-        
-        Debug.Log($"[DialogueUIAdapter] TryFindReferences done - dialogeUIRoot={(dialogeUIRoot!=null)}, textDialoge={(textDialoge!=null)}, textSpeaker={(textSpeaker!=null)}, storyCutscene={(storyCutscene!=null)}");
     }
 
     /// <summary>
@@ -184,7 +183,6 @@ public class DialogueUIAdapter : MonoBehaviour
         if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
         {
             _storyManager = GameManager.Container.Resolve<IStoryManager>();
-            Debug.Log($"[DialogueUIAdapter] StoryManager resolved - isPlaying={_storyManager?.IsDialoguePlaying}");
         }
         else
         {
@@ -216,8 +214,6 @@ public class DialogueUIAdapter : MonoBehaviour
     /// </summary>
     private void OnDialogueLineChanged(string speaker, string text)
     {
-        Debug.Log($"[DialogueUIAdapter] OnDialogueLineChanged called - speaker={speaker}, text={text.Substring(0, Mathf.Min(20, text.Length))}...");
-        
         // 인스펙터에서 입력한 \n을 실제 줄바꿈 문자로 변환
         text = text.Replace("\\n", "\n");
 
@@ -343,24 +339,32 @@ public class DialogueUIAdapter : MonoBehaviour
         textDialoge.ForceMeshUpdate();
         int totalCharacters = textDialoge.textInfo.characterCount;
 
+        // 글자별 지연 시간을 미리 계산 (GC 최소화)
+        float[] delays = new float[totalCharacters];
         for (int i = 0; i < totalCharacters; i++)
         {
-            textDialoge.maxVisibleCharacters = i + 1;
-
-            // 딜레이 처리를 위해 현재 글자 확인
             char c = textDialoge.textInfo.characterInfo[i].character;
+            delays[i] = (c == '.' || c == '?' || c == '!' || c == ',') 
+                ? punctuationDelay 
+                : charDelay;
+        }
 
-            if (c == '.' || c == '?' || c == '!' || c == ',')
-            {
-                yield return new WaitForSecondsRealtime(punctuationDelay);
-            }
-            else
-            {
-                yield return new WaitForSecondsRealtime(charDelay);
-            }
-
+        // Time.unscaledTime 기반으로 프레임 드롭에도 안정적인 타이밍 제공
+        float nextRevealTime = Time.unscaledTime;
+        for (int i = 0; i < totalCharacters; i++)
+        {
             if (!_isCurrentlyTyping)
                 yield break;
+
+            nextRevealTime += delays[i];
+            
+            // 지연 시간이 끝날 때까지 대기
+            while (Time.unscaledTime < nextRevealTime)
+            {
+                yield return null;
+            }
+
+            textDialoge.maxVisibleCharacters = i + 1;
         }
 
         _isCurrentlyTyping = false;
