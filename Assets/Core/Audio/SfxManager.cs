@@ -85,6 +85,15 @@ namespace HideAndInk.Core.Audio
 
             BuildClipMap();
             LoadSettings();
+
+            if (_muted)
+            {
+                Debug.Log("[SfxManager] Previous mute state detected. Auto-unmuting for testing.");
+                _muted = false;
+                if (_source != null)
+                    _source.mute = false;
+                PlayerPrefs.SetInt(PREFS_MUTE, 0);
+            }
         }
 
         private void BuildClipMap()
