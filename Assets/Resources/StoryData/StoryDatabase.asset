@@ -16,7 +16,7 @@ MonoBehaviour:
   - speaker: 
     text: "\uC885\uC774 \uBC14\uB2E4\uC5D0\uC11C \uCB49 \uC0B4\uC544\uC628 \uBB38\uC5B4
       \uB450\uB450. \uACBD\uC7C1\uC790\uC640 \uD3EC\uC2DD\uC790\uC758 \uC218\uAC00
-      \uB4E4\uC5B4 \uBCF4\uAE08\uC790\uB9AC\uAC00 \uD669\uD3D0\uD574\uC84C\uC2B5\uB2C8\uB2E4."
+      \uB298\uC5B4 \uBCF4\uAE08\uC790\uB9AC\uAC00 \uD669\uD3D0\uD574\uC84C\uC2B5\uB2C8\uB2E4."
     sceneId: 1-1
     cutsceneBg: {fileID: 21300000, guid: c0a462a299e456f469a9149833852230, type: 3}
   - speaker: "\uB450\uB450"
