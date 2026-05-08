@@ -120,7 +120,7 @@ namespace HideAndInk.Scripts.UI
                 btnContinue.interactable = hasSave;
 
             if (btnContinueText != null)
-                btnContinueText.color = hasSave ? Color.white : Color.gray;
+                btnContinueText.alpha = hasSave ? 1f : 0.3f;
         }
 
         /// <summary>
