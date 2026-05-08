@@ -11,6 +11,18 @@ public class PauseButtonFixer : MonoBehaviour
 {
     private void Awake()
     {
+        // Panel_PlayerInfo의 RaycastTarget 끄기 (클릭 가로채기 방지)
+        var panelPlayerInfo = GameObject.Find("Panel_PlayerInfo");
+        if (panelPlayerInfo != null)
+        {
+            var img = panelPlayerInfo.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = false;
+                Debug.Log("[PauseButtonFixer] Panel_PlayerInfo의 RaycastTarget을 OFF로 설정");
+            }
+        }
+
         var btn = GetComponent<Button>();
         
         // 기존 OnClick 모두 제거
@@ -21,6 +33,7 @@ public class PauseButtonFixer : MonoBehaviour
         if (pauseHandler != null)
         {
             btn.onClick.AddListener(pauseHandler.TogglePause);
+            Debug.Log("[PauseButtonFixer] PauseHandler.TogglePause 연결 완료");
         }
         else
         {
