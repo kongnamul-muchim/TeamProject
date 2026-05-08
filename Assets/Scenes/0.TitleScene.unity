@@ -3949,6 +3949,10 @@ MonoBehaviour:
   titleSceneName: 0.TitleScene
   fadeInObjPrefab: {fileID: 0}
   useSceneTransition: 1
+  bgmVolumeSlider: {fileID: 0}
+  sfxVolumeSlider: {fileID: 0}
+  bgmMuteToggle: {fileID: 0}
+  sfxMuteToggle: {fileID: 0}
 --- !u!1001 &3174233295518632336
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3961,6 +3965,14 @@ PrefabInstance:
       propertyPath: defaultVolume
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2825616333842440882, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
+      propertyPath: 'sfxClips.Array.data[3].clips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 73b39e3a36c273048bf4fafb8ec2185b, type: 3}
+    - target: {fileID: 2825616333842440882, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
+      propertyPath: 'sfxClips.Array.data[4].clips.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 12ce138601313d64caa266b4506cbfe4, type: 3}
     - target: {fileID: 4262707399575606831, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
       propertyPath: m_Name
       value: SfxManager
