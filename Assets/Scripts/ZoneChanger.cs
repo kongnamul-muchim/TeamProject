@@ -701,25 +701,30 @@ public class ZoneChanger : MonoBehaviour
     /// </summary>
     private IEnumerator ExecuteTutorialsAfterPrologue()
     {
-        // GameManager가 프롤로그를 실행할 예정이면, 프롤로그가 완료될 때까지 대기
+        // GameManager가 프롤로그를 실행할 예정이면(예약 또는 에디터 설정), 완료까지 대기
         var gm = GameManager.Instance;
-        if (gm != null && gm.WillPlayPrologueOnStart)
+        bool willPlayPrologue = (gm != null && (GameManager.IsProloguePending || gm.WillPlayPrologueOnStart));
+        
+        if (willPlayPrologue)
         {
-            // 프롤로그가 시작될 때까지 대기 (최대 2초)
+            Debug.Log("[ZoneChanger] 프롤로그 실행 예정 → 완료까지 대기");
+            
+            // 프롤로그가 시작될 때까지 대기 (최대 3초)
             float waitTimer = 0f;
-            while (!IsStoryPlaying() && waitTimer < 2f)
+            while (!IsStoryPlaying() && waitTimer < 3f)
             {
                 waitTimer += Time.deltaTime;
                 yield return null;
             }
-            
-            // 프롤로그가 끝날 때까지 대기
-            while (IsStoryPlaying())
-            {
-                yield return null;
-            }
         }
         
+        // StoryManager가 대화 중이면(프롤로그 실행 중) 완료까지 대기
+        while (IsStoryPlaying())
+        {
+            yield return null;
+        }
+        
+        Debug.Log("[ZoneChanger] 대화 완료 → 튜토리얼 실행");
         ExecuteTutorialTriggersInDeactivatedZones();
     }
 
