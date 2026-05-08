@@ -95,6 +95,9 @@ namespace HideAndInk.Scripts.UI
             // 이어하기 버튼 상태 업데이트
             UpdateContinueButton();
 
+            // 타이틀 BGM 재생
+            PlayTitleBgm();
+
             // FadeInObj 트랜지션으로 진입 중이면 entry transition 스킵 (SettingsPopup에서 이미 처리함)
             if (SettingsPopup.IsFadeInTransitionActive)
             {
@@ -105,6 +108,18 @@ namespace HideAndInk.Scripts.UI
             {
                 // 씬 진입 트랜지션 실행
                 StartCoroutine(PlayEntryTransition());
+            }
+        }
+
+        /// <summary>
+        /// 타이틀 BGM을 재생합니다.
+        /// </summary>
+        private void PlayTitleBgm()
+        {
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IBgmService>())
+            {
+                var bgm = GameManager.Container.Resolve<IBgmService>();
+                bgm?.Play(HideAndInk.Core.Audio.BgmId.Title);
             }
         }
 
