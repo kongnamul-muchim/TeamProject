@@ -259,6 +259,19 @@ namespace HideAndInk.Scripts.UI
             // 시간 복원 (버튼 클릭 가능하도록)
             Time.timeScale = 1f;
             Debug.Log("[GameOverUI] Time.timeScale restored to 1 for UI interaction");
+
+            // EventSystem 상태 확인 및 StandaloneInputModule 추가
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem != null)
+            {
+                var standaloneModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                if (standaloneModule == null)
+                {
+                    eventSystem.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                    Debug.Log("[GameOverUI] StandaloneInputModule added to EventSystem");
+                }
+                Debug.Log($"[GameOverUI] EventSystem enabled={eventSystem.enabled}, StandaloneInputModule={standaloneModule != null}");
+            }
         }
 
         /// <summary>
@@ -319,6 +332,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnContinueClicked()
         {
+            Debug.Log("[GameOverUI] OnContinueClicked CALLED!");
             _sfxService?.Play(SfxId.ButtonClick);
             // 저장 데이터가 있으면 로드
             if (SaveManager.HasSaveData())
