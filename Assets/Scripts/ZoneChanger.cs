@@ -163,10 +163,10 @@ public class ZoneChanger : MonoBehaviour
                 SyncGroundObjects(fromZoneNumber);
                 Debug.Log($"[ZoneChanger] '{name}' 초기 Ground 동기화: Zone_{fromZoneNumber} (Ground_{fromZoneNumber:D2} 활성화)");
 
-                // 게임 시작 시 Zone 1이면 튜토리얼 트리거 순차 실행
+                // 게임 시작 시 Zone 1이면 튜토리얼 트리거 순차 실행 (프롤로그 완료 후)
                 if (fromZoneNumber == 1)
                 {
-                    ExecuteTutorialTriggersInDeactivatedZones();
+                    StartCoroutine(ExecuteTutorialsAfterPrologue());
                 }
             }
 
@@ -694,6 +694,45 @@ public class ZoneChanger : MonoBehaviour
     private void OnTutorialDialogueEnd()
     {
         ExecuteNextTutorial();
+    }
+
+    /// <summary>
+    /// 프롤로그 완료 후 튜토리얼을 실행합니다.
+    /// </summary>
+    private IEnumerator ExecuteTutorialsAfterPrologue()
+    {
+        // GameManager가 프롤로그를 실행할 예정이면, 프롤로그가 완료될 때까지 대기
+        var gm = GameManager.Instance;
+        if (gm != null && gm.WillPlayPrologueOnStart)
+        {
+            // 프롤로그가 시작될 때까지 대기 (최대 2초)
+            float waitTimer = 0f;
+            while (!IsStoryPlaying() && waitTimer < 2f)
+            {
+                waitTimer += Time.deltaTime;
+                yield return null;
+            }
+            
+            // 프롤로그가 끝날 때까지 대기
+            while (IsStoryPlaying())
+            {
+                yield return null;
+            }
+        }
+        
+        ExecuteTutorialTriggersInDeactivatedZones();
+    }
+
+    /// <summary>
+    /// StoryManager가 현재 대화 중인지 확인합니다.
+    /// </summary>
+    private bool IsStoryPlaying()
+    {
+        if (GameManager.Container == null) return false;
+        if (!GameManager.Container.IsRegistered<IStoryManager>()) return false;
+        
+        var story = GameManager.Container.Resolve<IStoryManager>();
+        return story != null && story.IsDialoguePlaying;
     }
 
     /// <summary>

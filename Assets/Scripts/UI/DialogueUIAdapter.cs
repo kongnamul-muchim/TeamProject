@@ -38,12 +38,20 @@ public class DialogueUIAdapter : MonoBehaviour
     // ─── 초기화 ────────────────────────────────────────────────
     private void Awake()
     {
+        Debug.Log("[DialogueUIAdapter] Awake called");
         TryFindReferences();
         SubscribeToEvents();
 
         // 시작 시 DialogeUI 비활성화
         if (dialogeUIRoot != null)
+        {
             dialogeUIRoot.SetActive(false);
+            Debug.Log("[DialogueUIAdapter] dialogeUIRoot found and deactivated");
+        }
+        else
+        {
+            Debug.LogError("[DialogueUIAdapter] dialogeUIRoot is NULL after TryFindReferences!");
+        }
 
         // StoryCutScene 강제 비활성화 (프리팹 기본값 보정)
         if (storyCutscene != null)
@@ -56,6 +64,7 @@ public class DialogueUIAdapter : MonoBehaviour
 
     private void Start()
     {
+        Debug.Log("[DialogueUIAdapter] Start called");
         ResolveStoryManager();
     }
 
@@ -147,6 +156,8 @@ public class DialogueUIAdapter : MonoBehaviour
         if (panelBgImage == null) Debug.LogWarning("[DialogueUIAdapter] Panel > Image를 찾을 수 없습니다.");
         if (playerInfoPanel == null) Debug.LogWarning("[DialogueUIAdapter] Panel_PlayerInfo를 찾을 수 없습니다.");
         if (pauseButton == null) Debug.LogWarning("[DialogueUIAdapter] Btn_Pause를 찾을 수 없습니다.");
+        
+        Debug.Log($"[DialogueUIAdapter] TryFindReferences done - dialogeUIRoot={(dialogeUIRoot!=null)}, textDialoge={(textDialoge!=null)}, textSpeaker={(textSpeaker!=null)}, storyCutscene={(storyCutscene!=null)}");
     }
 
     /// <summary>
@@ -173,6 +184,7 @@ public class DialogueUIAdapter : MonoBehaviour
         if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
         {
             _storyManager = GameManager.Container.Resolve<IStoryManager>();
+            Debug.Log($"[DialogueUIAdapter] StoryManager resolved - isPlaying={_storyManager?.IsDialoguePlaying}");
         }
         else
         {
@@ -204,6 +216,8 @@ public class DialogueUIAdapter : MonoBehaviour
     /// </summary>
     private void OnDialogueLineChanged(string speaker, string text)
     {
+        Debug.Log($"[DialogueUIAdapter] OnDialogueLineChanged called - speaker={speaker}, text={text.Substring(0, Mathf.Min(20, text.Length))}...");
+        
         // 인스펙터에서 입력한 \n을 실제 줄바꿈 문자로 변환
         text = text.Replace("\\n", "\n");
 

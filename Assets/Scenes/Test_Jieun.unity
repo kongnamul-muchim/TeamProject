@@ -3868,6 +3868,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3753754006676232911, guid: 3982229426fa8484fafb914cdf5061f2, type: 3}
   m_PrefabInstance: {fileID: 478480487}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &479597520 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7192490771539216152, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+  m_PrefabInstance: {fileID: 1293558955}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &482797767
 GameObject:
   m_ObjectHideFlags: 0
@@ -4380,6 +4391,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5705393309387548850, guid: 857c8c388fdfef34fbec870767022439, type: 3}
   m_PrefabInstance: {fileID: 524662829}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &536853599 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4206622260758924111, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+  m_PrefabInstance: {fileID: 1293558955}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &537948423
 GameObject:
   m_ObjectHideFlags: 0
@@ -4416,6 +4438,17 @@ Transform:
   - {fileID: 1153223551}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &539145556 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1966085078478771747, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+  m_PrefabInstance: {fileID: 1293558955}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &546128318
 GameObject:
   m_ObjectHideFlags: 0
@@ -10889,7 +10922,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3941961476890629209, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1468471255}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8002560091602375977, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1670618394}
   m_SourcePrefab: {fileID: 100100000, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
 --- !u!224 &1293558956 stripped
 RectTransform:
@@ -13397,6 +13433,33 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4465443308428394482, guid: 14038fe2e30b2b642b096e7ec9e9820b, type: 3}
   m_PrefabInstance: {fileID: 1670253042}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1670618390 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8002560091602375977, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+  m_PrefabInstance: {fileID: 1293558955}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1670618394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1670618390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3775f9a300031a4aa4b2f9b808a47e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::DialogueUIAdapter
+  dialogeUIRoot: {fileID: 1741265889}
+  textDialoge: {fileID: 539145556}
+  textSpeaker: {fileID: 536853599}
+  endDialogueSign: {fileID: 0}
+  storyCutscene: {fileID: 479597520}
+  panelBgImage: {fileID: 0}
+  playerInfoPanel: {fileID: 0}
+  pauseButton: {fileID: 0}
+  charDelay: 0.04
+  punctuationDelay: 0.15
 --- !u!1001 &1671598011
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13969,6 +14032,11 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &1741265889 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3364405650498998894, guid: 02a02e7ad81b8f04589b8b7586aed365, type: 3}
+  m_PrefabInstance: {fileID: 1293558955}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1746494008
 PrefabInstance:
   m_ObjectHideFlags: 0

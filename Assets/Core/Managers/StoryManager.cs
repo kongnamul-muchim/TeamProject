@@ -150,6 +150,7 @@ namespace HideAndInk.Core.Managers
             if (_currentLines == null || _currentIndex >= _currentLines.Length) return;
 
             var line = _currentLines[_currentIndex];
+            Debug.Log($"[StoryManager] ShowCurrentLine - speaker={line.speaker}, text={line.text.Substring(0, Mathf.Min(20, line.text.Length))}...");
             StoryEvents.InvokeDialogueLineChanged(line.speaker, line.text);
 
             // 컷씬 배경 이미지가 있으면 교체 (null이면 이전 이미지 유지)

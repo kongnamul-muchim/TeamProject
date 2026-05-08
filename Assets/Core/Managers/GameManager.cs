@@ -68,6 +68,7 @@ namespace HideAndInk.Core.Managers
         // 테스트: Play 누르면 바로 프롤로그 실행 (에디터 전용)
         [Header("Debug")]
         [SerializeField] private bool playPrologueOnStart = false;
+        public bool WillPlayPrologueOnStart => playPrologueOnStart;
 
         private void Awake()
         {
