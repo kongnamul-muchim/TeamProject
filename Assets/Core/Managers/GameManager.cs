@@ -13,6 +13,7 @@ namespace HideAndInk.Core.Managers
     /// 게임 매니저 - DI 컨테이너와 게임 상태를 관리
     /// GameEvents 발생을 담당 (GameStateMachine은 순수 상태 관리만)
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public sealed class GameManager : MonoBehaviour
     {
         private static GameManager _instance;

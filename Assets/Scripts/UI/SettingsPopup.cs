@@ -39,6 +39,12 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("타이틀 복귀 시 PatternTransition 사용 (2순위)")]
         [SerializeField] private bool useSceneTransition = true;
 
+        [Header("Audio UI")]
+        [SerializeField] private UnityEngine.UI.Slider bgmVolumeSlider;
+        [SerializeField] private UnityEngine.UI.Slider sfxVolumeSlider;
+        [SerializeField] private UnityEngine.UI.Toggle bgmMuteToggle;
+        [SerializeField] private UnityEngine.UI.Toggle sfxMuteToggle;
+
         private ISfxService _sfx;
         private IBgmService _bgm;
 
@@ -51,6 +57,19 @@ namespace HideAndInk.Scripts.UI
                 if (GameManager.Container.IsRegistered<IBgmService>())
                     _bgm = GameManager.Container.Resolve<IBgmService>();
             }
+        }
+
+        private void Start()
+        {
+            // Slider/Toggle 초기값을 현재 오디오 서비스 상태와 동기화
+            if (_bgm != null && bgmVolumeSlider != null)
+                bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
+            if (_sfx != null && sfxVolumeSlider != null)
+                sfxVolumeSlider.SetValueWithoutNotify(_sfx.Volume);
+            if (_bgm != null && bgmMuteToggle != null)
+                bgmMuteToggle.SetIsOnWithoutNotify(!_bgm.Muted);
+            if (_sfx != null && sfxMuteToggle != null)
+                sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
         }
 
         /// <summary>

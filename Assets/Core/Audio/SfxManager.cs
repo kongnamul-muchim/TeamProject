@@ -12,6 +12,7 @@ namespace HideAndInk.Core.Audio
         public AudioClip[] clips;
     }
 
+    [DefaultExecutionOrder(-50)]
     public sealed class SfxManager : MonoBehaviour, ISfxService
     {
         public static SfxManager Instance { get; private set; }
@@ -100,6 +101,14 @@ namespace HideAndInk.Core.Audio
         {
             _volume = PlayerPrefs.GetFloat(PREFS_VOLUME, defaultVolume);
             _muted = PlayerPrefs.GetInt(PREFS_MUTE, 0) == 1;
+
+            // 볼륨이 0이면 defaultVolume으로 fallback (처음 실행 또는 잘못된 저장값 복구)
+            if (_volume <= 0f && defaultVolume > 0f)
+            {
+                _volume = defaultVolume;
+                PlayerPrefs.SetFloat(PREFS_VOLUME, _volume);
+            }
+
             if (_source != null)
             {
                 _source.volume = _volume;

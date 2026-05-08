@@ -92,6 +92,13 @@ namespace HideAndInk.Scripts.UI
             {
                 _sfxService = GameManager.Container.Resolve<ISfxService>();
             }
+
+            // DI 실패 시 Singleton fallback
+            if (_sfxService == null)
+            {
+                _sfxService = SfxManager.Instance;
+            }
+
         }
 
         private void Start()
