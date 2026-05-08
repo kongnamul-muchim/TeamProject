@@ -202,6 +202,18 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void RegisterAudioServices()
         {
+            // sfxManager가 null이거나 파괴 상태면 Resources에서 Prefab 로드
+            if (sfxManager == null)
+            {
+                var sfxPrefab = Resources.Load<GameObject>("Prefabs/SfxManager");
+                if (sfxPrefab != null)
+                {
+                    var sfxGo = Instantiate(sfxPrefab);
+                    sfxGo.name = "SfxManager";
+                    sfxManager = sfxGo.GetComponent<SfxManager>();
+                }
+            }
+
             if (sfxManager != null)
                 _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
 
@@ -241,9 +253,19 @@ namespace HideAndInk.Core.Managers
             }
             else if (current == GameState.Dead)
             {
-                // 게임 오버 효과음 재생
-                var sfx = Container.IsRegistered<ISfxService>()
-                    ? Container.Resolve<ISfxService>() : null;
+                // 게임 오버 효과음 재생 (DI 실패 시 Instance 직접 사용)
+                ISfxService sfx = null;
+                if (Container.IsRegistered<ISfxService>())
+                {
+                    sfx = Container.Resolve<ISfxService>();
+                    // 유니티 오브젝트가 파괴 상태인지 확인 (null 비교로 가능)
+                    if (sfx == null)
+                        sfx = SfxManager.Instance;
+                }
+                else
+                {
+                    sfx = SfxManager.Instance;
+                }
                 sfx?.Play(SfxId.GameOver);
 
                 // PlayerLives에서 사망 원인 + 의태 상태 읽기
