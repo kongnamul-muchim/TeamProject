@@ -88,34 +88,19 @@ namespace HideAndInk.Scripts.UI
 
             // 버튼 리스너 등록
             if (continueButton != null)
-            {
                 continueButton.onClick.AddListener(OnContinueClicked);
-                Debug.Log($"[GameOverUI] Continue button listener registered. interactable={continueButton.interactable}, enabled={continueButton.enabled}");
-            }
             else
-            {
                 Debug.LogError("[GameOverUI] Continue button is NULL!");
-            }
 
             if (restartButton != null)
-            {
                 restartButton.onClick.AddListener(OnRestartClicked);
-                Debug.Log($"[GameOverUI] Restart button listener registered. interactable={restartButton.interactable}, enabled={restartButton.enabled}");
-            }
             else
-            {
                 Debug.LogError("[GameOverUI] Restart button is NULL!");
-            }
 
             if (titleButton != null)
-            {
                 titleButton.onClick.AddListener(OnTitleClicked);
-                Debug.Log($"[GameOverUI] Title button listener registered. interactable={titleButton.interactable}, enabled={titleButton.enabled}");
-            }
             else
-            {
                 Debug.LogError("[GameOverUI] Title button is NULL!");
-            }
 
             // 버튼 자식 텍스트들의 RaycastTarget 강제 비활성화 (클릭 가로채기 방지)
             DisableButtonTextRaycast(continueButton);
@@ -143,10 +128,7 @@ namespace HideAndInk.Scripts.UI
             foreach (var text in texts)
             {
                 if (text.raycastTarget)
-                {
                     text.raycastTarget = false;
-                    Debug.Log($"[GameOverUI] Disabled RaycastTarget on {text.gameObject.name} (parent: {button.name})");
-                }
             }
             
             // Image 컴포넌트도 확인 (버튼 자신의 Image는 제외)
@@ -154,10 +136,7 @@ namespace HideAndInk.Scripts.UI
             foreach (var img in images)
             {
                 if (img.gameObject != button.gameObject && img.raycastTarget)
-                {
                     img.raycastTarget = false;
-                    Debug.Log($"[GameOverUI] Disabled RaycastTarget on Image {img.gameObject.name} (parent: {button.name})");
-                }
             }
         }
 
@@ -176,7 +155,6 @@ namespace HideAndInk.Scripts.UI
                 {
                     color.a = 0.01f;
                     img.color = color;
-                    Debug.Log($"[GameOverUI] Fixed alpha on {button.name} Image: 0 -> 0.01 (near-transparent)");
                 }
             }
         }
@@ -239,10 +217,7 @@ namespace HideAndInk.Scripts.UI
                 // DialogUI도 닫기
                 var dialogUI = canvasIngame.Find("DialogUI")?.gameObject;
                 if (dialogUI != null && dialogUI.activeSelf)
-                {
                     dialogUI.SetActive(false);
-                    Debug.Log("[GameOverUI] DialogUI force-closed");
-                }
             }
 
             // 게임 오버 패널 표시 및 최상위로 이동
@@ -250,7 +225,6 @@ namespace HideAndInk.Scripts.UI
             {
                 gameOverPanel.SetActive(true);
                 gameOverPanel.transform.SetAsLastSibling(); // 최상위로
-                Debug.Log($"[GameOverUI] gameOverPanel active={gameOverPanel.activeInHierarchy}, eventSystem={UnityEngine.EventSystems.EventSystem.current != null}");
             }
 
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
@@ -258,20 +232,11 @@ namespace HideAndInk.Scripts.UI
 
             // 시간 복원 (버튼 클릭 가능하도록)
             Time.timeScale = 1f;
-            Debug.Log("[GameOverUI] Time.timeScale restored to 1 for UI interaction");
 
-            // EventSystem 상태 확인 및 StandaloneInputModule 추가
+            // EventSystem에 StandaloneInputModule이 없으면 추가
             var eventSystem = UnityEngine.EventSystems.EventSystem.current;
-            if (eventSystem != null)
-            {
-                var standaloneModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-                if (standaloneModule == null)
-                {
-                    eventSystem.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-                    Debug.Log("[GameOverUI] StandaloneInputModule added to EventSystem");
-                }
-                Debug.Log($"[GameOverUI] EventSystem enabled={eventSystem.enabled}, StandaloneInputModule={standaloneModule != null}");
-            }
+            if (eventSystem != null && eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>() == null)
+                eventSystem.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
 
         /// <summary>
@@ -294,7 +259,6 @@ namespace HideAndInk.Scripts.UI
             {
                 color.a = 200f / 255f;
                 img.color = color;
-                Debug.Log($"[GameOverUI] Vignette alpha fixed: → {color.a:F3}");
             }
         }
 
@@ -332,7 +296,6 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnContinueClicked()
         {
-            Debug.Log("[GameOverUI] OnContinueClicked CALLED!");
             _sfxService?.Play(SfxId.ButtonClick);
             // 저장 데이터가 있으면 로드
             if (SaveManager.HasSaveData())
