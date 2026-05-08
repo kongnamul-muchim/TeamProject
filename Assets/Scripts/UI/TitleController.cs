@@ -116,10 +116,19 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void PlayTitleBgm()
         {
+            // 1순위: DI 컨테이너에서 BgmManager 해결
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IBgmService>())
             {
                 var bgm = GameManager.Container.Resolve<IBgmService>();
                 bgm?.Play(HideAndInk.Core.Audio.BgmId.Title);
+                return;
+            }
+
+            // 2순위: 씬에서 BgmManager 직접 찾기
+            var bgmManager = FindObjectOfType<HideAndInk.Core.Audio.BgmManager>();
+            if (bgmManager != null)
+            {
+                bgmManager.Play(HideAndInk.Core.Audio.BgmId.Title);
             }
         }
 
