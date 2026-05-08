@@ -142,6 +142,10 @@ namespace HideAndInk.Scripts.UI
 
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
             ForceVignetteToMax();
+
+            // 시간 복원 (버튼 클릭 가능하도록)
+            Time.timeScale = 1f;
+            Debug.Log("[GameOverUI] Time.timeScale restored to 1 for UI interaction");
         }
 
         /// <summary>
