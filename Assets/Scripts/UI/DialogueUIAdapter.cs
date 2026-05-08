@@ -29,6 +29,7 @@ public class DialogueUIAdapter : MonoBehaviour
     [SerializeField] private float punctuationDelay = 0.15f; // 마침표/물음표/느낌표 지연 시간
 
     // ─── 상태 ──────────────────────────────────────────────────
+    private static DialogueUIAdapter _instance;
     private IStoryManager _storyManager;
     private Coroutine _typewriterCoroutine;
     private bool _isCurrentlyTyping;
@@ -38,6 +39,15 @@ public class DialogueUIAdapter : MonoBehaviour
     // ─── 초기화 ────────────────────────────────────────────────
     private void Awake()
     {
+        // 중복 인스턴스 방지: 이미 존재하면 자신을 비활성화
+        if (_instance != null && _instance != this)
+        {
+            Debug.LogWarning("[DialogueUIAdapter] 중복 인스턴스 감지. 자신을 비활성화합니다.");
+            enabled = false;
+            return;
+        }
+        _instance = this;
+
         TryFindReferences();
         SubscribeToEvents();
 
@@ -204,6 +214,9 @@ public class DialogueUIAdapter : MonoBehaviour
     /// </summary>
     private void OnDialogueLineChanged(string speaker, string text)
     {
+        // 인스펙터에서 입력한 \n을 실제 줄바꿈 문자로 변환
+        text = text.Replace("\\n", "\n");
+
         _isDialogueActive = true;
 
         // DialogeUI 활성화
@@ -318,25 +331,40 @@ public class DialogueUIAdapter : MonoBehaviour
     {
         if (textDialoge == null) yield break;
 
-        textDialoge.text = "";
-        int length = fullText.Length;
+        // 전체 텍스트를 미리 세팅하고, 보이는 글자 수를 0으로 설정
+        textDialoge.text = fullText;
+        textDialoge.maxVisibleCharacters = 0;
 
-        for (int i = 0; i < length; i++)
+        // TMP가 리치 텍스트와 줄바꿈 등을 계산하도록 강제 갱신
+        textDialoge.ForceMeshUpdate();
+        int totalCharacters = textDialoge.textInfo.characterCount;
+
+        // 글자별 지연 시간을 미리 계산 (GC 최소화)
+        float[] delays = new float[totalCharacters];
+        for (int i = 0; i < totalCharacters; i++)
         {
-            char c = fullText[i];
-            textDialoge.text += c;
+            char c = textDialoge.textInfo.characterInfo[i].character;
+            delays[i] = (c == '.' || c == '?' || c == '!' || c == ',') 
+                ? punctuationDelay 
+                : charDelay;
+        }
 
-            if (c == '.' || c == '?' || c == '!' || c == ',')
-            {
-                yield return new WaitForSecondsRealtime(punctuationDelay);
-            }
-            else
-            {
-                yield return new WaitForSecondsRealtime(charDelay);
-            }
-
+        // Time.unscaledTime 기반으로 프레임 드롭에도 안정적인 타이밍 제공
+        float nextRevealTime = Time.unscaledTime;
+        for (int i = 0; i < totalCharacters; i++)
+        {
             if (!_isCurrentlyTyping)
                 yield break;
+
+            nextRevealTime += delays[i];
+            
+            // 지연 시간이 끝날 때까지 대기
+            while (Time.unscaledTime < nextRevealTime)
+            {
+                yield return null;
+            }
+
+            textDialoge.maxVisibleCharacters = i + 1;
         }
 
         _isCurrentlyTyping = false;
@@ -352,7 +380,8 @@ public class DialogueUIAdapter : MonoBehaviour
 
     private void Update()
     {
-        if (!_isDialogueActive) return;
+        // 대화 중이 아니거나, 연출로 인해 입력이 차단된 상태면 리턴
+        if (!_isDialogueActive || StoryEvents.IsInputBlocked) return;
 
         if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
         {
@@ -368,6 +397,14 @@ public class DialogueUIAdapter : MonoBehaviour
         }
         else
         {
+            // 에필로그의 마지막 대사라면 UI를 끄기 전에 이벤트를 발생시켜 페이드아웃을 먼저 진행합니다.
+            if (_storyManager != null && _storyManager.CurrentSection == StorySection.Epilogue 
+                && _storyManager.CurrentLineIndex >= _storyManager.TotalLineCount - 1)
+            {
+                StoryEvents.InvokeEpilogueWillEnd();
+                return; // NextLine()을 호출하지 않고 대기합니다.
+            }
+
             _storyManager?.NextLine();
         }
     }
@@ -383,7 +420,10 @@ public class DialogueUIAdapter : MonoBehaviour
         _isCurrentlyTyping = false;
 
         if (textDialoge != null)
+        {
             textDialoge.text = _currentFullText;
+            textDialoge.maxVisibleCharacters = 99999; // 모든 글자 강제 표시
+        }
 
         if (endDialogueSign != null)
             endDialogueSign.SetActive(true);

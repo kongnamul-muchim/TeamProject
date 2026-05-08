@@ -1,4 +1,5 @@
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using UnityEngine;
@@ -52,7 +53,7 @@ public class ZoneChanger : MonoBehaviour
     public int toZoneNumber = -1;
 
     [Header("UI - Canvas_Ingame")]
-    [Tooltip("Zone 1~5에서만 활성화, Zone 6에서는 비활성화할 Canvas_Ingame 오브젝트. 미할당 시 자동 탐색")]
+    [Tooltip("Zone 1~6에서 활성화할 Canvas_Ingame 오브젝트. 미할당 시 자동 탐색")]
     public GameObject canvasIngame;
 
     [Header("트랜지션 설정")]
@@ -110,8 +111,9 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("CameraFollow 컴포넌트 (미할당 시 씬에서 자동 탐색)")]
     [SerializeField] private CameraFollow cameraFollow;
 
-    private ISfxService _sfxService;
-    private bool _alreadyTriggered = false;
+        private ISfxService _sfxService;
+        private IBgmService _bgmService;
+        private bool _alreadyTriggered = false;
     private GameObject _autoCreatedWall;
     private GameObject _autoCreatedLeftBoundaryWall;
 
@@ -134,11 +136,13 @@ public class ZoneChanger : MonoBehaviour
             cameraFollow = FindObjectOfType<CameraFollow>();
         }
 
-        // SFX 서비스 해결
-        if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
-        {
-            _sfxService = GameManager.Container.Resolve<ISfxService>();
-        }
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+                _sfxService = GameManager.Container.Resolve<ISfxService>();
+
+            // BGM 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IBgmService>())
+                _bgmService = GameManager.Container.Resolve<IBgmService>();
 
         // 게임 시작 시 현재 활성 Zone의 Ground 동기화
         // (deactivateZones[0]이 활성화되어 있으면 fromZoneNumber가 현재 활성 Zone)
@@ -158,6 +162,12 @@ public class ZoneChanger : MonoBehaviour
             {
                 SyncGroundObjects(fromZoneNumber);
                 Debug.Log($"[ZoneChanger] '{name}' 초기 Ground 동기화: Zone_{fromZoneNumber} (Ground_{fromZoneNumber:D2} 활성화)");
+
+                // 게임 시작 시 Zone 1이면 튜토리얼 트리거 순차 실행 (프롤로그 완료 후)
+                if (fromZoneNumber == 1)
+                {
+                    StartCoroutine(ExecuteTutorialsAfterPrologue());
+                }
             }
 
             // 게임 시작 시 Fog Zone(1,2,3,6)이면 Underwater Effects 활성화
@@ -450,6 +460,9 @@ public class ZoneChanger : MonoBehaviour
 
                     // 자식 중 BoundaryWall 태그를 가진 오브젝트 자동 활성화
                     ActivateBoundaryWallsInZone(zone.transform);
+
+                    // 자식 중 보스 트리거 자동 활성화
+                    ActivateBossTriggersInZone(zone.transform);
                 }
             }
             changed = true;
@@ -487,8 +500,20 @@ public class ZoneChanger : MonoBehaviour
             if (toZoneNumber >= 0)
                 onZoneChanged?.Invoke(toZoneNumber);
 
+            // Zone 활성화 시 보스 트리거 자동 실행
+            if (toZoneNumber >= 0)
+                ExecuteBossTriggersInActivatedZones();
+
+            // Zone 1: 튜토리얼 트리거 순차 실행
+            if (toZoneNumber == 1)
+                ExecuteTutorialTriggersInOrder();
+
             // 구역 전환 효과음 재생
             _sfxService?.Play(SfxId.StageClear);
+
+            // BGM 전환 (Zone 1~5 → BgmId)
+            if (_bgmService != null && toZoneNumber >= 1 && toZoneNumber <= 5)
+                _bgmService.Play((BgmId)toZoneNumber);
         }
         else
         {
@@ -520,24 +545,199 @@ public class ZoneChanger : MonoBehaviour
             ActivateSingleWallInContainer();
         }
 
-        // ── Canvas_Ingame: Zone 1~5 활성화, Zone 6 비활성화 ──
+        // ── Canvas_Ingame: Zone 1~6 활성화 ──
         UpdateCanvasIngame(toZoneNumber);
     }
 
     /// <summary>
     /// Canvas_Ingame의 활성화 상태를 Zone 번호에 따라 설정합니다.
-    /// Zone 1~5에서는 활성화, Zone 6에서는 비활성화합니다.
+    /// Zone 1~6에서는 활성화합니다.
     /// </summary>
     private void UpdateCanvasIngame(int zoneNumber)
     {
         if (canvasIngame == null) return;
 
-        bool shouldBeActive = (zoneNumber >= 1 && zoneNumber <= 5);
+        bool shouldBeActive = (zoneNumber >= 1 && zoneNumber <= 6);
         if (canvasIngame.activeSelf != shouldBeActive)
         {
             canvasIngame.SetActive(shouldBeActive);
             Debug.Log($"[ZoneChanger] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
         }
+    }
+
+    /// <summary>
+    /// 활성화된 Zone들의 자식 중 보스 트리거(Trigger_Boss_*)를 찾아 자동 실행합니다.
+    /// Zone 전환 완료 시 바로 보스 이벤트가 시작됩니다.
+    /// </summary>
+    private void ExecuteBossTriggersInActivatedZones()
+    {
+        if (activateZones == null) return;
+
+        foreach (var zone in activateZones)
+        {
+            if (zone == null) continue;
+
+            foreach (Transform child in zone.transform)
+            {
+                if (child.name.StartsWith("Trigger_Boss_"))
+                {
+                    var trigger = child.GetComponent<HideAndInk.Gameplay.TutorialTrigger>();
+                    if (trigger != null)
+                    {
+                        Debug.Log($"[ZoneChanger] 보스 트리거 자동 실행: {child.name}");
+                        trigger.ExecuteTrigger();
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[ZoneChanger] {child.name}에 TutorialTrigger가 없습니다.");
+                    }
+                }
+            }
+        }
+    }
+
+    // ─── 튜토리얼 순차 실행 큐 ─────────────────────────────────
+    private Queue<HideAndInk.Gameplay.TutorialTrigger> _tutorialQueue;
+    private bool _isExecutingTutorials = false;
+
+    /// <summary>
+    /// Zone 1 활성화 시 튜토리얼 트리거를 순서대로 자동 실행합니다.
+    /// Camouflage → Escape → InkLow → InkSupply 순서로 실행됩니다.
+    /// </summary>
+    private void ExecuteTutorialTriggersInOrder()
+    {
+        ExecuteTutorialTriggersInZones(activateZones);
+    }
+
+    /// <summary>
+    /// 게임 시작 시 Zone 1이 이미 활성화되어 있을 때 deactivateZones에서 튜토리얼 트리거를 실행합니다.
+    /// </summary>
+    private void ExecuteTutorialTriggersInDeactivatedZones()
+    {
+        ExecuteTutorialTriggersInZones(deactivateZones);
+    }
+
+    /// <summary>
+    /// 지정된 Zone 배열에서 튜토리얼 트리거를 찾아 순서대로 실행합니다.
+    /// StoryManager의 대사가 끝날 때마다 다음 튜토리얼을 실행합니다.
+    /// </summary>
+    private void ExecuteTutorialTriggersInZones(GameObject[] zones)
+    {
+        if (zones == null) return;
+
+        _tutorialQueue = new Queue<HideAndInk.Gameplay.TutorialTrigger>();
+
+        foreach (var zone in zones)
+        {
+            if (zone == null) continue;
+
+            // TutorialType enum 순서대로 정렬된 리스트
+            var tutorialTriggers = new List<(TutorialType type, HideAndInk.Gameplay.TutorialTrigger trigger)>();
+
+            foreach (Transform child in zone.transform)
+            {
+                if (child.name.StartsWith("Trigger_Tutorial_"))
+                {
+                    var trigger = child.GetComponent<HideAndInk.Gameplay.TutorialTrigger>();
+                    if (trigger != null)
+                    {
+                        tutorialTriggers.Add((trigger.tutorialType, trigger));
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[ZoneChanger] {child.name}에 TutorialTrigger가 없습니다.");
+                    }
+                }
+            }
+
+            // TutorialType enum 값 순서대로 정렬 (Camouflage=0, Escape=1, InkLow=2, InkSupply=3)
+            tutorialTriggers.Sort((a, b) => ((int)a.type).CompareTo((int)b.type));
+
+            // 큐에 추가
+            foreach (var item in tutorialTriggers)
+            {
+                _tutorialQueue.Enqueue(item.trigger);
+            }
+        }
+
+        // 첫 번째 튜토리얼 실행 시작
+        if (_tutorialQueue.Count > 0 && !_isExecutingTutorials)
+        {
+            _isExecutingTutorials = true;
+            StoryEvents.OnDialogueEnd += OnTutorialDialogueEnd;
+            ExecuteNextTutorial();
+        }
+    }
+
+    /// <summary>
+    /// 큐에서 다음 튜토리얼 트리거를 실행합니다.
+    /// </summary>
+    private void ExecuteNextTutorial()
+    {
+        if (_tutorialQueue == null || _tutorialQueue.Count == 0)
+        {
+            // 모든 튜토리얼 실행 완료
+            StoryEvents.OnDialogueEnd -= OnTutorialDialogueEnd;
+            _isExecutingTutorials = false;
+            Debug.Log("[ZoneChanger] 모든 튜토리얼 트리거 실행 완료");
+            return;
+        }
+
+        var trigger = _tutorialQueue.Dequeue();
+        Debug.Log($"[ZoneChanger] 튜토리얼 트리거 실행: {trigger.name} ({trigger.tutorialType})");
+        trigger.ExecuteTrigger();
+    }
+
+    /// <summary>
+    /// 대사가 종료되면 다음 튜토리얼을 실행합니다.
+    /// </summary>
+    private void OnTutorialDialogueEnd()
+    {
+        ExecuteNextTutorial();
+    }
+
+    /// <summary>
+    /// 프롤로그 완료 후 튜토리얼을 실행합니다.
+    /// </summary>
+    private IEnumerator ExecuteTutorialsAfterPrologue()
+    {
+        // GameManager가 프롤로그를 실행할 예정이면(예약 또는 에디터 설정), 완료까지 대기
+        var gm = GameManager.Instance;
+        bool willPlayPrologue = (gm != null && (GameManager.IsProloguePending || gm.WillPlayPrologueOnStart));
+        
+        if (willPlayPrologue)
+        {
+            Debug.Log("[ZoneChanger] 프롤로그 실행 예정 → 완료까지 대기");
+            
+            // 프롤로그가 시작될 때까지 대기 (최대 3초)
+            float waitTimer = 0f;
+            while (!IsStoryPlaying() && waitTimer < 3f)
+            {
+                waitTimer += Time.deltaTime;
+                yield return null;
+            }
+        }
+        
+        // StoryManager가 대화 중이면(프롤로그 실행 중) 완료까지 대기
+        while (IsStoryPlaying())
+        {
+            yield return null;
+        }
+        
+        Debug.Log("[ZoneChanger] 대화 완료 → 튜토리얼 실행");
+        ExecuteTutorialTriggersInDeactivatedZones();
+    }
+
+    /// <summary>
+    /// StoryManager가 현재 대화 중인지 확인합니다.
+    /// </summary>
+    private bool IsStoryPlaying()
+    {
+        if (GameManager.Container == null) return false;
+        if (!GameManager.Container.IsRegistered<IStoryManager>()) return false;
+        
+        var story = GameManager.Container.Resolve<IStoryManager>();
+        return story != null && story.IsDialoguePlaying;
     }
 
     /// <summary>
@@ -792,6 +992,23 @@ public class ZoneChanger : MonoBehaviour
             {
                 child.gameObject.SetActive(true);
                 Debug.Log($"[ZoneChanger] 경계 벽 자동 활성화 (이름): {child.name}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Zone의 자식 중 보스 트리거(Trigger_Boss_*)를 찾아 활성화합니다.
+    /// </summary>
+    private void ActivateBossTriggersInZone(Transform zoneTransform)
+    {
+        if (zoneTransform == null) return;
+
+        foreach (Transform child in zoneTransform)
+        {
+            if (child.name.StartsWith("Trigger_Boss_"))
+            {
+                child.gameObject.SetActive(true);
+                Debug.Log($"[ZoneChanger] 보스 트리거 자동 활성화: {child.name}");
             }
         }
     }

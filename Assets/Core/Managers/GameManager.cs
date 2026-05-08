@@ -48,8 +48,13 @@ namespace HideAndInk.Core.Managers
         // 스토리 데이터베이스 (Inspector에서 할당)
         [SerializeField] private StoryDatabaseSO storyDatabase;
 
+        [Header("Audio")]
+        [SerializeField] private SfxManager sfxManager;
+        [SerializeField] private BgmManager bgmManager;
+
         // ─── 프롤로그 트리거 ──────────────────────────────────────
         private bool _pendingPrologue;      // Title → NewGame 시 예약됨
+        public static bool IsProloguePending => Instance != null && Instance._pendingPrologue;
 
         /// <summary>
         /// TitleController.OnNewGameClicked()에서 호출
@@ -64,6 +69,7 @@ namespace HideAndInk.Core.Managers
         // 테스트: Play 누르면 바로 프롤로그 실행 (에디터 전용)
         [Header("Debug")]
         [SerializeField] private bool playPrologueOnStart = false;
+        public bool WillPlayPrologueOnStart => playPrologueOnStart;
 
         private void Awake()
         {
@@ -129,7 +135,6 @@ namespace HideAndInk.Core.Managers
         {
             if (_pendingPrologue)
             {
-                _pendingPrologue = false;
                 Debug.Log("[GameManager] 씬 로드 완료 → 프롤로그 예약 감지, 실행합니다.");
                 StartCoroutine(PlayPrologueDelayed());
             }
@@ -146,6 +151,7 @@ namespace HideAndInk.Core.Managers
                 Debug.Log("[GameManager] PlayPrologueOnStart: 프롤로그를 시작합니다.");
                 story.PlayPrologue();
             }
+            _pendingPrologue = false;
         }
 
         /// <summary>
@@ -192,26 +198,15 @@ namespace HideAndInk.Core.Managers
 
         /// <summary>
         /// 오디오 서비스 DI 등록
-        /// AudioManager가 ISfxService / IBgmService / IAmbientService를 구현한 후 활성화
-        /// 
-        /// 사용 예:
-        ///   _rootContainer.RegisterSingleton&lt;ISfxService, AudioManager&gt;();
-        ///   _rootContainer.RegisterSingleton&lt;IBgmService, AudioManager&gt;();
-        ///   _rootContainer.RegisterSingleton&lt;IAmbientService, AudioManager&gt;();
+        /// SfxManager / BgmManager를 씬에서 찾거나 자동 생성하여 등록
         /// </summary>
         private void RegisterAudioServices()
         {
-            // AudioManager는 MonoBehaviour Singleton이므로 RegisterInstance 사용
-            var audioManager = AudioManager.Instance;
+            if (sfxManager != null)
+                _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
 
-            // SFX 서비스 (Singleton — 전역 AudioManager 인스턴스)
-            _rootContainer.RegisterInstance<ISfxService>(audioManager, ServiceLifetime.Singleton);
-
-            // BGM 서비스 (Singleton) — TODO: BGM 구현 후 활성화
-            // _rootContainer.RegisterInstance<IBgmService>(audioManager, ServiceLifetime.Singleton);
-
-            // Ambient 서비스 (Singleton) — TODO: Ambient 구현 후 활성화
-            // _rootContainer.RegisterInstance<IAmbientService>(audioManager, ServiceLifetime.Singleton);
+            if (bgmManager != null)
+                _rootContainer.RegisterInstance<IBgmService>(bgmManager, ServiceLifetime.Singleton);
         }
 
         /// <summary>
@@ -247,8 +242,9 @@ namespace HideAndInk.Core.Managers
             else if (current == GameState.Dead)
             {
                 // 게임 오버 효과음 재생
-                var audioManager = AudioManager.Instance;
-                audioManager.Play(SfxId.GameOver);
+                var sfx = Container.IsRegistered<ISfxService>()
+                    ? Container.Resolve<ISfxService>() : null;
+                sfx?.Play(SfxId.GameOver);
 
                 // PlayerLives에서 사망 원인 + 의태 상태 읽기
                 var playerLives = PlayerLives.Instance;

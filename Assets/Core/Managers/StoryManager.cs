@@ -48,20 +48,34 @@ namespace HideAndInk.Core.Managers
             BeginSection(StorySection.Epilogue, _database.GetEpilogue());
         }
 
-        // ─── 튜토리얼 힌트 (단발성) ───────────────────────────────
+        // ─── 튜토리얼 힌트 (여러 페이지 지원) ──────────────────────
         public void ShowTutorialHint(TutorialType type)
         {
             if (_isPlaying) return;
-            var line = _database.GetTutorialHint(type);
-            BeginSingleLine(line);
+            var lines = _database.GetTutorialHint(type);
+            if (lines.Length == 1)
+            {
+                BeginSingleLine(lines[0]);
+            }
+            else if (lines.Length > 1)
+            {
+                BeginSection(StorySection.Tutorial, lines);
+            }
         }
 
-        // ─── 보스 조우 대사 (단발성) ──────────────────────────────
+        // ─── 보스 조우 대사 (여러 페이지 지원) ──────────────────────
         public void ShowBossDialogue(BossType type)
         {
             if (_isPlaying) return;
-            var line = _database.GetBossDialogue(type);
-            BeginSingleLine(line);
+            var lines = _database.GetBossDialogue(type);
+            if (lines.Length == 1)
+            {
+                BeginSingleLine(lines[0]);
+            }
+            else if (lines.Length > 1)
+            {
+                BeginSection(StorySection.Tutorial, lines);
+            }
         }
 
         // ─── 다음 대사 진행 ─────────────────────────────────────

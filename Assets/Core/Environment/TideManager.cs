@@ -45,6 +45,10 @@ namespace HideAndInk.Core.Environment
         [Tooltip("조류 1초당 생성할 성게 수 (0.2 = 0.2초마다 1마리 = 초당 5마리)")]
         [SerializeField] private float spawnInterval = 0.2f;
 
+        [Header("Zone 설정")]
+        [Tooltip("조류를 활성화할 Zone 번호들 (예: 3, 4). 비워두면 모든 Zone에서 활성화")]
+        [SerializeField] private int[] activeZoneNumbers = { 3, 4 };
+
         [Header("Player 참조")]
         [Tooltip("Player Rigidbody")]
         [SerializeField] private Rigidbody playerRigidbody;
@@ -63,6 +67,9 @@ namespace HideAndInk.Core.Environment
         // Player 의태 상태 캐싱
         private bool _wasCamouflaging;
         private IEventBus _eventBus;
+
+        // Zone 추적
+        private int _currentZoneNumber = -1;
 
         private void Awake()
         {
@@ -110,8 +117,96 @@ namespace HideAndInk.Core.Environment
             }
         }
 
+        private void Start()
+        {
+            // ZoneChanger 이벤트 구독
+            SubscribeToZoneChangers();
+        }
+
+        /// <summary>
+        /// 모든 ZoneChanger의 onZoneChanged 이벤트 구독
+        /// </summary>
+        private void SubscribeToZoneChangers()
+        {
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                changer.onZoneChanged.AddListener(OnZoneChanged);
+            }
+
+            // 초기 Zone 감지 (시작 Zone 찾기)
+            DetectInitialZone();
+        }
+
+        /// <summary>
+        /// 시작 시 현재 Zone 감지
+        /// </summary>
+        private void DetectInitialZone()
+        {
+            // ZoneChanger 중 fromZoneNumber가 유효하고 deactivateZones가 활성화된 Zone 찾기
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                if (changer.fromZoneNumber >= 0)
+                {
+                    // fromZoneNumber의 Zone 오브젝트들이 활성화되어 있는지 확인
+                    var zones = changer.GetType().GetField("deactivateZones", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)?.GetValue(changer) as GameObject[];
+                    if (zones != null)
+                    {
+                        foreach (var zone in zones)
+                        {
+                            if (zone != null && zone.activeInHierarchy)
+                            {
+                                _currentZoneNumber = changer.fromZoneNumber;
+                                Debug.Log($"[TideManager] 초기 Zone 감지: Zone {_currentZoneNumber}");
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Zone 변경 시 호출
+        /// </summary>
+        private void OnZoneChanged(int zoneNumber)
+        {
+            _currentZoneNumber = zoneNumber;
+            bool shouldBeActive = IsActiveInZone(zoneNumber);
+
+            Debug.Log($"[TideManager] Zone 변경: {zoneNumber}, 조류 활성화: {shouldBeActive}");
+
+            // 활성화되지 않은 Zone으로 이동 시 조류 종료
+            if (!shouldBeActive && _isTideActive)
+            {
+                EndTide();
+            }
+        }
+
+        /// <summary>
+        /// 현재 Zone에서 조류가 활성화되어야 하는지 확인
+        /// </summary>
+        private bool IsActiveInZone(int zoneNumber)
+        {
+            // activeZoneNumbers가 비어있으면 모든 Zone에서 활성화
+            if (activeZoneNumbers == null || activeZoneNumbers.Length == 0)
+                return true;
+
+            foreach (int activeZone in activeZoneNumbers)
+            {
+                if (activeZone == zoneNumber)
+                    return true;
+            }
+            return false;
+        }
+
         private void Update()
         {
+            // 현재 Zone에서 조류가 활성화되어야 하는지 확인
+            if (!IsActiveInZone(_currentZoneNumber))
+                return;
+
             // 조류 타이머
             if (!_isTideActive)
             {
@@ -215,6 +310,14 @@ namespace HideAndInk.Core.Environment
 
         private void OnDestroy()
         {
+            // ZoneChanger 이벤트 구독 해제
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                if (changer != null)
+                    changer.onZoneChanged.RemoveListener(OnZoneChanged);
+            }
+
             // 풀 정리
             if (_urchinPool != null)
             {

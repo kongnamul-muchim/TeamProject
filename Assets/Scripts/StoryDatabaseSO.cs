@@ -14,14 +14,14 @@ public class StoryDatabaseSO : ScriptableObject
     public class TutorialHintEntry
     {
         public TutorialType type;
-        public DialogueLine line;
+        public DialogueLine[] lines;
     }
 
     [System.Serializable]
     public class BossDialogueEntry
     {
         public BossType type;
-        public DialogueLine line;
+        public DialogueLine[] lines;
     }
 
     // ─── 데이터 필드 ────────────────────────────────────────────
@@ -46,33 +46,33 @@ public class StoryDatabaseSO : ScriptableObject
     /// <summary> 에필로그 대사 배열 반환 </summary>
     public DialogueLine[] GetEpilogue() => epilogue ?? new DialogueLine[0];
 
-    /// <summary> 특정 튜토리얼 힌트 조회 </summary>
-    public DialogueLine GetTutorialHint(TutorialType type)
+    /// <summary> 특정 튜토리얼 힌트 대사 배열 조회 </summary>
+    public DialogueLine[] GetTutorialHint(TutorialType type)
     {
         if (tutorialHints != null)
         {
             for (int i = 0; i < tutorialHints.Length; i++)
             {
                 if (tutorialHints[i].type == type)
-                    return tutorialHints[i].line;
+                    return tutorialHints[i].lines ?? new DialogueLine[0];
             }
         }
         Debug.LogWarning($"[StoryDatabaseSO] TutorialHint '{type}' not found. Check Inspector.");
-        return new DialogueLine("?", "");
+        return new DialogueLine[] { new DialogueLine("?", "") };
     }
 
-    /// <summary> 특정 보스 조우 대사 조회 </summary>
-    public DialogueLine GetBossDialogue(BossType type)
+    /// <summary> 특정 보스 조우 대사 배열 조회 </summary>
+    public DialogueLine[] GetBossDialogue(BossType type)
     {
         if (bossDialogues != null)
         {
             for (int i = 0; i < bossDialogues.Length; i++)
             {
                 if (bossDialogues[i].type == type)
-                    return bossDialogues[i].line;
+                    return bossDialogues[i].lines ?? new DialogueLine[0];
             }
         }
         Debug.LogWarning($"[StoryDatabaseSO] BossDialogue '{type}' not found. Check Inspector.");
-        return new DialogueLine("?", "");
+        return new DialogueLine[] { new DialogueLine("?", "") };
     }
 }

@@ -6,6 +6,7 @@ using HideAndInk.Core.Perception;
 using HideAndInk.Core.Enemy.Boss.Gimmicks;
 using HideAndInk.Core.Player;
 using HideAndInk.Core.Enemy.Movement;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Managers;
@@ -77,6 +78,10 @@ namespace HideAndInk.Core.Enemy.Boss
         [Tooltip("넉백 힘")]
         [SerializeField] private float knockbackForce = 12f;
 
+        [Header("Zone 설정")]
+        [Tooltip("이 보스가 활성화될 Zone 번호 (-1이면 모든 Zone에서 활성화)")]
+        [SerializeField] private int targetZoneNumber = -1;
+
         private EnemyAIStateMachine _stateMachine;
         private PatrolBehavior _patrolBehavior;
         private ChaseBehavior _chaseBehavior;
@@ -86,6 +91,7 @@ namespace HideAndInk.Core.Enemy.Boss
         private PlayerLives _playerLives;
         private Rigidbody _playerRigidbody;
         private IEventBus _eventBus;
+        private ISfxService _sfxService;
 
         // 기믹 인터페이스 캐싱 (SOLID - ISP)
         private IGimmickPlayerAware _playerAware;
@@ -115,6 +121,10 @@ namespace HideAndInk.Core.Enemy.Boss
         // Ambush 근접 Chase 쿨타임 (강제 Patrol 후 재발견 방지)
         private float _ambushProximityCooldown;
 
+        // Zone 추적
+        private int _currentZoneNumber = -1;
+        private bool _isZoneActive = true;
+
         // Moray charge 방향 (Prepare/Charge 중 시야각 동기화용)
         private Vector3 _morayFacingDirection = Vector3.right;
 
@@ -133,6 +143,10 @@ namespace HideAndInk.Core.Enemy.Boss
                 _eventBus = GameManager.Container.Resolve<IEventBus>();
             }
 
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+                _sfxService = GameManager.Container.Resolve<ISfxService>();
+
             _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
             CacheCamouflageAdapter();
             CacheBossPlayerComponents();
@@ -145,6 +159,26 @@ namespace HideAndInk.Core.Enemy.Boss
             // 렌더러/콜라이더 캐시
             _bossRenderers = GetComponentsInChildren<Renderer>();
             _bossColliders = GetComponentsInChildren<Collider>();
+
+            // Zone 추적 초기화
+            SubscribeToZoneChangers();
+            UpdateZoneState(_currentZoneNumber);
+        }
+
+        private void Update()
+        {
+            // Zone이 비활성화되면 보스 오브젝트 전체 비활성화
+            if (!_isZoneActive)
+            {
+                if (gameObject.activeSelf)
+                {
+                    gameObject.SetActive(false);
+#if UNITY_EDITOR
+                    Debug.Log($"[BossEnemyController] {name} 오브젝트 비활성화 (Zone {_currentZoneNumber} != {targetZoneNumber})");
+#endif
+                }
+                return;
+            }
         }
 
         protected override void ScanGroundBounds()
@@ -593,6 +627,14 @@ namespace HideAndInk.Core.Enemy.Boss
 
         private void UpdateVisionConeVisibility()
         {
+            // Zone이 비활성화되면 시야 원뿔 숨김
+            if (!_isZoneActive)
+            {
+                if (visionConeRenderer != null)
+                    visionConeRenderer.enabled = false;
+                return;
+            }
+
             // Ambush도 Patrol에서 시각적 피드백: vision cone + 바닥 표시
             // Chase 중에는 바닥 숨김 (전투 중엔 범위 표시 불필요)
             bool isAmbush = _activeGimmick is AmbushGimmick;
@@ -767,6 +809,8 @@ namespace HideAndInk.Core.Enemy.Boss
                             suspicionSystem.SetSuspicionDecayMultiplier(chaseSuspicionDecayMultiplier);
                         }
                     }
+                    // 추격 효과음
+                    _sfxService?.Play(SfxId.PredatorChase);
                     // 애니메이션: Chase
                     if (_animator != null) _animator.SetBool("IsChase", true);
                     PlayerInk.Instance?.SetThreat(true);
@@ -884,6 +928,13 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateViewDirection()
         {
+            // Zone이 비활성화되면 방향 전환 및 인디케이터 중단
+            if (!_isZoneActive)
+            {
+                HideChargeIndicator();
+                return;
+            }
+
             // 쿨타임 감소 (base class 로직 유지)
             if (_directionChangeTimer > 0f)
                 _directionChangeTimer -= Time.deltaTime;
@@ -1427,8 +1478,102 @@ namespace HideAndInk.Core.Enemy.Boss
 
         #endregion
 
+        #region Zone Tracking
+
+        /// <summary>
+        /// 모든 ZoneChanger의 onZoneChanged 이벤트 구독
+        /// </summary>
+        private void SubscribeToZoneChangers()
+        {
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                changer.onZoneChanged.AddListener(OnZoneChanged);
+            }
+
+            // 초기 Zone 감지
+            DetectInitialZone();
+        }
+
+        /// <summary>
+        /// 부모 오브젝트 이름에서 Zone 번호 추출
+        /// </summary>
+        private void DetectInitialZone()
+        {
+            Transform parent = transform.parent;
+            while (parent != null)
+            {
+                string name = parent.name;
+                if (name.StartsWith("Zone_"))
+                {
+                    string numberStr = name.Substring(5);
+                    int underscoreIndex = numberStr.IndexOf('_');
+                    if (underscoreIndex > 0)
+                        numberStr = numberStr.Substring(0, underscoreIndex);
+
+                    if (int.TryParse(numberStr, out int zoneNumber))
+                    {
+                        _currentZoneNumber = zoneNumber;
+                        return;
+                    }
+                }
+                parent = parent.parent;
+            }
+        }
+
+        /// <summary>
+        /// Zone 변경 시 호출
+        /// </summary>
+        private void OnZoneChanged(int zoneNumber)
+        {
+            _currentZoneNumber = zoneNumber;
+            UpdateZoneState(zoneNumber);
+        }
+
+        /// <summary>
+        /// 현재 Zone에서 보스가 활성화되어야 하는지 확인 및 처리
+        /// </summary>
+        private void UpdateZoneState(int zoneNumber)
+        {
+            bool shouldBeActive = (targetZoneNumber < 0) || (targetZoneNumber == zoneNumber);
+
+            if (_isZoneActive == shouldBeActive) return;
+
+            _isZoneActive = shouldBeActive;
+
+            if (_isZoneActive)
+            {
+                // 활성화
+                if (visionConeRenderer != null)
+                    visionConeRenderer.enabled = true;
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] {name} 활성화 (Zone {zoneNumber})");
+#endif
+            }
+            else
+            {
+                // 비활성화: 시야 원뿔, 돌진 인디케이터 숨김
+                if (visionConeRenderer != null)
+                    visionConeRenderer.enabled = false;
+                HideChargeIndicator();
+#if UNITY_EDITOR
+                Debug.Log($"[BossEnemyController] {name} 비활성화 (Zone {zoneNumber})");
+#endif
+            }
+        }
+
+        #endregion
+
         protected virtual void OnDestroy()
         {
+            // ZoneChanger 이벤트 구독 해제
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                if (changer != null)
+                    changer.onZoneChanged.RemoveListener(OnZoneChanged);
+            }
+
             if (_stateMachine != null)
                 _stateMachine.OnStateChanged -= OnAIStateChanged;
             _activeGimmick?.OnDeactivate();

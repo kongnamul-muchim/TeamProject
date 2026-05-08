@@ -120,7 +120,7 @@ namespace HideAndInk.Scripts.UI
                 btnContinue.interactable = hasSave;
 
             if (btnContinueText != null)
-                btnContinueText.color = hasSave ? Color.white : Color.gray;
+                btnContinueText.alpha = hasSave ? 1f : 0.3f;
         }
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace HideAndInk.Scripts.UI
         {
             if (_isTransitioning) return;
             _isTransitioning = true;
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
 
             // 저장 데이터 초기화
             SaveManager.DeleteSave();
@@ -185,7 +185,7 @@ namespace HideAndInk.Scripts.UI
         public void OnContinueClicked()
         {
             if (_isTransitioning) return;
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
 
             if (!SaveManager.HasSaveData())
             {
@@ -257,7 +257,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnSettingClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             if (popupSetting != null)
             {
                 bool isActive = popupSetting.activeSelf;
@@ -270,7 +270,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         public void OnExitPopupClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             if (popupSetting != null)
                 popupSetting.SetActive(false);
         }

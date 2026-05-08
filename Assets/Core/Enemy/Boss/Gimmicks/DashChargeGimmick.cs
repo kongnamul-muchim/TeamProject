@@ -23,45 +23,45 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         [Header("의심도 단계별 상승률 (%/s)")]
         [SerializeField, Tooltip("의심도 0~30%일 때 초당 상승량")]
-        private float suspicionRateStage1 = 3f;
+        private float suspicionRateStage1 = 9f;
         [SerializeField, Tooltip("의심도 30~60%일 때 초당 상승량")]
-        private float suspicionRateStage2 = 8f;
+        private float suspicionRateStage2 = 20f;
         [SerializeField, Tooltip("의심도 60~90%일 때 초당 상승량")]
-        private float suspicionRateStage3 = 15f;
+        private float suspicionRateStage3 = 35f;
         [SerializeField, Tooltip("의심도 90~100%일 때 초당 상승량")]
-        private float suspicionRateStage4 = 25f;
+        private float suspicionRateStage4 = 50f;
         [SerializeField, Tooltip("의태 중 초당 의심도 하락량")]
-        private float suspicionDecreaseRateCamouflage = 10f;
+        private float suspicionDecreaseRateCamouflage = 1f;
         [SerializeField, Tooltip("Chase 종료 후 설정될 의심도")]
         private float postChaseSuspicion = 0f;
 
         [Header("이동 속도")]
         [SerializeField, Tooltip("일반 순찰 속도")]
-        private float patrolSpeed = 3f;
+        private float patrolSpeed = 4.5f;
         [SerializeField, Tooltip("Patrol 중 의태 트리거 돌진 속도")]
-        private float chargeSpeedPatrol = 15f;
+        private float chargeSpeedPatrol = 24f;
         [SerializeField, Tooltip("Chase 폭주 모드 돌진 속도")]
-        private float chargeSpeedChase = 22f;
+        private float chargeSpeedChase = 38f;
         [SerializeField, Tooltip("돌진 판정 너비 (m)")]
-        private float chargeWidth = 2.5f;
+        private float chargeWidth = 3.5f;
         [SerializeField, Tooltip("최대 돌진 거리 (m)")]
         private float maxDashDistance = 25f;
         [SerializeField, Tooltip("Chase 중 돌진 사이 쿨타임 (초)")]
-        private float chargeCooldownChase = 1.5f;
+        private float chargeCooldownChase = 0.6f;
 
         [Header("의태 타겟팅")]
         [SerializeField, Tooltip("의태 → 오브젝트 선정까지 딜레이 (초)")]
-        private float camouflageLockDelay = 0.5f;
+        private float camouflageLockDelay = 0.15f;
         [SerializeField, Tooltip("오브젝트 머리 위 공격 표식 지속 시간 (초)")]
         private float indicatorDuration = 0.8f;
         [SerializeField, Tooltip("Player 기준 오브젝트 탐색 반경 (m)")]
-        private float targetSearchRadius = 12f;
+        private float targetSearchRadius = 14f;
 
         [Header("Patrol 순찰")]
         [SerializeField, Tooltip("Player와 최소 거리 (m)")]
-        private float minPatrolRadius = 5f;
+        private float minPatrolRadius = 4f;
         [SerializeField, Tooltip("Player와 최대 거리 (m)")]
-        private float maxPatrolRadius = 12f;
+        private float maxPatrolRadius = 8f;
 
         // ──────────────────────────────────────────────
         //  Internal State
@@ -217,9 +217,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                     if (_isCamouflaging && _currentCamouflageTarget != null && _targetObject != null
                         && _currentCamouflageTarget == _targetObject.gameObject)
                     {
-                        OnIncreaseSuspicion?.Invoke(15f, deltaTime);
+                        OnIncreaseSuspicion?.Invoke(25f, deltaTime);
 #if UNITY_EDITOR
-                        Debug.Log($"[DashCharge] ⚠️ Player가 Lock-On 타겟에 숨어있음! 의심도 +{15f * deltaTime:F1}%");
+                        Debug.Log($"[DashCharge] ⚠️ Player가 Lock-On 타겟에 숨어있음! 의심도 +{25f * deltaTime:F1}%");
 #endif
                     }
 
@@ -267,7 +267,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             _isChaseMode = true;
             _chasePhase = ChasePhase.Locking;
-            _phaseTimer = 0.3f; // Lock-On 시간
+            _phaseTimer = 0.15f; // Lock-On 시간
             _chaseCooldownTimer = 0f;
             OnSpeedOverride?.Invoke(0f); // Lock-On 중 정지
         }
@@ -621,7 +621,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private void StartPatrolCooldown()
         {
             _currentPhase = GimmickPhase.Cooldown;
-            _phaseTimer = 0.5f; // 0.5초 쿨다운
+            _phaseTimer = 0.15f; // 0.15초 쿨다운
             OnSpeedOverride?.Invoke(0f);
         }
 
@@ -842,9 +842,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 // - 의심도 +10% 패널티 (최초 false→false 방지)
                 if (wasCamouflaging)
                 {
-                    OnIncreaseSuspicion?.Invoke(10f, 1f);
+                    OnIncreaseSuspicion?.Invoke(20f, 1f);
 #if UNITY_EDITOR
-                    Debug.Log("[DashCharge] 의태 해제 → 의심도 +10% 패널티, Lock 유지");
+                    Debug.Log("[DashCharge] 의태 해제 → 의심도 +20% 패널티, Lock 유지");
 #endif
                 }
 

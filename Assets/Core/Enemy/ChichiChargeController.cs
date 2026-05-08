@@ -1,4 +1,5 @@
 using System;
+using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using UnityEngine;
@@ -47,6 +48,7 @@ namespace HideAndInk.Siyeon1
         private IDuduInkReceiver inkReceiver;
         private IDuduStateProvider stateProvider;
         private IDuduContactChargeSession contactChargeSession;
+        private ISfxService _sfx;
 
         public KeyCode ChargeKey => chargeKey;
         public float ChargeProgress01 => isCharging && chargeDuration > 0f ? Mathf.Clamp01(chargeTimer / chargeDuration) : 0f;
@@ -95,6 +97,12 @@ namespace HideAndInk.Siyeon1
             // DuduDevelopChargeAdapter가 아직 DI 등록을 안 했을 수 있기 때문.
             // 대신 CanBeginChargeRequest()에서 최초 사용 시점에 지연 해결(lazy resolve)함.
             ResolvePlayerTransform();
+
+            // SFX 서비스 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+                _sfx = GameManager.Container.Resolve<ISfxService>();
+
+            ChargingStarted += () => _sfx?.Play(SfxId.Charge);
         }
 
         private void ResolvePlayerTransform()

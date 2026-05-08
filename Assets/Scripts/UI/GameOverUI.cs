@@ -202,7 +202,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnContinueClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             // 저장 데이터가 있으면 로드
             if (SaveManager.HasSaveData())
             {
@@ -222,7 +222,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnRestartClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             // 저장 데이터 삭제
             SaveManager.DeleteSave();
             SaveManager.ClearContinueZone();
@@ -235,7 +235,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnTitleClicked()
         {
-            _sfxService?.Play(SfxId.ButtonClick2);
+            _sfxService?.Play(SfxId.ButtonClick);
             TransitionToScene(titleSceneIndex);
         }
 

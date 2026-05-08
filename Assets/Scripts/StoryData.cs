@@ -100,26 +100,26 @@ public static class StoryDatabase
         so.tutorialHints = new StoryDatabaseSO.TutorialHintEntry[]
         {
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.Camouflage, line = new DialogueLine("치치", "[시스템] 주변 사물과 색상을 동화시키세요. 포식자의 의심을 피할 수 있습니다. (C키: 의태)") },
+            { type = TutorialType.Camouflage, lines = new DialogueLine[] { new DialogueLine("치치", "[시스템] 주변 사물과 색상을 동화시키세요. 포식자의 의심을 피할 수 있습니다. (C키: 의태)") } },
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.Escape, line = new DialogueLine("두두", "위험해! 먹물을 내뿜어서 빨리 빠져나가야겠어! (Space: 고속 도주 - 무적 상태)") },
+            { type = TutorialType.Escape, lines = new DialogueLine[] { new DialogueLine("두두", "위험해! 먹물을 낻요어서 빨리 빠져나가야겠어! (Space: 고속 도주 - 무적 상태)") } },
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.InkLow, line = new DialogueLine("두두", "먹물이 다 떨어졌어... 움직이기가 너무 힘들어... 치치, 도와줘!") },
+            { type = TutorialType.InkLow, lines = new DialogueLine[] { new DialogueLine("두두", "먹물이 다 떨어졌어... 움직이기가 너무 힘들어... 치치, 도와줘!") } },
             new StoryDatabaseSO.TutorialHintEntry
-            { type = TutorialType.InkSupply, line = new DialogueLine("치치", "[보급] 잉크 게이지를 재충전합니다. (X키: 치치 호출)") },
+            { type = TutorialType.InkSupply, lines = new DialogueLine[] { new DialogueLine("치치", "[보급] 잉크 게이지를 재충전합니다. (X키: 치치 호출)") } },
         };
 
         // ─── 보스 정보 ──────────────────────────────────────────────
         so.bossDialogues = new StoryDatabaseSO.BossDialogueEntry[]
         {
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.Swordfish, line = new DialogueLine("두두", "저 뾰족한 코에 찔리면 무사하지 못할 거야. 내가 불안해할수록 더 빨리 돌진해오겠지? 여차하면 바위에 부딪히게 유인해보자!") },
+            { type = BossType.Swordfish, lines = new DialogueLine[] { new DialogueLine("두두", "저 뾰족한 코에 찔리면 무사하지 못할 거야. 내가 불안해할수록 더 빨리 돌진해오겠지? 여차하면 바위에 부딪히게 유인핬보자!") } },
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.Flounder, line = new DialogueLine("두두", "모래바닥이 미세하게 떨리고 있어... 혹시 박스 가자미가 주변에 있는걸까? 녀석의 근처에 가면 튀어나와서 덮칠 거야. 저 모래구덩이에 빠지면 발이 묶이니 조심해야 해!") },
+            { type = BossType.Flounder, lines = new DialogueLine[] { new DialogueLine("두두", "모래바닥이 미세하게 떨리고 있어... 혹시 박스 가자미가 주변에 있는걸까? 녀석의 근처에 가면 튀어나와서 덮칠 거야. 저 모래구덩이에 빠지면 발이 묶이니 조심해야 해!") } },
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.Moray, line = new DialogueLine("두두", "저 녀석, 내 주변을 맴돌며 기회를 엿보고 있어. 가만히 있으면 의심만 살 뿐이야. 차라리 돌진을 유도하고 그 틈에 도망치자!") },
+            { type = BossType.Moray, lines = new DialogueLine[] { new DialogueLine("두두", "저 녀석, 내 주변을 맘돌며 기회를 엿보고 있어. 가만히 있으면 의심만 살 뿐이야. 차라리 돌진을 유도하고 그 틈에 도망치자!") } },
             new StoryDatabaseSO.BossDialogueEntry
-            { type = BossType.GreatWhite, line = new DialogueLine("두두", "백상아리야... 숨을 곳을 무작위로 부수고 있어! 은신처가 사라지기 전에 지나가야 해. 들키는 순간 끝장이야!") },
+            { type = BossType.GreatWhite, lines = new DialogueLine[] { new DialogueLine("두두", "백상아리야... 숨을 곳을 무작위로 부수고 있어! 은신처가 사라지기 전에 지나가야 해. 들키는 순간 끝장이야!") } },
         };
 
         // ─── 에필로그 ───────────────────────────────────────────────

@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 
 namespace HideAndInk.Core.Perception
 {
@@ -38,6 +39,10 @@ namespace HideAndInk.Core.Perception
         [Tooltip("일반 의심도 하락 속도")]
         [SerializeField] private float normalDecreaseSpeed = 5f;
 
+        [Header("Zone 설정")]
+        [Tooltip("이 보스가 활성화될 Zone 번호 (-1이면 모든 Zone에서 활성화)")]
+        [SerializeField] private int targetZoneNumber = -1;
+
         [Header("의심 범위 바닥 시각화")]
         [Tooltip("의심 범위 바닥 표시 활성화")]
         [SerializeField] private bool showSuspicionRadiusInGame = true;
@@ -58,6 +63,10 @@ namespace HideAndInk.Core.Perception
         private float _suspicionDecayMultiplier = 1f; // 의심도 하락 배율 (RelentlessChase용)
         private bool _autoDecayEnabled = true; // 자체 하락 활성화 (false면 기믹 전담)
         private bool _isIncreaseBlocked = false; // 의심도 상승 차단 플래그 (Ambush Chase용)
+
+        // Zone 추적
+        private int _currentZoneNumber = -1;
+        private bool _isZoneActive = true;
 
         // Gizmos 표시용 반경 (AmbushGimmick에서 설정)
         private Vector2 _suspicionRadius = new Vector2(10f, 10f);
@@ -165,11 +174,28 @@ namespace HideAndInk.Core.Perception
 
         private void Awake()
         {
+            // Awake에서는 UIManager 등록만 수행
+            // ZoneChanger 구독은 Start()에서 안전하게 처리
             SuspicionUIManager.Instance?.Register(this);
+        }
+
+        private void Start()
+        {
+            SubscribeToZoneChangers();
+            UpdateZoneState(_currentZoneNumber);
         }
 
         private void Update()
         {
+            // Zone이 활성화되지 않은 경우 처리 중단
+            if (!_isZoneActive)
+            {
+                // 바닥 시각화 숨김
+                if (_floorMeshRenderer != null && _floorMeshRenderer.enabled)
+                    _floorMeshRenderer.enabled = false;
+                return;
+            }
+
             // 의심도 모듈 업데이트 (기믹별 계산)
             if (_suspicionModule != null)
             {
@@ -527,8 +553,129 @@ namespace HideAndInk.Core.Perception
         /// </summary>
         // Gizmos는 BossEnemyController.OnDrawGizmosSelected에서 관리
 
+        #region Zone Tracking
+
+        /// <summary>
+        /// 모든 ZoneChanger의 onZoneChanged 이벤트 구독
+        /// </summary>
+        private void SubscribeToZoneChangers()
+        {
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                changer.onZoneChanged.AddListener(OnZoneChanged);
+            }
+
+            // 초기 Zone 감지 (시작 Zone 찾기)
+            DetectInitialZone();
+        }
+
+        /// <summary>
+        /// 시작 시 현재 Zone 감지
+        /// 1. 부모 오브젝트 이름에서 Zone 번호 추출 (예: Zone_2_Object → 2)
+        /// 2. 실패 시 ZoneChanger의 활성화된 Zone 검색
+        /// </summary>
+        private void DetectInitialZone()
+        {
+            // 1. 부모 오브젝트 이름에서 Zone 번호 추출
+            Transform parent = transform.parent;
+            while (parent != null)
+            {
+                string name = parent.name;
+                if (name.StartsWith("Zone_"))
+                {
+                    string numberStr = name.Substring(5); // "Zone_" 이후
+                    int underscoreIndex = numberStr.IndexOf('_');
+                    if (underscoreIndex > 0)
+                        numberStr = numberStr.Substring(0, underscoreIndex);
+
+                    if (int.TryParse(numberStr, out int zoneNumber))
+                    {
+                        _currentZoneNumber = zoneNumber;
+#if UNITY_EDITOR
+                        Debug.Log($"[BossSuspicionSystem] 부모 오브젝트에서 Zone 감지: {name} → Zone {zoneNumber}");
+#endif
+                        return;
+                    }
+                }
+                parent = parent.parent;
+            }
+
+            // 2. 부모에서 찾지 못하면 ZoneChanger의 활성화된 Zone 검색
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                if (changer.fromZoneNumber >= 0)
+                {
+                    var zones = changer.GetType().GetField("deactivateZones", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)?.GetValue(changer) as GameObject[];
+                    if (zones != null)
+                    {
+                        foreach (var zone in zones)
+                        {
+                            if (zone != null && zone.activeInHierarchy)
+                            {
+                                _currentZoneNumber = changer.fromZoneNumber;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Zone 변경 시 호출
+        /// </summary>
+        private void OnZoneChanged(int zoneNumber)
+        {
+            _currentZoneNumber = zoneNumber;
+            UpdateZoneState(zoneNumber);
+        }
+
+        /// <summary>
+        /// 현재 Zone에서 보스가 활성화되어야 하는지 확인 및 처리
+        /// </summary>
+        private void UpdateZoneState(int zoneNumber)
+        {
+            // targetZoneNumber가 -1이면 모든 Zone에서 활성화
+            bool shouldBeActive = (targetZoneNumber < 0) || (targetZoneNumber == zoneNumber);
+
+            if (_isZoneActive == shouldBeActive) return;
+
+            _isZoneActive = shouldBeActive;
+
+            if (_isZoneActive)
+            {
+                // 활성화: UIManager에 등록
+                SuspicionUIManager.Instance?.Register(this);
+#if UNITY_EDITOR
+                Debug.Log($"[BossSuspicionSystem] {name} 활성화 (Zone {zoneNumber})");
+#endif
+            }
+            else
+            {
+                // 비활성화: UIManager에서 해제, 바닥 시각화 숨김
+                SuspicionUIManager.Instance?.Unregister(this);
+                if (_floorMeshRenderer != null)
+                    _floorMeshRenderer.enabled = false;
+#if UNITY_EDITOR
+                Debug.Log($"[BossSuspicionSystem] {name} 비활성화 (Zone {zoneNumber})");
+#endif
+            }
+        }
+
+        #endregion
+
         private void OnDestroy()
         {
+            // ZoneChanger 이벤트 구독 해제
+            ZoneChanger[] zoneChangers = FindObjectsOfType<ZoneChanger>();
+            foreach (var changer in zoneChangers)
+            {
+                if (changer != null)
+                    changer.onZoneChanged.RemoveListener(OnZoneChanged);
+            }
+
             SuspicionUIManager.Instance?.Unregister(this);
 
             if (_floorMaterial != null) DestroyImmediate(_floorMaterial);
