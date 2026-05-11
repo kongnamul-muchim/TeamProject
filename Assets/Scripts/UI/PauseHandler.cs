@@ -270,7 +270,7 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// Popup_Pause 안의 모든 Image RaycastTarget을 확인하고,
-        /// Button과 연결되지 않은 Image는 RaycastTarget OFF로 설정
+        /// Button/Slider/Toggle과 연결되지 않은 Image는 RaycastTarget OFF로 설정
         /// </summary>
         private void DisablePopupRaycastBlockers()
         {
@@ -280,9 +280,17 @@ namespace HideAndInk.Scripts.UI
             
             foreach (var img in images)
             {
-                // 버튼과 연결된 Image는 제외 (버튼 클릭을 막지 않도록)
+                // 버튼과 연결된 Image는 제외
                 var parentButton = img.GetComponentInParent<UnityEngine.UI.Button>();
                 if (parentButton != null) continue;
+                
+                // Slider와 연결된 Image는 제외 (Handle, Fill, Background 등)
+                var parentSlider = img.GetComponentInParent<UnityEngine.UI.Slider>();
+                if (parentSlider != null) continue;
+                
+                // Toggle과 연결된 Image는 제외 (Background, Checkmark 등)
+                var parentToggle = img.GetComponentInParent<UnityEngine.UI.Toggle>();
+                if (parentToggle != null) continue;
                 
                 // RaycastTarget이 켜져 있으면 OFF
                 if (img.raycastTarget)
