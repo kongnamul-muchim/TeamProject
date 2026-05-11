@@ -70,11 +70,9 @@ namespace HideAndInk.Scripts.UI
 
         private void Start()
         {
-            // Awake보다 늦게 생성된 Singleton을 위해 Start에서도 한 번 더 확인
-            if (_sfx == null)
-                _sfx = SfxManager.Instance;
-            if (_bgm == null)
-                _bgm = BgmManager.Instance;
+            // 항상 살아있는 Singleton Instance를 강제로 사용 (DI에 파괴 인스턴스가 등록되었을 수 있음)
+            _sfx = SfxManager.Instance;
+            _bgm = BgmManager.Instance;
 
             Debug.Log($"[SettingsPopup] Start: _sfx={_sfx != null}, _bgm={_bgm != null}");
 
@@ -171,9 +169,25 @@ namespace HideAndInk.Scripts.UI
         // 아래 메서드들은 Toggle/Slider → 인스펙터 OnValueChanged 연결용
         // =====================================================
 
-        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = !isOn; }
-        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = !isOn; }
-        public void SetBgmVolume(float value) { if (_bgm != null) _bgm.Volume = value; }
-        public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
+        public void SetBgmMute(bool isOn)
+        {
+            Debug.Log($"[SettingsPopup] SetBgmMute({isOn}), _bgm={_bgm != null}");
+            if (_bgm != null) _bgm.Muted = !isOn;
+        }
+        public void SetSfxMute(bool isOn)
+        {
+            Debug.Log($"[SettingsPopup] SetSfxMute({isOn}), _sfx={_sfx != null}");
+            if (_sfx != null) _sfx.Muted = !isOn;
+        }
+        public void SetBgmVolume(float value)
+        {
+            Debug.Log($"[SettingsPopup] SetBgmVolume({value}), _bgm={_bgm != null}");
+            if (_bgm != null) _bgm.Volume = value;
+        }
+        public void SetSfxVolume(float value)
+        {
+            Debug.Log($"[SettingsPopup] SetSfxVolume({value}), _sfx={_sfx != null}");
+            if (_sfx != null) _sfx.Volume = value;
+        }
     }
 }
