@@ -15,18 +15,21 @@
 ### [ STAFF ]
 | 역할 (Role) | 성함 (Name) |
 | :--- | :--- |
-| **System Architecture & Core Programming** | 김동열 (Dongyeol Kim) |
-| **Gameplay Programming & Component Integration** | 박시연 (Siyeon Park) |
-| **Lead Art & Visual Direction** | 박미초 (Micho Park) |
+| **Lead Programmer & System Architect** | 김동열 (Dongyeol Kim) |
+| **Sidekick System & Sound Sourcing** | 박시연 (Siyeon Park) |
+| **Art Director & Technical Artist** | 박미초 (Micho Park) |
 | **Environment Artist & Level Design** | 정지은 (Jieun Jung) |
 
 ### [ THIRD-PARTY ASSETS ]
 *   **TextMesh Pro** - Unity Technologies
 *   **Universal RP** - Unity Technologies
+*   **Fonts** - 꾸불림체 (Kkubullim Font)
 
 ### [ MUSIC & SOUND ]
-*   **BGM** - (출처 또는 작곡가 이름을 입력하세요. 예: SOSOMI, Bensound)
-*   **Sound Effects** - (사용하신 효과음 팩이나 사이트 이름을 입력하세요. 예: Freesound, Sonniss)
+*   **BGM**
+-
+*   **Sound Effects**
+-
 
 ### [ SPECIAL THANKS ]
 * 프로젝트에 소중한 조언을 주신 모든 분들
@@ -43,11 +46,9 @@ Powered by Unity Engine
 ### 🎨 디자인 테마: "Emotional & Premium Indie"
 *   **배경**: 완전한 블랙보다는 종이 질감이 느껴지는 어두운 다크 그레이/차콜 톤.
 *   **타이포그래피**: 
-    *   가독성이 좋으면서도 세련된 Sans-serif 폰트 (예: Noto Sans, Inter).
     *   색상은 순백색(#FFFFFF)보다 부드러운 미색(#F5F5F5)을 사용하여 눈의 피로를 줄임.
 *   **애니메이션**:
     *   **Slow Scroll**: 텍스트가 아래에서 위로 천천히 흐르는 정석적인 방식.
-    *   **Silhouette Interaction**: 화면 구석에 아기 문어 실루엣이 먹물을 내뿜으며 지나가는 애니메이션을 추가하여 'Hide & Ink'의 정체성 강조.
 
 ---
 

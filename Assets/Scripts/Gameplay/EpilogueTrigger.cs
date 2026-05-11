@@ -21,6 +21,11 @@ namespace HideAndInk.Gameplay
         [Tooltip("에필로그 종료 후 이동할 타이틀 씬의 이름")]
         public string titleSceneName = "Title";
 
+        [Header("크레딧 설정")]
+        [SerializeField] private HideAndInk.UI.CreditsUIAdapter creditsUI;
+        [TextArea(10, 20)]
+        [SerializeField] private string creditsContent; 
+
         private bool _isTriggered = false;
 
         private void OnEnable()
@@ -82,7 +87,7 @@ namespace HideAndInk.Gameplay
             StartCoroutine(Sequence_EndAndTitle());
         }
 
-        // [흐름 2] 페이드아웃 -> 스토리 시스템(UI) 끄기 -> 타이틀 씬 로드
+        // [흐름 2] 페이드아웃 -> 스토리 시스템(UI) 끄기 -> 크레딧 재생 -> 타이틀 씬 로드
         private IEnumerator Sequence_EndAndTitle()
         {
             // 연출 시작 시 입력 다시 차단 (마지막 연출이므로 다시 풀지 않음)
@@ -102,8 +107,54 @@ namespace HideAndInk.Gameplay
                 storyManager.StopStory(); 
             }
 
-            // 3. 타이틀 씬으로 넘어가기
+            // 3. 크레딧 재생
+            if (creditsUI != null)
+            {
+                bool creditsFinished = false;
+                
+                // 기본 크레딧 내용이 비어있다면 에셋에 미리 정의된 텍스트를 사용하거나 수동 입력 가능
+                string finalContent = string.IsNullOrEmpty(creditsContent) ? GetDefaultCreditsText() : creditsContent;
+                
+                creditsUI.StartCredits(finalContent, () => {
+                    creditsFinished = true;
+                });
+
+                // 크레딧이 끝날 때까지 대기
+                while (!creditsFinished)
+                {
+                    yield return null;
+                }
+            }
+            else
+            {
+                // 크레딧 UI가 없는 경우 최소한의 대기 시간 부여
+                yield return new WaitForSecondsRealtime(2f);
+            }
+
+            // 4. 타이틀 씬으로 넘어가기
             SceneManager.LoadScene(titleSceneName);
+        }
+
+        private string GetDefaultCreditsText()
+        {
+            // Credits_Draft.md의 내용을 기반으로 한 기본 텍스트
+            return "[ Hide & Ink : 문어의 먹물꿈질 ]\n\n\n" +
+                   "--- STAFF ---\n\n" +
+                   "Lead Programmer & System Architect\n김동열 (Dongyeol Kim)\n\n" +
+                   "Sidekick System & Sound Sourcing\n박시연 (Siyeon Park)\n\n" +
+                   "Art Director & Technical Artist\n박미초 (Micho Park)\n\n" +
+                   "Environment Artist & Level Design\n정지은 (Jieun Jung)\n\n\n" +
+                   "--- THIRD-PARTY ASSETS ---\n\n" +
+                   "TextMesh Pro - Unity Technologies\n" +
+                   "Universal RP - Unity Technologies\n" +
+                   "Fonts - 꾸불림체 (Kkubullim Font)\n\n\n" +
+                   "--- MUSIC & SOUND ---\n\n" +
+                   "BGM - Team 미지동시\n" +
+                   "Sound Effects - Team 미지동시\n\n\n" +
+                   "--- SPECIAL THANKS ---\n\n" +
+                   "프로젝트에 소중한 조언을 주신 모든 분들\n" +
+                   "그리고, 두두의 여정을 끝까지 지켜봐 주신 플레이어 여러분\n\n\n\n" +
+                   "© 2026 Team 미지동시. All rights reserved.";
         }
 
         // 공통 페이드 애니메이션 로직 (대사 중 시간정지 상태에서도 작동하도록 설정)
