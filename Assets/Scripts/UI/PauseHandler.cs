@@ -239,6 +239,7 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// Time.timeScale = 0 상태에서 Slider 값 업데이트 (클릭/드래그 공용)
+        /// SettingsPopup이 OnEnable에서 이벤트를 연결했으므로 Invoke는 하지 않음
         /// </summary>
         private void UpdateSliderValue(UnityEngine.UI.Slider slider)
         {
@@ -255,7 +256,8 @@ namespace HideAndInk.Scripts.UI
             if (Mathf.Abs(slider.value - newValue) > 0.001f)
             {
                 slider.value = newValue;
-                slider.onValueChanged?.Invoke(slider.value);
+                // Slider 컴포넌트가 자동으로 onValueChanged 발동
+                // (Time.timeScale=0에서도 value setter는 작동함)
             }
         }
 

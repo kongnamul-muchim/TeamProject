@@ -90,12 +90,33 @@ namespace HideAndInk.Scripts.UI
             if (_sfx != null && sfxMuteToggle != null)
                 sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
 
+            // 이벤트 연결 (코드에서만 관리)
+            ConnectAudioEvents();
+
             Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}, audioSource={_bgmAudioSource != null}, sliders={bgmVolumeSlider != null}/{sfxVolumeSlider != null}");
         }
 
         private void OnDisable()
         {
-            // 이벤트 해제 (메모리 누수 방지)
+            DisconnectAudioEvents();
+        }
+
+        private void ConnectAudioEvents()
+        {
+            DisconnectAudioEvents(); // 중복 방지
+            
+            if (bgmVolumeSlider != null)
+                bgmVolumeSlider.onValueChanged.AddListener(SetBgmVolume);
+            if (sfxVolumeSlider != null)
+                sfxVolumeSlider.onValueChanged.AddListener(SetSfxVolume);
+            if (bgmMuteToggle != null)
+                bgmMuteToggle.onValueChanged.AddListener(SetBgmMute);
+            if (sfxMuteToggle != null)
+                sfxMuteToggle.onValueChanged.AddListener(SetSfxMute);
+        }
+
+        private void DisconnectAudioEvents()
+        {
             if (bgmVolumeSlider != null)
                 bgmVolumeSlider.onValueChanged.RemoveListener(SetBgmVolume);
             if (sfxVolumeSlider != null)
