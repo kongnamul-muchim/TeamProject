@@ -193,18 +193,20 @@ namespace HideAndInk.Core.Managers
             int targetZone = SaveManager.PendingZoneIndex;
             Debug.Log($"[GameManager] ContinueZoneHandler 없음 → 직접 Zone_{targetZone} 활성화");
 
-            // 씬의 모든 루트 오브젝트에서 Zone 찾기
-            var rootObjects = scene.GetRootGameObjects();
+            // 씬 내 모든 Zone 오브젝트 찾기 (비활성 포함, 에셋/프리팹 제외)
             List<GameObject> allZones = new List<GameObject>();
-            foreach (var root in rootObjects)
+            HashSet<int> addedIds = new HashSet<int>();
+            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (var go in allObjects)
             {
-                if (root.name.StartsWith("Zone_"))
-                    allZones.Add(root);
-                foreach (Transform child in root.transform)
-                {
-                    if (child.name.StartsWith("Zone_"))
-                        allZones.Add(child.gameObject);
-                }
+                if (go == null) continue;
+                if (go.hideFlags != HideFlags.None) continue;
+                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+                if (addedIds.Contains(go.GetInstanceID())) continue;
+                if (!go.name.StartsWith("Zone_")) continue;
+                
+                allZones.Add(go);
+                addedIds.Add(go.GetInstanceID());
             }
 
             Debug.Log($"[GameManager] 찾은 Zone 오브젝트 수: {allZones.Count}");

@@ -490,41 +490,25 @@ namespace HideAndInk.Scripts.UI
         {
             int maxZone = -1;
             var scene = SceneManager.GetActiveScene();
-            var rootObjects = scene.GetRootGameObjects();
             
-            Debug.Log($"[GameOverUI] FindCurrentActiveZone - Scene: {scene.name}, Root objects: {rootObjects.Length}");
+            Debug.Log($"[GameOverUI] FindCurrentActiveZone - Scene: {scene.name}");
             
-            foreach (var root in rootObjects)
+            // 씬 내 모든 오브젝트를 검사 (비활성 포함)
+            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (var go in allObjects)
             {
-                if (root == null) continue;
+                if (go == null) continue;
+                if (go.hideFlags != HideFlags.None) continue;
+                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+                if (!go.name.StartsWith("Zone_")) continue;
+                if (!go.activeInHierarchy) continue;
                 
-                // 씬 루트의 Zone 오브젝트 체크
-                if (root.name.StartsWith("Zone_") && root.activeInHierarchy)
+                string[] parts = go.name.Split('_');
+                if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
                 {
-                    string[] parts = root.name.Split('_');
-                    if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
-                    {
-                        Debug.Log($"[GameOverUI] Found root Zone: {root.name} → Zone {zoneNum}, active={root.activeInHierarchy}");
-                        if (zoneNum > maxZone)
-                            maxZone = zoneNum;
-                    }
-                }
-                
-                // 자식 오브젝트들도 체크
-                var children = root.GetComponentsInChildren<Transform>(true);
-                foreach (var child in children)
-                {
-                    if (child == null || child == root.transform) continue;
-                    if (child.name.StartsWith("Zone_") && child.gameObject.activeInHierarchy)
-                    {
-                        string[] parts = child.name.Split('_');
-                        if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
-                        {
-                            Debug.Log($"[GameOverUI] Found child Zone: {child.name} → Zone {zoneNum}, active={child.gameObject.activeInHierarchy}");
-                            if (zoneNum > maxZone)
-                                maxZone = zoneNum;
-                        }
-                    }
+                    Debug.Log($"[GameOverUI] Found active Zone: {go.name} → Zone {zoneNum}");
+                    if (zoneNum > maxZone)
+                        maxZone = zoneNum;
                 }
             }
             
