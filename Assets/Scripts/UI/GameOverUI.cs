@@ -89,16 +89,74 @@ namespace HideAndInk.Scripts.UI
             // 버튼 리스너 등록
             if (continueButton != null)
                 continueButton.onClick.AddListener(OnContinueClicked);
+            else
+                Debug.LogError("[GameOverUI] Continue button is NULL!");
 
             if (restartButton != null)
                 restartButton.onClick.AddListener(OnRestartClicked);
+            else
+                Debug.LogError("[GameOverUI] Restart button is NULL!");
 
             if (titleButton != null)
                 titleButton.onClick.AddListener(OnTitleClicked);
+            else
+                Debug.LogError("[GameOverUI] Title button is NULL!");
+
+            // 버튼 자식 텍스트들의 RaycastTarget 강제 비활성화 (클릭 가로채기 방지)
+            DisableButtonTextRaycast(continueButton);
+            DisableButtonTextRaycast(restartButton);
+            DisableButtonTextRaycast(titleButton);
+
+            // 버튼 Image alpha 강제 설정 (투명 Image는 Raycast 안 됨)
+            FixButtonAlpha(continueButton);
+            FixButtonAlpha(restartButton);
+            FixButtonAlpha(titleButton);
 
             // 초기 상태: 숨김
             if (gameOverPanel != null)
                 gameOverPanel.SetActive(false);
+        }
+
+        /// <summary>
+        /// 버튼의 자식 텍스트 요소들의 RaycastTarget을 비활성화
+        /// </summary>
+        private void DisableButtonTextRaycast(Button button)
+        {
+            if (button == null) return;
+            
+            var texts = button.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var text in texts)
+            {
+                if (text.raycastTarget)
+                    text.raycastTarget = false;
+            }
+            
+            // Image 컴포넌트도 확인 (버튼 자신의 Image는 제외)
+            var images = button.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                if (img.gameObject != button.gameObject && img.raycastTarget)
+                    img.raycastTarget = false;
+            }
+        }
+
+        /// <summary>
+        /// 버튼 Image의 alpha를 0.01로 설정 (완전 투명하면 Raycast 안됨, 0.01이면 거의 투명 + 클릭 가능)
+        /// </summary>
+        private void FixButtonAlpha(Button button)
+        {
+            if (button == null) return;
+            
+            var img = button.GetComponent<Image>();
+            if (img != null)
+            {
+                var color = img.color;
+                if (color.a <= 0f)
+                {
+                    color.a = 0.01f;
+                    img.color = color;
+                }
+            }
         }
 
         private void Start()
@@ -136,12 +194,49 @@ namespace HideAndInk.Scripts.UI
                 logText.text = $"Log: {evt.DeathMessage}";
             }
 
-            // 게임 오버 패널 표시
+            // Canvas_Ingame 직접 찾기 (현재 스크립트 위치와 무관)
+            var canvasIngame = GameObject.Find("Canvas_Ingame")?.transform;
+            if (canvasIngame != null)
+            {
+                // 다른 팝업이 열려있으면 닫기 (Pause 등)
+                var popupPause = canvasIngame.Find("Popup_Pause")?.gameObject;
+                if (popupPause != null && popupPause.activeSelf)
+                {
+                    popupPause.SetActive(false);
+                    Debug.Log("[GameOverUI] Popup_Pause force-closed");
+                }
+
+                // 의심도 비네트 비활성화 (Raycast 차단 방지)
+                var vignette = canvasIngame.Find("UI_SuspicionVinette")?.gameObject;
+                if (vignette != null)
+                {
+                    vignette.SetActive(false);
+                    Debug.Log("[GameOverUI] UI_SuspicionVinette deactivated");
+                }
+
+                // DialogUI도 닫기
+                var dialogUI = canvasIngame.Find("DialogUI")?.gameObject;
+                if (dialogUI != null && dialogUI.activeSelf)
+                    dialogUI.SetActive(false);
+            }
+
+            // 게임 오버 패널 표시 및 최상위로 이동
             if (gameOverPanel != null)
+            {
                 gameOverPanel.SetActive(true);
+                gameOverPanel.transform.SetAsLastSibling(); // 최상위로
+            }
 
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
             ForceVignetteToMax();
+
+            // 시간 복원 (버튼 클릭 가능하도록)
+            Time.timeScale = 1f;
+
+            // EventSystem에 StandaloneInputModule이 없으면 추가
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem != null && eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>() == null)
+                eventSystem.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
 
         /// <summary>
@@ -164,7 +259,6 @@ namespace HideAndInk.Scripts.UI
             {
                 color.a = 200f / 255f;
                 img.color = color;
-                Debug.Log($"[GameOverUI] Vignette alpha fixed: → {color.a:F3}");
             }
         }
 

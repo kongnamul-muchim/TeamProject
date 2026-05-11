@@ -137,7 +137,7 @@ namespace HideAndInk.Gameplay
 
         private string GetDefaultCreditsText()
         {
-            // Credits_Draft.md의 내용을 기반으로 한 기본 텍스트
+            // Credits_Draft.md의 최신 내용을 기반으로 한 텍스트
             return "[ Hide & Ink : 문어의 먹물꿈질 ]\n\n\n" +
                    "--- STAFF ---\n\n" +
                    "Lead Programmer & System Architect\n김동열 (Dongyeol Kim)\n\n" +
@@ -149,12 +149,22 @@ namespace HideAndInk.Gameplay
                    "Universal RP - Unity Technologies\n" +
                    "Fonts - 꾸불림체 (Kkubullim Font)\n\n\n" +
                    "--- MUSIC & SOUND ---\n\n" +
-                   "BGM - Team 미지동시\n" +
-                   "Sound Effects - Team 미지동시\n\n\n" +
+                   "Original Sound Track\n" +
+                   "- Grassland Coast (Theme of Shore)\n" +
+                   "- Coral Reef (Vibrant Sea)\n" +
+                   "- Seaweed Forest (Shadows in Kelp)\n" +
+                   "- Deep Sea Cliff (Abyss Call)\n" +
+                   "- Deep Sea Ruins (Echoes of Ancient)\n\n" +
+                   "Sound Effects\n" +
+                   "- Interaction & UI Feedback\n" +
+                   "- Ink Ability & Camouflage Suite\n" +
+                   "- Environmental Ambience\n\n\n" +
                    "--- SPECIAL THANKS ---\n\n" +
-                   "프로젝트에 소중한 조언을 주신 모든 분들\n" +
-                   "그리고, 두두의 여정을 끝까지 지켜봐 주신 플레이어 여러분\n\n\n\n" +
-                   "© 2026 Team 미지동시. All rights reserved.";
+                   "Advisors: 프로젝트에 소중한 조언을 주신 모든 분들\n" +
+                   "Beta Testers: 안정적인 플레이를 위해 도움 주신 테스터분들\n" +
+                   "Players: 두두의 여정을 끝까지 지켜봐 주신 플레이어 여러분\n\n\n\n" +
+                   "© 2026 Team 미지동시. All rights reserved.\n" +
+                   "Powered by Unity Engine 2022.3 LTS";
         }
 
         // 공통 페이드 애니메이션 로직 (대사 중 시간정지 상태에서도 작동하도록 설정)

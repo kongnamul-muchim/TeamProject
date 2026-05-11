@@ -12,6 +12,7 @@ namespace HideAndInk.Core.Audio
         public AudioClip[] clips;
     }
 
+    [DefaultExecutionOrder(-50)]
     public sealed class SfxManager : MonoBehaviour, ISfxService
     {
         public static SfxManager Instance { get; private set; }
@@ -23,6 +24,9 @@ namespace HideAndInk.Core.Audio
         private Dictionary<SfxId, AudioClip[]> _clipMap;
         private float _volume;
         private bool _muted;
+
+        private readonly HashSet<SfxId> _warnedMissingIds = new HashSet<SfxId>();
+        private bool _warnedSourceNull;
 
         private const string PREFS_VOLUME = "Audio_SFX_Volume";
         private const string PREFS_MUTE = "Audio_SFX_Mute";
@@ -60,6 +64,8 @@ namespace HideAndInk.Core.Audio
         {
             if (Instance != null && Instance != this)
             {
+                // 기존 인스턴스가 있으면 자신을 파괴 (DontDestroyOnLoad 유지)
+                Debug.LogWarning($"[SfxManager] Another SfxManager already exists on '{Instance.gameObject.name}'. Destroying duplicate on '{gameObject.name}'.");
                 Destroy(gameObject);
                 return;
             }
@@ -72,8 +78,22 @@ namespace HideAndInk.Core.Audio
             _source.playOnAwake = false;
             _source.spatialBlend = 0f;
 
+            if (sfxClips == null || sfxClips.Length == 0)
+            {
+                Debug.LogWarning($"[SfxManager] sfxClips is empty on '{gameObject.name}'. No sounds will play.");
+            }
+
             BuildClipMap();
             LoadSettings();
+
+            if (_muted)
+            {
+                Debug.Log("[SfxManager] Previous mute state detected. Auto-unmuting for testing.");
+                _muted = false;
+                if (_source != null)
+                    _source.mute = false;
+                PlayerPrefs.SetInt(PREFS_MUTE, 0);
+            }
         }
 
         private void BuildClipMap()
@@ -90,6 +110,14 @@ namespace HideAndInk.Core.Audio
         {
             _volume = PlayerPrefs.GetFloat(PREFS_VOLUME, defaultVolume);
             _muted = PlayerPrefs.GetInt(PREFS_MUTE, 0) == 1;
+
+            // 볼륨이 0이면 defaultVolume으로 fallback (처음 실행 또는 잘못된 저장값 복구)
+            if (_volume <= 0f && defaultVolume > 0f)
+            {
+                _volume = defaultVolume;
+                PlayerPrefs.SetFloat(PREFS_VOLUME, _volume);
+            }
+
             if (_source != null)
             {
                 _source.volume = _volume;
@@ -100,19 +128,59 @@ namespace HideAndInk.Core.Audio
         private AudioClip GetRandomClip(SfxId id)
         {
             if (!_clipMap.TryGetValue(id, out var clips) || clips == null || clips.Length == 0)
+            {
+                if (_warnedMissingIds.Add(id))
+                {
+                    Debug.LogWarning($"[SfxManager] No clips registered for SfxId.{id}. Check the sfxClips array in the inspector.");
+                }
                 return null;
+            }
             return clips[UnityEngine.Random.Range(0, clips.Length)];
         }
 
         public void Play(SfxId id)
         {
+            Debug.Log($"[SfxManager] Play({id}) called. _source={_source != null}, _volume={_volume}, _muted={_muted}");
+
+            if (_muted)
+            {
+                Debug.Log($"[SfxManager] Play({id}) skipped because muted.");
+                return;
+            }
+
+            if (_source == null)
+            {
+                if (!_warnedSourceNull)
+                {
+                    _warnedSourceNull = true;
+                    Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                }
+                return;
+            }
+
             var clip = GetRandomClip(id);
+            Debug.Log($"[SfxManager] Play({id}) clip={clip != null}");
             if (clip != null)
+            {
                 _source.PlayOneShot(clip, _volume);
+                Debug.Log($"[SfxManager] PlayOneShot executed: {clip.name}, volume={_volume}");
+            }
         }
 
         public void Play(SfxId id, float volumeScale)
         {
+            if (_muted) return;
+
+            if (_source == null)
+            {
+                if (!_warnedSourceNull)
+                {
+                    _warnedSourceNull = true;
+                    Debug.LogWarning("[SfxManager] AudioSource is null. SfxManager may have been destroyed or not initialized.");
+                }
+                return;
+            }
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 _source.PlayOneShot(clip, _volume * Mathf.Clamp01(volumeScale));
@@ -120,6 +188,8 @@ namespace HideAndInk.Core.Audio
 
         public void PlayAtPoint(SfxId id, Vector3 position)
         {
+            if (_muted) return;
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 AudioSource.PlayClipAtPoint(clip, position, _volume);
@@ -127,6 +197,8 @@ namespace HideAndInk.Core.Audio
 
         public void PlayAtPoint(SfxId id, Vector3 position, float volumeScale)
         {
+            if (_muted) return;
+
             var clip = GetRandomClip(id);
             if (clip != null)
                 AudioSource.PlayClipAtPoint(clip, position, _volume * Mathf.Clamp01(volumeScale));

@@ -53,6 +53,9 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("FadeInObjController (출구 전환 - 화면 덮기, FadeInObj 프리팹 루트에 부착)")]
         [SerializeField] private FadeInObjController fadeExit;
 
+        [Tooltip("SFX 매니저 (버튼 효과음용, TitleScene에 직접 배치된 SfxManager 연결)")]
+        [SerializeField] private SfxManager sfxManager;
+
         [Header("Transition Settings")]
         [Tooltip("씬 진입 시 PatternTransitionController로 PlayOut (권장)")]
         [SerializeField] private bool useEntryTransition = true;
@@ -80,11 +83,22 @@ namespace HideAndInk.Scripts.UI
             if (popupSetting != null)
                 popupSetting.SetActive(false);
 
-            // SFX 서비스 해결
-            if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
+            // SFX 서비스 해결 (DI 컨테이너 또는 Inspector 직접 할당)
+            if (sfxManager != null)
+            {
+                _sfxService = sfxManager;
+            }
+            else if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
             {
                 _sfxService = GameManager.Container.Resolve<ISfxService>();
             }
+
+            // DI 실패 시 Singleton fallback
+            if (_sfxService == null)
+            {
+                _sfxService = SfxManager.Instance;
+            }
+
         }
 
         private void Start()
@@ -94,6 +108,9 @@ namespace HideAndInk.Scripts.UI
 
             // 이어하기 버튼 상태 업데이트
             UpdateContinueButton();
+
+            // 타이틀 BGM 재생
+            PlayTitleBgm();
 
             // FadeInObj 트랜지션으로 진입 중이면 entry transition 스킵 (SettingsPopup에서 이미 처리함)
             if (SettingsPopup.IsFadeInTransitionActive)
@@ -105,6 +122,27 @@ namespace HideAndInk.Scripts.UI
             {
                 // 씬 진입 트랜지션 실행
                 StartCoroutine(PlayEntryTransition());
+            }
+        }
+
+        /// <summary>
+        /// 타이틀 BGM을 재생합니다.
+        /// </summary>
+        private void PlayTitleBgm()
+        {
+            // 1순위: DI 컨테이너에서 BgmManager 해결
+            if (GameManager.Container != null && GameManager.Container.IsRegistered<IBgmService>())
+            {
+                var bgm = GameManager.Container.Resolve<IBgmService>();
+                bgm?.Play(HideAndInk.Core.Audio.BgmId.Title);
+                return;
+            }
+
+            // 2순위: 씬에서 BgmManager 직접 찾기
+            var bgmManager = FindObjectOfType<HideAndInk.Core.Audio.BgmManager>();
+            if (bgmManager != null)
+            {
+                bgmManager.Play(HideAndInk.Core.Audio.BgmId.Title);
             }
         }
 

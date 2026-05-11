@@ -9,6 +9,9 @@ namespace HideAndInk.Core.Audio
         /// <summary>무음</summary>
         None = 0,
 
+        /// <summary>타이틀 BGM</summary>
+        Title,
+
         /// <summary>초원해안Bgm.mp3 — 스테이지 1</summary>
         GrasslandCoast,
 
