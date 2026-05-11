@@ -30,9 +30,21 @@ namespace HideAndInk.Scripts.UI
 
         private void OnEnable()
         {
+            // 항상 살아있는 Singleton Instance를 강제로 사용
             _sfx = SfxManager.Instance;
             _bgm = BgmManager.Instance;
 
+            // 코드에서 Slider/Toggle 직접 찾기 (Inspector 연결과 무관)
+            if (bgmVolumeSlider == null)
+                bgmVolumeSlider = GetComponentInChildren<UnityEngine.UI.Slider>(true);
+            if (sfxVolumeSlider == null)
+                sfxVolumeSlider = GetComponentInChildren<UnityEngine.UI.Slider>(true);
+            if (bgmMuteToggle == null)
+                bgmMuteToggle = GetComponentInChildren<UnityEngine.UI.Toggle>(true);
+            if (sfxMuteToggle == null)
+                sfxMuteToggle = GetComponentInChildren<UnityEngine.UI.Toggle>(true);
+
+            // 볼륨이 0이면 기본값(0.5)으로 복원
             if (_bgm != null && _bgm.Volume <= 0f)
                 _bgm.Volume = 0.5f;
             if (_sfx != null && _sfx.Volume <= 0f)
@@ -48,15 +60,29 @@ namespace HideAndInk.Scripts.UI
             if (_sfx != null && sfxMuteToggle != null)
                 sfxMuteToggle.SetIsOnWithoutNotify(_sfx.Muted);
 
-            // 코드에서 직접 이벤트 연결 (Inspector 연결 불필요)
+            // 기존 이벤트 모두 제거 후 다시 연결 (중복 방지)
             if (bgmVolumeSlider != null)
+            {
+                bgmVolumeSlider.onValueChanged.RemoveAllListeners();
                 bgmVolumeSlider.onValueChanged.AddListener(SetBgmVolume);
+            }
             if (sfxVolumeSlider != null)
+            {
+                sfxVolumeSlider.onValueChanged.RemoveAllListeners();
                 sfxVolumeSlider.onValueChanged.AddListener(SetSfxVolume);
+            }
             if (bgmMuteToggle != null)
+            {
+                bgmMuteToggle.onValueChanged.RemoveAllListeners();
                 bgmMuteToggle.onValueChanged.AddListener(SetBgmMute);
+            }
             if (sfxMuteToggle != null)
+            {
+                sfxMuteToggle.onValueChanged.RemoveAllListeners();
                 sfxMuteToggle.onValueChanged.AddListener(SetSfxMute);
+            }
+
+            Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}, sliders={bgmVolumeSlider != null}/{sfxVolumeSlider != null}");
         }
 
         private void OnDisable()
