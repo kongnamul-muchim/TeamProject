@@ -854,7 +854,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &183732723
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3949,10 +3949,10 @@ MonoBehaviour:
   titleSceneName: 0.TitleScene
   fadeInObjPrefab: {fileID: 0}
   useSceneTransition: 1
-  bgmVolumeSlider: {fileID: 0}
-  sfxVolumeSlider: {fileID: 0}
-  bgmMuteToggle: {fileID: 0}
-  sfxMuteToggle: {fileID: 0}
+  bgmVolumeSlider: {fileID: 1581208521}
+  sfxVolumeSlider: {fileID: 441534797}
+  bgmMuteToggle: {fileID: 1851125428}
+  sfxMuteToggle: {fileID: 1443556256}
 --- !u!1001 &3174233295518632336
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3968,7 +3968,7 @@ PrefabInstance:
     - target: {fileID: 2825616333842440882, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
       propertyPath: 'sfxClips.Array.data[3].clips.Array.data[0]'
       value: 
-      objectReference: {fileID: 8300000, guid: 73b39e3a36c273048bf4fafb8ec2185b, type: 3}
+      objectReference: {fileID: 8300000, guid: ac70151d9447a644a870359ffa7027ad, type: 3}
     - target: {fileID: 2825616333842440882, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
       propertyPath: 'sfxClips.Array.data[4].clips.Array.data[0]'
       value: 
@@ -4022,6 +4022,52 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
+--- !u!1 &999999001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 999999003}
+  - component: {fileID: 999999002}
+  m_Layer: 0
+  m_Name: SfxManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &999999002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 999999001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 125821f00c2a32d4a83eda0a7bd35db0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Core.Audio.SfxManager
+  sfxClips: []
+  defaultVolume: 0.5
+--- !u!4 &999999003
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 999999001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -4034,3 +4080,4 @@ SceneRoots:
   - {fileID: 183732724}
   - {fileID: 1583748578}
   - {fileID: 153190184}
+  - {fileID: 999999003}

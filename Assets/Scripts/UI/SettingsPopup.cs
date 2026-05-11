@@ -64,10 +64,20 @@ namespace HideAndInk.Scripts.UI
                 _sfx = SfxManager.Instance;
             if (_bgm == null)
                 _bgm = BgmManager.Instance;
+
+            Debug.Log($"[SettingsPopup] Awake: DI={GameManager.Container != null}, _sfx={_sfx != null}, _bgm={_bgm != null}");
         }
 
         private void Start()
         {
+            // Awake보다 늦게 생성된 Singleton을 위해 Start에서도 한 번 더 확인
+            if (_sfx == null)
+                _sfx = SfxManager.Instance;
+            if (_bgm == null)
+                _bgm = BgmManager.Instance;
+
+            Debug.Log($"[SettingsPopup] Start: _sfx={_sfx != null}, _bgm={_bgm != null}");
+
             // Slider/Toggle 초기값을 현재 오디오 서비스 상태와 동기화
             if (_bgm != null && bgmVolumeSlider != null)
                 bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
