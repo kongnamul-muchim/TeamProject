@@ -198,7 +198,7 @@ namespace HideAndInk.Scripts.UI
             var canvasIngame = GameObject.Find("Canvas_Ingame")?.transform;
             if (canvasIngame != null)
             {
-                // 다른 팝업이 열려있으면 닫기 (Pause 등)
+                // 다른 팝업이 열리있으면 닫기 (Pause 등)
                 var popupPause = canvasIngame.Find("Popup_Pause")?.gameObject;
                 if (popupPause != null && popupPause.activeSelf)
                 {
@@ -227,6 +227,23 @@ namespace HideAndInk.Scripts.UI
                 gameOverPanel.transform.SetAsLastSibling(); // 최상위로
             }
 
+            // 버튼 클릭 가능하도록 강제 활성화
+            EnableButtonInteraction(continueButton);
+            EnableButtonInteraction(restartButton);
+            EnableButtonInteraction(titleButton);
+
+            // CanvasGroup Raycast 차단 해제
+            if (gameOverPanel != null)
+            {
+                var canvasGroup = gameOverPanel.GetComponent<CanvasGroup>();
+                if (canvasGroup != null)
+                {
+                    canvasGroup.blocksRaycasts = true;
+                    canvasGroup.interactable = true;
+                    canvasGroup.alpha = 1f;
+                }
+            }
+
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
             ForceVignetteToMax();
 
@@ -237,6 +254,26 @@ namespace HideAndInk.Scripts.UI
             var eventSystem = UnityEngine.EventSystems.EventSystem.current;
             if (eventSystem != null && eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>() == null)
                 eventSystem.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+
+        /// <summary>
+        /// 버튼의 interactable과 raycastTarget을 강제로 활성화합니다.
+        /// </summary>
+        private void EnableButtonInteraction(Button button)
+        {
+            if (button == null) return;
+            button.interactable = true;
+            var img = button.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = true;
+                if (img.color.a <= 0f)
+                {
+                    var color = img.color;
+                    color.a = 0.01f;
+                    img.color = color;
+                }
+            }
         }
 
         /// <summary>
@@ -300,7 +337,7 @@ namespace HideAndInk.Scripts.UI
         private void OnContinueClicked()
         {
             _sfxService?.Play(SfxId.ButtonClick);
-            // 저장 데이터가 있으면 로드
+
             if (SaveManager.HasSaveData())
             {
                 var data = SaveManager.Load();
@@ -308,10 +345,47 @@ namespace HideAndInk.Scripts.UI
                 {
                     SaveManager.SetContinueZone(data.lastZoneIndex,
                         data.GetPlayerPosition(), data.GetSquidPosition());
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 로드 - Zone_{data.lastZoneIndex}");
+                }
+            }
+            else
+            {
+                // 저장 데이터가 없으면 현재 활성 Zone을 찾아서 이어하기
+                int currentZone = FindCurrentActiveZone();
+                if (currentZone > 0)
+                {
+                    SaveManager.SetContinueZone(currentZone);
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 없음 → 현재 Zone_{currentZone}에서 이어하기");
+                }
+                else
+                {
+                    Debug.LogWarning("[GameOverUI] 이어하기: 저장 데이터 없고 활성 Zone도 찾을 수 없음 → Zone_1에서 시작");
+                    SaveManager.SetContinueZone(1);
                 }
             }
 
             TransitionToScene(gameSceneIndex);
+        }
+
+        /// <summary>
+        /// 씬에서 현재 활성화된 Zone 번호를 찾습니다.
+        /// </summary>
+        private int FindCurrentActiveZone()
+        {
+            var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>(true);
+            foreach (var go in allObjects)
+            {
+                if (go == null) continue;
+                if (go.name.StartsWith("Zone_") && go.activeInHierarchy)
+                {
+                    string[] parts = go.name.Split('_');
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
+                    {
+                        return zoneNum;
+                    }
+                }
+            }
+            return -1;
         }
 
         /// <summary>
