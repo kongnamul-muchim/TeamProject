@@ -47,13 +47,13 @@ namespace HideAndInk.Scripts.UI
                 _stateMachine.OnStateChanged += OnGameStateChanged;
             }
 
-        // 초기 상태: 팝업 닫힘
-        if (pausePopup != null)
-            pausePopup.SetActive(false);
-            
-        // 팝업 버튼 자동 연결
-        ConnectPopupButtons();
-    }
+            // 초기 상태: 팝업 닫힘
+            if (pausePopup != null)
+                pausePopup.SetActive(false);
+                
+            // 팝업 버튼 자동 연결
+            ConnectPopupButtons();
+        }
     
     /// <summary>
     /// Popup_Pause 안의 모든 Button을 찾아서 리스너 연결
@@ -181,30 +181,73 @@ namespace HideAndInk.Scripts.UI
             
             Debug.Log($"[PauseHandler] Raycast 결과 수: {results.Count}");
             
-            foreach (var result in results)
-            {
-                var go = result.gameObject;
-                Debug.Log($"[PauseHandler] Raycast: {go.name}");
-                
-                if (go.name == "Btn_Continue")
+                foreach (var result in results)
                 {
-                    Debug.Log("[PauseHandler] Btn_Continue GraphicRaycast 클릭 감지!");
-                    ResumeGame();
-                    return;
+                    var go = result.gameObject;
+                    Debug.Log($"[PauseHandler] Raycast: {go.name}");
+                    
+                    if (go.name == "Btn_Continue")
+                    {
+                        Debug.Log("[PauseHandler] Btn_Continue GraphicRaycast 클릭 감지!");
+                        ResumeGame();
+                        return;
+                    }
+                    else if (go.name == "Btn_GoTitle")
+                    {
+                        Debug.Log("[PauseHandler] Btn_GoTitle GraphicRaycast 클릭 감지!");
+                        GoToTitleScene();
+                        return;
+                    }
+                    else if (go.name == "Btn_Close")
+                    {
+                        Debug.Log("[PauseHandler] Btn_Close GraphicRaycast 클릭 감지!");
+                        ResumeGame();
+                        return;
+                    }
+                    else if (go.name == "BGMToggle" || go.name == "FXToggle" || 
+                             go.name == "Checkmark")
+                    {
+                        // Toggle 영역 클릭 (Background는 Slider와 겹칠 수 있으므로 제외)
+                        var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
+                        if (toggle == null) toggle = go.GetComponent<UnityEngine.UI.Toggle>();
+                        if (toggle != null)
+                        {
+                            toggle.isOn = !toggle.isOn;
+                            toggle.onValueChanged?.Invoke(toggle.isOn);
+                            return;
+                        }
+                    }
+                    else if (go.name == "BGM_Slider" || go.name == "FX_Slider" || 
+                             go.name == "Handle" || go.name == "Fill" || go.name == "Background")
+                    {
+                        // Slider 영역 클릭
+                        var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
+                        if (slider == null) slider = go.GetComponent<UnityEngine.UI.Slider>();
+                        if (slider != null)
+                        {
+                            HandleSliderClick(slider);
+                            return;
+                        }
+                    }
                 }
-                else if (go.name == "Btn_GoTitle")
-                {
-                    Debug.Log("[PauseHandler] Btn_GoTitle GraphicRaycast 클릭 감지!");
-                    GoToTitleScene();
-                    return;
-                }
-                else if (go.name == "Btn_Close")
-                {
-                    Debug.Log("[PauseHandler] Btn_Close GraphicRaycast 클릭 감지!");
-                    ResumeGame();
-                    return;
-                }
-            }
+        }
+
+        /// <summary>
+        /// Time.timeScale = 0 상태에서 Slider 클릭 처리
+        /// </summary>
+        private void HandleSliderClick(UnityEngine.UI.Slider slider)
+        {
+            var rectTransform = slider.GetComponent<RectTransform>();
+            if (rectTransform == null) return;
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rectTransform, Input.mousePosition, null, out Vector2 localPoint);
+
+            float normalizedValue = Mathf.InverseLerp(
+                rectTransform.rect.xMin, rectTransform.rect.xMax, localPoint.x);
+            
+            slider.value = Mathf.Clamp01(normalizedValue);
+            slider.onValueChanged?.Invoke(slider.value);
         }
 
         /// <summary>
