@@ -466,23 +466,26 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// 씬에서 현재 활성화된 Zone 번호를 찾습니다.
+        /// active 상태인 Zone 오브젝트 중 번호가 가장 큰 것을 반환합니다.
         /// </summary>
         private int FindCurrentActiveZone()
         {
+            int maxZone = -1;
             var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>(true);
             foreach (var go in allObjects)
             {
-                if (go == null) continue;
+                if (go == null || !go.scene.IsValid() || !go.scene.isLoaded) continue;
                 if (go.name.StartsWith("Zone_") && go.activeInHierarchy)
                 {
                     string[] parts = go.name.Split('_');
                     if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
                     {
-                        return zoneNum;
+                        if (zoneNum > maxZone)
+                            maxZone = zoneNum;
                     }
                 }
             }
-            return -1;
+            return maxZone;
         }
 
         /// <summary>
