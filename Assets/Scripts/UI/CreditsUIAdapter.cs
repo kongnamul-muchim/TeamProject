@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System;
@@ -41,6 +42,9 @@ namespace HideAndInk.UI
         {
             if (_isCreditsPlaying) return;
 
+            // 코루틴 시작을 위해 오브젝트 자체를 활성화
+            gameObject.SetActive(true);
+
             _onComplete = onComplete;
             _isCreditsPlaying = true;
 
@@ -50,8 +54,23 @@ namespace HideAndInk.UI
             if (creditsRoot != null)
                 creditsRoot.SetActive(true);
 
+            // 레이아웃 강제 갱신으로 텍스트 길이에 따른 높이 즉시 계산
+            Canvas.ForceUpdateCanvases();
             if (scrollContent != null)
-                scrollContent.localPosition = _startPosition;
+            {
+                // ContentSizeFitter가 있다면 설정을 강제로 PreferredSize로 변경하여 높이 자동 조절 보장
+                var fitter = scrollContent.GetComponent<ContentSizeFitter>();
+                if (fitter != null)
+                {
+                    fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                }
+
+                LayoutRebuilder.ForceRebuildLayoutImmediate(scrollContent);
+                
+                // [수정] X와 Z는 현재 설정(인스펙터 값)을 유지하고 Y만 0으로 초기화하여 튀는 현상 방지
+                Vector3 currentPos = scrollContent.localPosition;
+                scrollContent.localPosition = new Vector3(currentPos.x, 0, currentPos.z);
+            }
 
             StartCoroutine(CreditsRoutine());
         }
@@ -64,27 +83,37 @@ namespace HideAndInk.UI
                 yield break;
             }
 
-            // 텍스트가 화면 위로 다 올라갈 때까지 스크롤
-            // 텍스트 높이 계산 (Layout 등 강제 갱신 필요할 수 있음)
-            Canvas.ForceUpdateCanvases();
-            float contentHeight = scrollContent.rect.height;
+            // 텍스트 컴포넌트가 계산한 실제 컨텐츠 높이
+            float contentHeight = textCredits.preferredHeight;
             float screenHeight = Screen.height;
-            float targetY = contentHeight + screenHeight;
+            
+            // targetY 정밀 계산 (피벗 0.5 기준)
+            // 텍스트의 절반 + 화면의 절반이 이동하면 텍스트 하단이 화면 상단 끝에 닿음
+            // 여기에 200픽셀 정도의 여백만 더해 즉시 종료되도록 설정
+            float targetY = (contentHeight * 0.5f) + (screenHeight * 0.5f) + 200f; 
+            float currentY = scrollContent.anchoredPosition.y;
 
-            while (scrollContent.localPosition.y < targetY)
+            Debug.Log($"[Credits] Scroll Start. Height: {contentHeight}, TargetY: {targetY}");
+
+            while (currentY < targetY)
             {
+                // ESC 키를 누르면 즉시 종료
+                if (Input.GetKeyDown(KeyCode.Escape)) break;
+
+                // 스페이스바/클릭 시 가속 배수를 10배로 상향하여 답답함 해소
                 float currentSpeed = scrollSpeed;
-                
-                // 입력(클릭/스페이스) 시 가속
                 if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.Return))
                 {
-                    currentSpeed *= fastScrollMultiplier;
+                    currentSpeed *= 10f; 
                 }
 
-                scrollContent.localPosition += Vector3.up * (currentSpeed * Time.unscaledDeltaTime);
+                currentY += currentSpeed * Time.unscaledDeltaTime;
+                scrollContent.anchoredPosition = new Vector2(scrollContent.anchoredPosition.x, currentY);
+                
                 yield return null;
             }
 
+            Debug.Log("[Credits] Scroll Finished! Transitioning to Title...");
             yield return new WaitForSecondsRealtime(endWaitTime);
             FinishCredits();
         }
@@ -92,10 +121,10 @@ namespace HideAndInk.UI
         private void FinishCredits()
         {
             _isCreditsPlaying = false;
-            if (creditsRoot != null)
-                creditsRoot.SetActive(false);
-
+            
+            // [수정] 콜백을 실행하여 종료를 알리지만, 화면에서 즉시 사라지지는 않음 (페이드 아웃 연출을 위해)
             _onComplete?.Invoke();
+            _onComplete = null;
         }
 
         /// <summary>

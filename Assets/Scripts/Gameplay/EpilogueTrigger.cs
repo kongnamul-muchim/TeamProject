@@ -110,6 +110,9 @@ namespace HideAndInk.Gameplay
             // 3. 크레딧 재생
             if (creditsUI != null)
             {
+                // 시간 정지 (플레이어 입력 및 적 활동 중단)
+                Time.timeScale = 0f;
+
                 bool creditsFinished = false;
                 
                 // 기본 크레딧 내용이 비어있다면 에셋에 미리 정의된 텍스트를 사용하거나 수동 입력 가능
@@ -131,14 +134,31 @@ namespace HideAndInk.Gameplay
                 yield return new WaitForSecondsRealtime(2f);
             }
 
-            // 4. 타이틀 씬으로 넘어가기
+            // 4. 크레딧 종료 후 최종 페이드 아웃 (타이틀 전환 전)
+            if (fadeImage != null)
+            {
+                // 페이드 이미지를 최상단으로 가져와서 크레딧과 인게임을 모두 덮도록 설정
+                fadeImage.rectTransform.SetAsLastSibling();
+                fadeImage.gameObject.SetActive(true);
+                yield return StartCoroutine(FadeRoutine(0f, 1f));
+                
+                // [추가] 이제 화면이 완전히 까매졌으므로 안전하게 크레딧 UI를 끕니다.
+                if (creditsUI != null) creditsUI.gameObject.SetActive(false);
+                
+                yield return new WaitForSecondsRealtime(1f);
+            }
+
+            // 5. 타이틀 씬으로 넘어가기 전 시간 복구
+            Time.timeScale = 1.0f;
             SceneManager.LoadScene(titleSceneName);
         }
 
         private string GetDefaultCreditsText()
         {
             // Credits_Draft.md의 최신 내용을 기반으로 한 텍스트
-            return "[ Hide & Ink : 문어의 먹물꿈질 ]\n\n\n" +
+            // 시작과 끝에 여백(\n)을 추가하여 연출 개선
+            return "\n\n\n\n\n" + 
+                   "[ Hide & Ink : 문어의 먹물꿈질 ]\n\n\n" +
                    "--- STAFF ---\n\n" +
                    "Lead Programmer & System Architect\n김동열 (Dongyeol Kim)\n\n" +
                    "Sidekick System & Sound Sourcing\n박시연 (Siyeon Park)\n\n" +
@@ -165,10 +185,10 @@ namespace HideAndInk.Gameplay
                    "Fonts - 꾸불림체 (Kkubullim Font)\n\n\n" +
                    "--- SPECIAL THANKS ---\n\n" +
                    "Advisors: 프로젝트에 소중한 조언을 주신 모든 분들\n" +
-                   "Beta Testers: 안정적인 플레이를 위해 도움 주신 테스터분들\n" +
                    "Players: 두두의 여정을 끝까지 지켜봐 주신 플레이어 여러분\n\n\n\n" +
                    "© 2026 Team 미지동시. All rights reserved.\n" +
-                   "Powered by Unity Engine 2022.3 LTS";
+                   "Powered by Unity Engine 2022.3 LTS\n" +
+                   "\n\n\n\n\n\n\n\n";
         }
 
         // 공통 페이드 애니메이션 로직 (대사 중 시간정지 상태에서도 작동하도록 설정)
