@@ -176,15 +176,25 @@ namespace HideAndInk.Scripts.UI
         public void SetBgmMute(bool isOn)
         {
             bool muted = !isOn;
+            Debug.Log($"[SettingsPopup] SetBgmMute({isOn}) -> muted={muted}, _bgm={_bgm != null}, _audioSource={_bgmAudioSource != null}");
             if (_bgm != null) _bgm.Muted = muted;
             if (_bgmAudioSource != null) _bgmAudioSource.mute = muted;
         }
-        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = !isOn; }
+        public void SetSfxMute(bool isOn)
+        {
+            Debug.Log($"[SettingsPopup] SetSfxMute({isOn}), _sfx={_sfx != null}");
+            if (_sfx != null) _sfx.Muted = !isOn;
+        }
         public void SetBgmVolume(float value)
         {
+            Debug.Log($"[SettingsPopup] SetBgmVolume({value}), _bgm={_bgm != null}, _audioSource={_bgmAudioSource != null}");
             if (_bgm != null) _bgm.Volume = value;
             if (_bgmAudioSource != null) _bgmAudioSource.volume = value;
         }
-        public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
+        public void SetSfxVolume(float value)
+        {
+            Debug.Log($"[SettingsPopup] SetSfxVolume({value}), _sfx={_sfx != null}");
+            if (_sfx != null) _sfx.Volume = value;
+        }
     }
 }
