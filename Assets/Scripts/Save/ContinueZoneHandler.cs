@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using HideAndInk.Core.Managers;
 using HideAndInk.Scripts.Save;
 using UnityEngine;
 
@@ -122,19 +121,6 @@ public class ContinueZoneHandler : MonoBehaviour
 
         ActivateZoneOnly(allZones, targetZone);
 
-        // ── Ground 동기화, 안개 효과, Canvas_Ingame 처리 ──
-        ZoneChanger.SyncGroundObjects(targetZone);
-        if (ZoneChanger.IsFogZone(targetZone))
-        {
-            bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
-            ZoneChanger.SetUnderwaterEffect(true, isDark);
-        }
-        else
-        {
-            ZoneChanger.SetUnderwaterEffect(false);
-        }
-        UpdateCanvasIngame(targetZone);
-
         Transform player = GetPlayer();
         Transform squid = GetSquid();
 
@@ -162,7 +148,6 @@ public class ContinueZoneHandler : MonoBehaviour
             {
                 Debug.Log($"[ContinueZoneHandler] 저장된 Player 위치 없음 → ZoneChanger 위치로 fallback");
                 TeleportPlayerToZone(targetZone);
-                playerPos = player.position;
             }
         }
 
@@ -179,9 +164,6 @@ public class ContinueZoneHandler : MonoBehaviour
                 TeleportSquidToZone(targetZone);
             }
         }
-
-        // ---- 치메라를 Player 위치로 즉시 이동 ----
-        GameManager.MoveCameraToPlayer(player?.gameObject, playerPos);
     }
 
     // =====================================================
@@ -226,17 +208,6 @@ public class ContinueZoneHandler : MonoBehaviour
         results.RemoveAll(go => !seen.Add(go.GetInstanceID()));
 
         return results;
-    }
-
-    private void UpdateCanvasIngame(int zoneNumber)
-    {
-        var canvasIngame = GameObject.Find("Canvas_Ingame");
-        if (canvasIngame != null)
-        {
-            bool shouldBeActive = zoneNumber >= 1 && zoneNumber <= 6;
-            canvasIngame.SetActive(shouldBeActive);
-            Debug.Log($"[ContinueZoneHandler] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
-        }
     }
 
     private void SearchInChildren(Transform parent, List<GameObject> results)

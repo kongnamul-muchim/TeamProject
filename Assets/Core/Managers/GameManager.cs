@@ -168,33 +168,6 @@ namespace HideAndInk.Core.Managers
 
             // ContinueZoneHandler가 씬에 없으면 직접 Zone 활성화 처리
             HandleContinueZoneFallback(scene);
-
-            // 안전장치: ContinueZoneHandler가 Destroy된 후에도 CameraFollow target이 설정되도록
-            EnsureCameraFollowTarget();
-        }
-
-        /// <summary>
-        /// CameraFollow의 target이 null이면 Player를 찾아 설정하고 즉시 업데이트합니다.
-        /// ContinueZoneHandler가 Destroy된 후에도 치메라가 플레이어를 따라가도록 하는 안전장치입니다.
-        /// </summary>
-        private static void EnsureCameraFollowTarget()
-        {
-            var cameraFollow = Object.FindObjectOfType<HideAndInk.CameraSystem.CameraFollow>();
-            if (cameraFollow == null) return;
-
-            var targetField = cameraFollow.GetType().GetField("target", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var currentTarget = targetField?.GetValue(cameraFollow) as Transform;
-            if (currentTarget != null) return;
-
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player == null) return;
-
-            cameraFollow.SetTarget(player.transform);
-            cameraFollow.enabled = true;
-            var followType = cameraFollow.GetType();
-            var updateMethod = followType.GetMethod("LateUpdate", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            updateMethod?.Invoke(cameraFollow, null);
-            Debug.Log("[GameManager] CameraFollow target 안전장치 설정 완료");
         }
 
         /// <summary>
@@ -317,7 +290,7 @@ namespace HideAndInk.Core.Managers
         /// <summary>
         /// 플레이어 위치로 치메라를 즉시 이동시킵니다.
         /// </summary>
-        public static void MoveCameraToPlayer(GameObject player, Vector3 playerPos)
+        private static void MoveCameraToPlayer(GameObject player, Vector3 playerPos)
         {
             Camera mainCam = Camera.main;
             if (mainCam == null) return;
@@ -332,15 +305,11 @@ namespace HideAndInk.Core.Managers
                 Debug.Log($"[GameManager] 치메라를 플레이어 위치로 이동: {camPos}");
             }
 
-            // CameraFollow가 있으면 활성화하고 타겟 설정 후 즉시 한 번 업데이트
+            // CameraFollow가 있으면 활성화하고 즉시 한 번 업데이트
             var cameraFollow = Object.FindObjectOfType<HideAndInk.CameraSystem.CameraFollow>();
             if (cameraFollow != null)
             {
                 cameraFollow.enabled = true;
-                if (player != null)
-                {
-                    cameraFollow.SetTarget(player.transform);
-                }
                 // 즉시 한 번 업데이트해서 치메라가 플레이어를 정확히 따라가도록
                 var followType = cameraFollow.GetType();
                 var updateMethod = followType.GetMethod("LateUpdate", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
