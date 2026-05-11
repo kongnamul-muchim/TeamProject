@@ -449,10 +449,11 @@ namespace HideAndInk.Scripts.UI
             {
                 // 저장 데이터가 없으면 현재 활성 Zone을 찾아서 이어하기
                 int currentZone = FindCurrentActiveZone();
+                Debug.Log($"[GameOverUI] FindCurrentActiveZone returned: {currentZone}");
                 if (currentZone > 0)
                 {
                     SaveManager.SetContinueZone(currentZone);
-                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 없음 → 현재 Zone_{currentZone}에서 이어하기");
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 없음 → 현재 Zone_{currentZone}에서 이어하기, PendingZoneIndex={SaveManager.PendingZoneIndex}");
                 }
                 else
                 {
@@ -461,6 +462,7 @@ namespace HideAndInk.Scripts.UI
                 }
             }
 
+            Debug.Log($"[GameOverUI] TransitionToScene called with PendingZoneIndex={SaveManager.PendingZoneIndex}");
             TransitionToScene(gameSceneIndex);
         }
 
@@ -471,20 +473,46 @@ namespace HideAndInk.Scripts.UI
         private int FindCurrentActiveZone()
         {
             int maxZone = -1;
-            var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>(true);
-            foreach (var go in allObjects)
+            var scene = SceneManager.GetActiveScene();
+            var rootObjects = scene.GetRootGameObjects();
+            
+            Debug.Log($"[GameOverUI] FindCurrentActiveZone - Scene: {scene.name}, Root objects: {rootObjects.Length}");
+            
+            foreach (var root in rootObjects)
             {
-                if (go == null || !go.scene.IsValid() || !go.scene.isLoaded) continue;
-                if (go.name.StartsWith("Zone_") && go.activeInHierarchy)
+                if (root == null) continue;
+                
+                // 씬 루트의 Zone 오브젝트 체크
+                if (root.name.StartsWith("Zone_") && root.activeInHierarchy)
                 {
-                    string[] parts = go.name.Split('_');
+                    string[] parts = root.name.Split('_');
                     if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
                     {
+                        Debug.Log($"[GameOverUI] Found root Zone: {root.name} → Zone {zoneNum}, active={root.activeInHierarchy}");
                         if (zoneNum > maxZone)
                             maxZone = zoneNum;
                     }
                 }
+                
+                // 자식 오브젝트들도 체크
+                var children = root.GetComponentsInChildren<Transform>(true);
+                foreach (var child in children)
+                {
+                    if (child == null || child == root.transform) continue;
+                    if (child.name.StartsWith("Zone_") && child.gameObject.activeInHierarchy)
+                    {
+                        string[] parts = child.name.Split('_');
+                        if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
+                        {
+                            Debug.Log($"[GameOverUI] Found child Zone: {child.name} → Zone {zoneNum}, active={child.gameObject.activeInHierarchy}");
+                            if (zoneNum > maxZone)
+                                maxZone = zoneNum;
+                        }
+                    }
+                }
             }
+            
+            Debug.Log($"[GameOverUI] FindCurrentActiveZone result: {maxZone}");
             return maxZone;
         }
 
