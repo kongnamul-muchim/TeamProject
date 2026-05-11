@@ -1616,8 +1616,8 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
-        m_MethodName: SetSfxVolume
-        m_Mode: 4
+        m_MethodName: SetBgmVolume
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -2745,7 +2745,7 @@ MonoBehaviour:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
         m_MethodName: SetSfxMute
-        m_Mode: 6
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -3033,8 +3033,8 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
-        m_MethodName: SetBgmVolume
-        m_Mode: 4
+        m_MethodName: SetSfxVolume
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -3750,7 +3750,7 @@ MonoBehaviour:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
         m_MethodName: SetBgmMute
-        m_Mode: 6
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
