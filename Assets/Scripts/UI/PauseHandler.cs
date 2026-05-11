@@ -47,10 +47,48 @@ namespace HideAndInk.Scripts.UI
                 _stateMachine.OnStateChanged += OnGameStateChanged;
             }
 
-            // 초기 상태: 팝업 닫힘
-            if (pausePopup != null)
-                pausePopup.SetActive(false);
+        // 초기 상태: 팝업 닫힘
+        if (pausePopup != null)
+            pausePopup.SetActive(false);
+            
+        // 팝업 버튼 자동 연결
+        ConnectPopupButtons();
+    }
+    
+    /// <summary>
+    /// Popup_Pause 안의 모든 Button을 찾아서 리스너 연결
+    /// </summary>
+    private void ConnectPopupButtons()
+    {
+        if (pausePopup == null) return;
+        
+        var buttons = pausePopup.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+        foreach (var btn in buttons)
+        {
+            btn.onClick.RemoveAllListeners();
+            
+            if (btn.gameObject.name == "Btn_Continue")
+            {
+                btn.onClick.AddListener(ResumeGame);
+                Debug.Log("[PauseHandler] Btn_Continue → ResumeGame 연결 완료");
+            }
+            else if (btn.gameObject.name == "Btn_GoTitle")
+            {
+                btn.onClick.AddListener(GoToTitleScene);
+                Debug.Log("[PauseHandler] Btn_GoTitle → GoToTitleScene 연결 완료");
+            }
         }
+    }
+    
+    /// <summary>
+    /// 타이틀 화면으로 돌아가기
+    /// </summary>
+    public void GoToTitleScene()
+    {
+        _sfxService?.Play(SfxId.ButtonClick);
+        Time.timeScale = 1f;
+        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+    }
 
         private void OnDestroy()
         {
@@ -97,13 +135,122 @@ namespace HideAndInk.Scripts.UI
             if (current == GameState.Paused)
             {
                 Time.timeScale = 0f;
-                if (pausePopup != null) pausePopup.SetActive(true);
+                if (pausePopup != null)
+                {
+                    pausePopup.SetActive(true);
+                    pausePopup.transform.SetAsLastSibling();
+                    DisablePopupRaycastBlockers();
+                }
             }
             else if (previous == GameState.Paused)
             {
                 Time.timeScale = 1f;
                 if (pausePopup != null) pausePopup.SetActive(false);
             }
+        }
+
+        private void Update()
+        {
+            // Time.timeScale = 0일 때 EventSystem이 멈추므로 직접 클릭 체크
+            if (Time.timeScale == 0f && pausePopup != null && pausePopup.activeSelf)
+            {
+                CheckPopupButtonClicks();
+            }
+        }
+
+        /// <summary>
+        /// Time.timeScale = 0 상태에서 팝업 버튼 클릭을 직접 체크
+        /// GraphicRaycaster 사용
+        /// </summary>
+        private void CheckPopupButtonClicks()
+        {
+            if (!Input.GetMouseButtonDown(0)) return;
+
+            // GraphicRaycaster로 정확히 어떤 UI가 클릭되는지 확인
+            var canvas = pausePopup.GetComponentInParent<UnityEngine.Canvas>();
+            if (canvas == null) return;
+            
+            var raycaster = canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+            if (raycaster == null) return;
+            
+            var pointerEventData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
+            pointerEventData.position = Input.mousePosition;
+            
+            var results = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
+            raycaster.Raycast(pointerEventData, results);
+            
+            Debug.Log($"[PauseHandler] Raycast 결과 수: {results.Count}");
+            
+            foreach (var result in results)
+            {
+                var go = result.gameObject;
+                Debug.Log($"[PauseHandler] Raycast: {go.name}");
+                
+                if (go.name == "Btn_Continue")
+                {
+                    Debug.Log("[PauseHandler] Btn_Continue GraphicRaycast 클릭 감지!");
+                    ResumeGame();
+                    return;
+                }
+                else if (go.name == "Btn_GoTitle")
+                {
+                    Debug.Log("[PauseHandler] Btn_GoTitle GraphicRaycast 클릭 감지!");
+                    GoToTitleScene();
+                    return;
+                }
+                else if (go.name == "Btn_Close")
+                {
+                    Debug.Log("[PauseHandler] Btn_Close GraphicRaycast 클릭 감지!");
+                    ResumeGame();
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 마우스가 버튼 RectTransform 영역 안에 있는지 체크
+        /// </summary>
+        private bool IsMouseOverButton(Transform buttonTransform)
+        {
+            var rectTransform = buttonTransform.GetComponent<RectTransform>();
+            if (rectTransform == null) return false;
+
+            Vector2 localMousePosition;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rectTransform,
+                Input.mousePosition,
+                null,
+                out localMousePosition);
+
+            return rectTransform.rect.Contains(localMousePosition);
+        }
+
+        /// <summary>
+        /// Popup_Pause 안의 모든 Image RaycastTarget을 확인하고,
+        /// Button과 연결되지 않은 Image는 RaycastTarget OFF로 설정
+        /// </summary>
+        private void DisablePopupRaycastBlockers()
+        {
+            var popupTransform = pausePopup.transform;
+            var images = popupTransform.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+            int blockedCount = 0;
+            
+            foreach (var img in images)
+            {
+                // 버튼과 연결된 Image는 제외 (버튼 클릭을 막지 않도록)
+                var parentButton = img.GetComponentInParent<UnityEngine.UI.Button>();
+                if (parentButton != null) continue;
+                
+                // RaycastTarget이 켜져 있으면 OFF
+                if (img.raycastTarget)
+                {
+                    img.raycastTarget = false;
+                    blockedCount++;
+                    Debug.Log($"[PauseHandler] RaycastTarget OFF: {img.gameObject.name}");
+                }
+            }
+            
+            Debug.Log($"[PauseHandler] 총 {blockedCount}개 Image의 RaycastTarget을 OFF로 설정");
         }
     }
 }

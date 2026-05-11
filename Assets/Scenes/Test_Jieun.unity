@@ -11140,6 +11140,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1296253349}
   - component: {fileID: 1296253348}
+  - component: {fileID: 1296253350}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -11177,6 +11178,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 516912067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1296253350
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1296253346}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.StandaloneInputModule
+  m_HorizontalAxis: Horizontal
+  m_VerticalAxis: Vertical
+  m_SubmitButton: Submit
+  m_CancelButton: Cancel
+  m_InputActionsPerSecond: 10
+  m_RepeatDelay: 0.5
+  m_ForceModuleActive: 0
 --- !u!1 &1332911239
 GameObject:
   m_ObjectHideFlags: 0
@@ -19672,7 +19692,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.46666667}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -20501,6 +20521,7 @@ GameObject:
   - component: {fileID: 5746790330452841398}
   - component: {fileID: 6129833009682267124}
   - component: {fileID: 2673207018381550804}
+  - component: {fileID: 8979661265527058895}
   m_Layer: 5
   m_Name: Btn_GoTitle
   m_TagString: Untagged
@@ -23234,6 +23255,7 @@ GameObject:
   - component: {fileID: 3992451095904351664}
   - component: {fileID: 8916128173354553043}
   - component: {fileID: 4209574998795431260}
+  - component: {fileID: 8916128173354553044}
   m_Layer: 5
   m_Name: Btn_Continue
   m_TagString: Untagged
@@ -23931,6 +23953,19 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8916128173354553044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7628731811746426768}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 378ba0b8cc1aee647af5833ce8f8f3d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::PopupButtonClickHandler
+  buttonType: 1
 --- !u!114 &8925101408232854453
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23973,6 +24008,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 28}
   m_SizeDelta: {x: 450, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &8979661265527058895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3697952977421377167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 378ba0b8cc1aee647af5833ce8f8f3d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::PopupButtonClickHandler
+  buttonType: 2
 --- !u!1001 &9049202170415961967
 PrefabInstance:
   m_ObjectHideFlags: 0
