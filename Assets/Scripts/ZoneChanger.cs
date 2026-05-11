@@ -432,7 +432,7 @@ public class ZoneChanger : MonoBehaviour
         }
     }
 
-    void ChangeZone()
+    public void ChangeZone()
     {
         bool changed = false;
 

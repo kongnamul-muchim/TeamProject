@@ -193,91 +193,76 @@ namespace HideAndInk.Core.Managers
             int targetZone = SaveManager.PendingZoneIndex;
             Debug.Log($"[GameManager] ContinueZoneHandler 없음 → 직접 Zone_{targetZone} 활성화");
 
-            // 씬 내 모든 Zone 오브젝트 찾기 (재귀 탐색, 비활성 포함)
-            List<GameObject> allZones = new List<GameObject>();
-            HashSet<int> addedIds = new HashSet<int>();
-            
-            void SearchZoneRecursive(Transform parent)
+            // === ZoneChanger를 찾아서 ChangeZone 직접 호출 ===
+            // 해당 Zone으로 가는 ZoneChanger를 찾음
+            var zoneChangers = FindObjectsOfType<ZoneChanger>();
+            ZoneChanger targetChanger = null;
+            foreach (var changer in zoneChangers)
             {
-                foreach (Transform child in parent)
+                if (changer.toZoneNumber == targetZone)
                 {
-                    if (child == null) continue;
-                    int id = child.gameObject.GetInstanceID();
-                    if (addedIds.Contains(id)) continue;
-                    
-                    if (child.name.StartsWith("Zone_"))
-                    {
-                        allZones.Add(child.gameObject);
-                        addedIds.Add(id);
-                    }
-                    
-                    // 자식이 Zone이든 아니든 계속 탐색
-                    SearchZoneRecursive(child);
-                }
-            }
-            
-            // 루트 오브젝트부터 시작
-            var rootObjects = scene.GetRootGameObjects();
-            foreach (var root in rootObjects)
-            {
-                if (root == null) continue;
-                if (root.name.StartsWith("Zone_"))
-                {
-                    int id = root.GetInstanceID();
-                    if (!addedIds.Contains(id))
-                    {
-                        allZones.Add(root);
-                        addedIds.Add(id);
-                    }
-                }
-                SearchZoneRecursive(root.transform);
-            }
-
-            Debug.Log($"[GameManager] 찾은 Zone 오브젝트 수: {allZones.Count}");
-            foreach (var z in allZones)
-            {
-                Debug.Log($"[GameManager] 발견: {z.name}");
-            }
-
-            // targetZone과 일치하는 것만 활성화, 나머지는 비활성화
-            int activatedCount = 0;
-            GameObject activatedZone = null;
-            foreach (var zone in allZones)
-            {
-                string[] parts = zone.name.Split('_');
-                if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
-                {
-                    bool isTarget = zoneNum == targetZone;
-                    zone.SetActive(isTarget);
-                    if (isTarget)
-                    {
-                        activatedCount++;
-                        activatedZone = zone;
-                    }
-                    Debug.Log($"[GameManager] {zone.name} → {(isTarget ? "활성화" : "비활성화")}");
+                    targetChanger = changer;
+                    break;
                 }
             }
 
-            if (activatedCount == 0)
+            if (targetChanger != null)
             {
-                Debug.LogWarning($"[GameManager] Zone_{targetZone} 오브젝트를 찾을 수 없음!");
+                Debug.Log($"[GameManager] ZoneChanger 찾음: {targetChanger.name} → ChangeZone 직접 호출");
+                targetChanger.ChangeZone();
+            }
+            else
+            {
+                Debug.LogWarning($"[GameManager] Zone_{targetZone}으로 가는 ZoneChanger를 찾을 수 없음 → 수동 처리");
+                
+                // 수동 처리: Zone 오브젝트 활성화/비활성화
+                var rootObjects = scene.GetRootGameObjects();
+                foreach (var root in rootObjects)
+                {
+                    if (root.name.StartsWith("Zone_"))
+                    {
+                        string[] parts = root.name.Split('_');
+                        if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
+                        {
+                            bool isTarget = zoneNum == targetZone;
+                            root.SetActive(isTarget);
+                            Debug.Log($"[GameManager] {root.name} → {(isTarget ? "활성화" : "비활성화")}");
+                        }
+                    }
+                }
+                
+                ZoneChanger.SyncGroundObjects(targetZone);
+                
+                if (ZoneChanger.IsFogZone(targetZone))
+                {
+                    bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
+                    ZoneChanger.SetUnderwaterEffect(true, isDark);
+                }
+                else
+                {
+                    ZoneChanger.SetUnderwaterEffect(false);
+                }
             }
 
-            // === Player 위치 복원 (먼저 실행) ===
+            // === Player 위치 복원 ===
             var player = GameObject.FindGameObjectWithTag("Player");
             Vector3 playerPos = Vector3.zero;
             if (player != null)
             {
                 playerPos = SaveManager.PendingPlayerPosition;
 
-                // 저장된 위치가 zero이면 활성화된 Zone의 위치로 fallback
                 if (playerPos == Vector3.zero)
                 {
-                    if (activatedZone != null)
+                    // 저장된 위치가 없으면 활성화된 Zone의 위치로
+                    var activeZones = GameObject.FindObjectsOfType<GameObject>();
+                    foreach (var z in activeZones)
                     {
-                        playerPos = activatedZone.transform.position;
-                        playerPos.y = player.transform.position.y;
-                        Debug.Log($"[GameManager] 저장 위치가 zero → {activatedZone.name} 위치({playerPos})로 fallback");
+                        if (z.name == $"Zone_{targetZone}_Object" || z.name == $"Zone_{targetZone}_Images")
+                        {
+                            playerPos = z.transform.position;
+                            playerPos.y = player.transform.position.y;
+                            break;
+                        }
                     }
                 }
 
@@ -292,37 +277,10 @@ namespace HideAndInk.Core.Managers
                     }
                     Debug.Log($"[GameManager] Player 위치 복원: {playerPos}");
                 }
-                else
-                {
-                    Debug.LogWarning("[GameManager] Player 위치를 복원할 수 없음 (targetPos가 zero)");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[GameManager] Player 태그 오브젝트를 찾을 수 없음");
-            }
-
-            // === Ground 동기화 ===
-            ZoneChanger.SyncGroundObjects(targetZone);
-
-            // === Underwater Effects 설정 ===
-            if (ZoneChanger.IsFogZone(targetZone))
-            {
-                bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
-                ZoneChanger.SetUnderwaterEffect(true, isDark);
-                Debug.Log($"[GameManager] Underwater Effects {(isDark ? "어둡게" : "밝게")} 활성화 (Zone {targetZone})");
-            }
-            else
-            {
-                ZoneChanger.SetUnderwaterEffect(false);
-                Debug.Log($"[GameManager] Underwater Effects 비활성화 (Zone {targetZone})");
             }
 
             // === 치메라를 Player 위치로 즉시 이동 ===
             MoveCameraToPlayer(player, playerPos);
-
-            // === Canvas_Ingame 설정 ===
-            UpdateCanvasIngame(targetZone);
 
             // 이어하기 정보 초기화
             SaveManager.ClearContinueZone();
