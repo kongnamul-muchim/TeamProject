@@ -227,18 +227,47 @@ namespace HideAndInk.Core.Managers
                 Debug.LogWarning($"[GameManager] Zone_{targetZone} 오브젝트를 찾을 수 없음!");
             }
 
-            // Player 위치 복원 (선택사항)
+            // Player 위치 복원
             var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null && SaveManager.PendingPlayerPosition != Vector3.zero)
+            if (player != null)
             {
-                player.transform.position = SaveManager.PendingPlayerPosition;
-                var rb = player.GetComponent<Rigidbody>();
-                if (rb != null)
+                Vector3 targetPos = SaveManager.PendingPlayerPosition;
+
+                // 저장된 위치가 zero이면 활성화된 Zone의 위치로 fallback
+                if (targetPos == Vector3.zero)
                 {
-                    rb.position = SaveManager.PendingPlayerPosition;
-                    rb.linearVelocity = Vector3.zero;
+                    foreach (var zone in allZones)
+                    {
+                        if (zone.activeInHierarchy)
+                        {
+                            targetPos = zone.transform.position;
+                            // 플레이어의 현재 y 높이는 유지 (땅에 붙이기)
+                            targetPos.y = player.transform.position.y;
+                            Debug.Log($"[GameManager] 저장 위치가 zero → {zone.name} 위치({targetPos})로 fallback");
+                            break;
+                        }
+                    }
                 }
-                Debug.Log($"[GameManager] Player 위치 복원: {SaveManager.PendingPlayerPosition}");
+
+                if (targetPos != Vector3.zero)
+                {
+                    player.transform.position = targetPos;
+                    var rb = player.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.position = targetPos;
+                        rb.linearVelocity = Vector3.zero;
+                    }
+                    Debug.Log($"[GameManager] Player 위치 복원: {targetPos}");
+                }
+                else
+                {
+                    Debug.LogWarning("[GameManager] Player 위치를 복원할 수 없음 (targetPos가 zero)");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[GameManager] Player 태그 오브젝트를 찾을 수 없음");
             }
 
             // 이어하기 정보 초기화
@@ -415,6 +444,14 @@ namespace HideAndInk.Core.Managers
                     cause, sourceName, deathPos, Time.timeSinceLevelLoad,
                     deathMessage, wasCamouflaged
                 ));
+
+                // === 이어하기용 위치 저장 ===
+                // 사망 직전 위치를 임시 저장 (SaveManager static이므로 씬 리로드 후에도 유지)
+                if (deathPos != Vector3.zero)
+                {
+                    SaveManager.PendingPlayerPosition = deathPos;
+                    Debug.Log($"[GameManager] 사망 위치 저장: {deathPos}");
+                }
 
                 // === 사망 처리 ===
 
