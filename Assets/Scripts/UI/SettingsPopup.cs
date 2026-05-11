@@ -27,12 +27,21 @@ namespace HideAndInk.Scripts.UI
 
         private ISfxService _sfx;
         private IBgmService _bgm;
+        private AudioSource _bgmAudioSource; // BGM_Manager 오브젝트의 직접 제어용
 
         private void OnEnable()
         {
             // 항상 살아있는 Singleton Instance를 강제로 사용
             _sfx = SfxManager.Instance;
             _bgm = BgmManager.Instance;
+
+            // 게임 씬에서는 BgmManager가 없을 수 있으므로 BGM_Manager 오브젝트 직접 찾기
+            if (_bgm == null)
+            {
+                var bgmManagerObj = GameObject.Find("BGM_Manager");
+                if (bgmManagerObj != null)
+                    _bgmAudioSource = bgmManagerObj.GetComponent<AudioSource>();
+            }
 
             // 코드에서 Slider/Toggle 직접 찾기 (Inspector 연결과 무관)
             if (bgmVolumeSlider == null)
@@ -47,22 +56,26 @@ namespace HideAndInk.Scripts.UI
             // 볼륨이 0이면 기본값(0.5)으로 복원
             if (_bgm != null && _bgm.Volume <= 0f)
                 _bgm.Volume = 0.5f;
+            if (_bgmAudioSource != null && _bgmAudioSource.volume <= 0f)
+                _bgmAudioSource.volume = 0.5f;
             if (_sfx != null && _sfx.Volume <= 0f)
                 _sfx.Volume = 0.5f;
 
             // Slider/Toggle 초기값 동기화
-            if (_bgm != null && bgmVolumeSlider != null)
-                bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
+            float bgmVol = _bgm != null ? _bgm.Volume : (_bgmAudioSource != null ? _bgmAudioSource.volume : 0.5f);
+            bool bgmMuted = _bgm != null ? _bgm.Muted : (_bgmAudioSource != null ? _bgmAudioSource.mute : false);
+            
+            if (bgmVolumeSlider != null)
+                bgmVolumeSlider.SetValueWithoutNotify(bgmVol);
             if (_sfx != null && sfxVolumeSlider != null)
                 sfxVolumeSlider.SetValueWithoutNotify(_sfx.Volume);
             // 토글 ON = 소리 켜짐 (음소거 해제)
-            if (_bgm != null && bgmMuteToggle != null)
-                bgmMuteToggle.SetIsOnWithoutNotify(!_bgm.Muted);
+            if (bgmMuteToggle != null)
+                bgmMuteToggle.SetIsOnWithoutNotify(!bgmMuted);
             if (_sfx != null && sfxMuteToggle != null)
                 sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
 
-            // SettingsAudioController가 이벤트를 담당하므로 여기서는 연결하지 않음
-            Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}, sliders={bgmVolumeSlider != null}/{sfxVolumeSlider != null}");
+            Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}, audioSource={_bgmAudioSource != null}, sliders={bgmVolumeSlider != null}/{sfxVolumeSlider != null}");
         }
 
         private void OnDisable()
@@ -145,9 +158,18 @@ namespace HideAndInk.Scripts.UI
             SceneManager.sceneLoaded -= OnTitleSceneLoaded;
         }
 
-        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = !isOn; }
+        public void SetBgmMute(bool isOn)
+        {
+            bool muted = !isOn;
+            if (_bgm != null) _bgm.Muted = muted;
+            if (_bgmAudioSource != null) _bgmAudioSource.mute = muted;
+        }
         public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = !isOn; }
-        public void SetBgmVolume(float value) { if (_bgm != null) _bgm.Volume = value; }
+        public void SetBgmVolume(float value)
+        {
+            if (_bgm != null) _bgm.Volume = value;
+            if (_bgmAudioSource != null) _bgmAudioSource.volume = value;
+        }
         public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
     }
 }

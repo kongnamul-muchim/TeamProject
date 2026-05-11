@@ -246,8 +246,13 @@ namespace HideAndInk.Scripts.UI
             float normalizedValue = Mathf.InverseLerp(
                 rectTransform.rect.xMin, rectTransform.rect.xMax, localPoint.x);
             
-            slider.value = Mathf.Clamp01(normalizedValue);
-            slider.onValueChanged?.Invoke(slider.value);
+            float newValue = Mathf.Clamp01(normalizedValue);
+            if (Mathf.Abs(slider.value - newValue) > 0.001f)
+            {
+                slider.value = newValue;
+                slider.onValueChanged?.Invoke(slider.value);
+                Debug.Log($"[PauseHandler] Slider 값 변경: {slider.gameObject.name} = {slider.value}");
+            }
         }
 
         /// <summary>
