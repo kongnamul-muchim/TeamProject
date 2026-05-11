@@ -181,6 +181,52 @@ namespace HideAndInk.Scripts.UI
             _eventBus?.Subscribe<PlayerDeathEvent>(OnPlayerDeath);
         }
 
+        private void Update()
+        {
+            // 게임 오버 패널이 활성화된 상태에서만 마우스 클릭 감지
+            if (gameOverPanel == null || !gameOverPanel.activeInHierarchy) return;
+            
+            if (Input.GetMouseButtonDown(0))
+            {
+                TryInvokeButtonClick(Input.mousePosition);
+            }
+        }
+
+        /// <summary>
+        /// 마우스 위치가 버튼 RectTransform 내에 있으면 해당 버튼의 onClick을 직접 호출합니다.
+        /// EventSystem raycast 문제 우회용.
+        /// </summary>
+        private void TryInvokeButtonClick(Vector2 screenPosition)
+        {
+            TryInvokeButton(continueButton, screenPosition);
+            TryInvokeButton(restartButton, screenPosition);
+            TryInvokeButton(titleButton, screenPosition);
+        }
+
+        private void TryInvokeButton(Button button, Vector2 screenPosition)
+        {
+            if (button == null || !button.interactable || !button.gameObject.activeInHierarchy) return;
+            
+            var rectTransform = button.GetComponent<RectTransform>();
+            if (rectTransform == null) return;
+            
+            // Screen Space - Overlay Canvas 기준으로 RectTransform의 world bounds 계산
+            Vector3[] corners = new Vector3[4];
+            rectTransform.GetWorldCorners(corners);
+            
+            // world corners를 screen space로 변환
+            Vector2 min = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+            Vector2 max = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+            
+            Rect buttonRect = new Rect(min.x, min.y, max.x - min.x, max.y - min.y);
+            
+            if (buttonRect.Contains(screenPosition))
+            {
+                Debug.Log($"[GameOverUI] Direct click detected on: {button.name}");
+                button.onClick?.Invoke();
+            }
+        }
+
         private void OnDestroy()
         {
             _eventBus?.Unsubscribe<PlayerDeathEvent>(OnPlayerDeath);
@@ -282,13 +328,24 @@ namespace HideAndInk.Scripts.UI
             if (img != null)
             {
                 img.raycastTarget = true;
-                if (img.color.a <= 0f)
+                if (img.color.a <= 0.01f)
                 {
                     var color = img.color;
                     color.a = 0.01f;
                     img.color = color;
                 }
             }
+            else
+            {
+                Debug.LogWarning($"[GameOverUI] Button {button.name} has NO Image component!");
+            }
+            
+            var rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                Debug.Log($"[GameOverUI] Button {button.name}: rect={rect.rect}, anchoredPosition={rect.anchoredPosition}, sizeDelta={rect.sizeDelta}");
+            }
+            
             Debug.Log($"[GameOverUI] Button enabled: {button.name}, interactable={button.interactable}, active={button.gameObject.activeInHierarchy}");
         }
 
