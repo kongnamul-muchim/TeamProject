@@ -50,6 +50,7 @@ namespace HideAndInk.Scripts.UI
 
         private void Awake()
         {
+            // 1순위: DI 컨테이너에서 해결
             if (GameManager.Container != null)
             {
                 if (GameManager.Container.IsRegistered<ISfxService>())
@@ -57,6 +58,12 @@ namespace HideAndInk.Scripts.UI
                 if (GameManager.Container.IsRegistered<IBgmService>())
                     _bgm = GameManager.Container.Resolve<IBgmService>();
             }
+
+            // 2순위: Singleton 인스턴스 fallback (DI 미등록 시에도 작동)
+            if (_sfx == null)
+                _sfx = SfxManager.Instance;
+            if (_bgm == null)
+                _bgm = BgmManager.Instance;
         }
 
         private void Start()
