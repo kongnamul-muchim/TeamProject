@@ -91,10 +91,11 @@ namespace HideAndInk.Scripts.UI
                 bgmSlider.SetValueWithoutNotify(bgmVol);
             if (_sfx != null && sfxSlider != null)
                 sfxSlider.SetValueWithoutNotify(_sfx.Volume);
+            // 토글 ON = 소리 켜짐 (음소거 해제), OFF = 소리 꺼짐 (음소거)
             if (bgmMuteToggle != null)
-                bgmMuteToggle.SetIsOnWithoutNotify(bgmMuted);
+                bgmMuteToggle.SetIsOnWithoutNotify(!bgmMuted);
             if (_sfx != null && sfxMuteToggle != null)
-                sfxMuteToggle.SetIsOnWithoutNotify(_sfx.Muted);
+                sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
         }
 
         private void OnBgmVolumeChanged(float value)
@@ -114,17 +115,20 @@ namespace HideAndInk.Scripts.UI
 
         private void OnBgmMuteChanged(bool isOn)
         {
+            // 토글 ON = 소리 켜짐 (음소거 해제), OFF = 소리 꺼짐 (음소거)
+            bool muted = !isOn;
             if (_bgm != null)
-                _bgm.Muted = isOn;
+                _bgm.Muted = muted;
             // 실제 BGM AudioSource도 함께 제어
             if (_bgmAudioSource != null)
-                _bgmAudioSource.mute = isOn;
+                _bgmAudioSource.mute = muted;
         }
 
         private void OnSfxMuteChanged(bool isOn)
         {
+            // 토글 ON = 소리 켜짐 (음소거 해제), OFF = 소리 꺼짐 (음소거)
             if (_sfx != null)
-                _sfx.Muted = isOn;
+                _sfx.Muted = !isOn;
         }
     }
 }

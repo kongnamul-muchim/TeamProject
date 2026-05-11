@@ -55,33 +55,13 @@ namespace HideAndInk.Scripts.UI
                 bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
             if (_sfx != null && sfxVolumeSlider != null)
                 sfxVolumeSlider.SetValueWithoutNotify(_sfx.Volume);
+            // 토글 ON = 소리 켜짐 (음소거 해제)
             if (_bgm != null && bgmMuteToggle != null)
-                bgmMuteToggle.SetIsOnWithoutNotify(_bgm.Muted);
+                bgmMuteToggle.SetIsOnWithoutNotify(!_bgm.Muted);
             if (_sfx != null && sfxMuteToggle != null)
-                sfxMuteToggle.SetIsOnWithoutNotify(_sfx.Muted);
+                sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
 
-            // 기존 이벤트 모두 제거 후 다시 연결 (중복 방지)
-            if (bgmVolumeSlider != null)
-            {
-                bgmVolumeSlider.onValueChanged.RemoveAllListeners();
-                bgmVolumeSlider.onValueChanged.AddListener(SetBgmVolume);
-            }
-            if (sfxVolumeSlider != null)
-            {
-                sfxVolumeSlider.onValueChanged.RemoveAllListeners();
-                sfxVolumeSlider.onValueChanged.AddListener(SetSfxVolume);
-            }
-            if (bgmMuteToggle != null)
-            {
-                bgmMuteToggle.onValueChanged.RemoveAllListeners();
-                bgmMuteToggle.onValueChanged.AddListener(SetBgmMute);
-            }
-            if (sfxMuteToggle != null)
-            {
-                sfxMuteToggle.onValueChanged.RemoveAllListeners();
-                sfxMuteToggle.onValueChanged.AddListener(SetSfxMute);
-            }
-
+            // SettingsAudioController가 이벤트를 담당하므로 여기서는 연결하지 않음
             Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}, sliders={bgmVolumeSlider != null}/{sfxVolumeSlider != null}");
         }
 
@@ -165,8 +145,8 @@ namespace HideAndInk.Scripts.UI
             SceneManager.sceneLoaded -= OnTitleSceneLoaded;
         }
 
-        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = isOn; }
-        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = isOn; }
+        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = !isOn; }
+        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = !isOn; }
         public void SetBgmVolume(float value) { if (_bgm != null) _bgm.Volume = value; }
         public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
     }
