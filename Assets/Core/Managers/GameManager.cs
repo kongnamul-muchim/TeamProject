@@ -136,6 +136,8 @@ namespace HideAndInk.Core.Managers
         /// </summary>
         private void OnSceneLoadedForPrologue(Scene scene, LoadSceneMode mode)
         {
+            Debug.Log($"[GameManager] OnSceneLoadedForPrologue called: {scene.name}, mode={mode}, IsContinueMode={SaveManager.IsContinueMode}, PendingZoneIndex={SaveManager.PendingZoneIndex}");
+
             // 씬 전환 후 SfxManager가 파괴 상태면 재찾거나 재생성 후 DI 갱신
             if (sfxManager == null)
             {
