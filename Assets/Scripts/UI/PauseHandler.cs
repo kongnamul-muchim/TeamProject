@@ -197,6 +197,7 @@ namespace HideAndInk.Scripts.UI
             foreach (var result in results)
             {
                 var go = result.gameObject;
+                Debug.Log($"[PauseHandler] Raycast hit: {go.name}");
                 
                 if (go.name == "Btn_Continue")
                 {
@@ -213,29 +214,25 @@ namespace HideAndInk.Scripts.UI
                     ResumeGame();
                     return;
                 }
-                else if (go.name == "BGMToggle" || go.name == "FXToggle" || 
-                         go.name.Contains("Checkmark") || go.name.Contains("Background_Off"))
+                
+                // Toggle 먼저 체크 (자식 오브젝트 클릭 시에도 parent Toggle 찾기)
+                var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
+                if (toggle != null)
                 {
-                    var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
-                    if (toggle == null) toggle = go.GetComponent<UnityEngine.UI.Toggle>();
-                    if (toggle != null)
-                    {
-                        toggle.isOn = !toggle.isOn;
-                        toggle.onValueChanged?.Invoke(toggle.isOn);
-                        return;
-                    }
+                    toggle.isOn = !toggle.isOn;
+                    toggle.onValueChanged?.Invoke(toggle.isOn);
+                    Debug.Log($"[PauseHandler] Toggle clicked: {toggle.gameObject.name}, isOn={toggle.isOn}");
+                    return;
                 }
-                else if (go.name == "BGM_Slider" || go.name == "FX_Slider" || 
-                         go.name == "Handle" || go.name == "Fill" || go.name == "Background")
+                
+                // Slider 체크 (자식 오브젝트 클릭 시에도 parent Slider 찾기)
+                var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
+                if (slider != null)
                 {
-                    var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
-                    if (slider == null) slider = go.GetComponent<UnityEngine.UI.Slider>();
-                    if (slider != null)
-                    {
-                        _draggingSlider = slider;
-                        UpdateSliderValue(slider);
-                        return;
-                    }
+                    _draggingSlider = slider;
+                    UpdateSliderValue(slider);
+                    Debug.Log($"[PauseHandler] Slider clicked: {slider.gameObject.name}, value={slider.value}");
+                    return;
                 }
             }
         }
