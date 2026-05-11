@@ -64,8 +64,6 @@ namespace HideAndInk.Scripts.UI
                 _sfx = SfxManager.Instance;
             if (_bgm == null)
                 _bgm = BgmManager.Instance;
-
-            Debug.Log($"[SettingsPopup] Awake: DI={GameManager.Container != null}, _sfx={_sfx != null}, _bgm={_bgm != null}");
         }
 
         private void Start()
@@ -74,35 +72,21 @@ namespace HideAndInk.Scripts.UI
             _sfx = SfxManager.Instance;
             _bgm = BgmManager.Instance;
 
-            Debug.Log($"[SettingsPopup] Start: _sfx={_sfx != null}, _bgm={_bgm != null}");
-
-            // 볼륨이 0이면 기본값(0.5)으로 복원 (Slider Handle이 0에 고정되는 문제 방지)
+            // 볼륨이 0이면 기본값(0.5)으로 복원
             if (_bgm != null && _bgm.Volume <= 0f)
-            {
-                Debug.Log("[SettingsPopup] BGM Volume이 0이므로 기본값 0.5로 복원");
                 _bgm.Volume = 0.5f;
-            }
             if (_sfx != null && _sfx.Volume <= 0f)
-            {
-                Debug.Log("[SettingsPopup] SFX Volume이 0이므로 기본값 0.5로 복원");
                 _sfx.Volume = 0.5f;
-            }
 
             // Slider/Toggle 초기값을 현재 오디오 서비스 상태와 동기화
             if (_bgm != null && bgmVolumeSlider != null)
-            {
                 bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
-                Debug.Log($"[SettingsPopup] BGM Slider 초기화: {_bgm.Volume}");
-            }
             if (_sfx != null && sfxVolumeSlider != null)
-            {
                 sfxVolumeSlider.SetValueWithoutNotify(_sfx.Volume);
-                Debug.Log($"[SettingsPopup] SFX Slider 초기화: {_sfx.Volume}");
-            }
             if (_bgm != null && bgmMuteToggle != null)
-                bgmMuteToggle.SetIsOnWithoutNotify(!_bgm.Muted);
+                bgmMuteToggle.SetIsOnWithoutNotify(_bgm.Muted);
             if (_sfx != null && sfxMuteToggle != null)
-                sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
+                sfxMuteToggle.SetIsOnWithoutNotify(_sfx.Muted);
         }
 
         /// <summary>
@@ -187,25 +171,9 @@ namespace HideAndInk.Scripts.UI
         // 아래 메서드들은 Toggle/Slider → 인스펙터 OnValueChanged 연결용
         // =====================================================
 
-        public void SetBgmMute(bool isOn)
-        {
-            Debug.Log($"[SettingsPopup] SetBgmMute({isOn}), _bgm={_bgm != null}");
-            if (_bgm != null) _bgm.Muted = !isOn;
-        }
-        public void SetSfxMute(bool isOn)
-        {
-            Debug.Log($"[SettingsPopup] SetSfxMute({isOn}), _sfx={_sfx != null}");
-            if (_sfx != null) _sfx.Muted = !isOn;
-        }
-        public void SetBgmVolume(float value)
-        {
-            Debug.Log($"[SettingsPopup] SetBgmVolume({value}), _bgm={_bgm != null}");
-            if (_bgm != null) _bgm.Volume = value;
-        }
-        public void SetSfxVolume(float value)
-        {
-            Debug.Log($"[SettingsPopup] SetSfxVolume({value}), _sfx={_sfx != null}");
-            if (_sfx != null) _sfx.Volume = value;
-        }
+        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = isOn; }
+        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = isOn; }
+        public void SetBgmVolume(float value) { if (_bgm != null) _bgm.Volume = value; }
+        public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
     }
 }
