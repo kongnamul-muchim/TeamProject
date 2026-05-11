@@ -26,16 +26,22 @@
 *   **Fonts** - 꾸불림체 (Kkubullim Font)
 
 ### [ MUSIC & SOUND ]
+
 *   **Original Sound Track**
-    - Grassland Coast (Theme of Shore)
-    - Coral Reef (Vibrant Sea)
-    - Seaweed Forest (Shadows in Kelp)
-    - Deep Sea Cliff (Abyss Call)
-    - Deep Sea Ruins (Echoes of Ancient)
+    - **Title Scene**: "Wire Wire Docks" by flowerhead
+    - **Zone 1 (Reef Coast)**: "Happy Pixie Town bgm" by HitCtrl
+    - **Zone 2 (Kelp Forest)**: "Dolphin Shores bgm" by flowerhead
+    - **Zone 3 (Coral Reef)**: "Ruin island bgm" by AiTechEye (OpenGameArt)
+    - **Zone 4 (Deep-sea Ruins)**: "ALONE.wav" by muertoapuntapies
+    - **Zone 5 (Deep-sea Cliff)**: "WhaleFall OST" by TurtleBox
+    - **Zone 6**: "The Last Dream" by 2LAZY / pulp_dev
+
 *   **Sound Effects**
-    - Interaction & UI Feedback
-    - Ink Ability & Camouflage Suite
-    - Environmental Ambience
+    - **Button Click / Stage Clear**: CLICK SFX PACK by HoveAudio
+    - **Camouflage Detach**: Angrily Crumpling Piece of Paper by F.M.Audio
+    - **Game Over**: Bad chest SFX by Oiboo
+    - **Ink Shoot**: Propeller (Cartoon) Loop by Mish7913
+    - **Predator Attack**: Water attack by xkeril
 
 ### [ SPECIAL THANKS ]
 *   **Advisors**: 프로젝트에 소중한 조언을 주신 모든 분들

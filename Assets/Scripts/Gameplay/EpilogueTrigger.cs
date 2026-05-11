@@ -144,21 +144,25 @@ namespace HideAndInk.Gameplay
                    "Sidekick System & Sound Sourcing\n박시연 (Siyeon Park)\n\n" +
                    "Art Director & Technical Artist\n박미초 (Micho Park)\n\n" +
                    "Environment Artist & Level Design\n정지은 (Jieun Jung)\n\n\n" +
+                   "--- MUSIC & SOUND ---\n\n" +
+                   "Original Sound Track\n" +
+                   "- Title Scene: \"Wire Wire Docks\" by flowerhead\n" +
+                   "- Zone 1 (Reef Coast): \"Happy Pixie Town bgm\" by HitCtrl\n" +
+                   "- Zone 2 (Kelp Forest): \"Dolphin Shores bgm\" by flowerhead\n" +
+                   "- Zone 3 (Coral Reef): \"Ruin island bgm\" by AiTechEye\n" +
+                   "- Zone 4 (Deep-sea Ruins): \"ALONE.wav\" by muertoapuntapies\n" +
+                   "- Zone 5 (Deep-sea Cliff): \"WhaleFall OST\" by TurtleBox\n" +
+                   "- Zone 6: \"The Last Dream\" by 2LAZY / pulp_dev\n\n" +
+                   "Sound Effects\n" +
+                   "- Button Click / Stage Clear: CLICK SFX PACK by HoveAudio\n" +
+                   "- Camouflage Detach: Angrily Crumpling Piece of Paper by F.M.Audio\n" +
+                   "- Game Over: Bad chest SFX by Oiboo\n" +
+                   "- Ink Shoot: Propeller (Cartoon) Loop by Mish7913\n" +
+                   "- Predator Attack: Water attack by xkeril\n\n\n" +
                    "--- THIRD-PARTY ASSETS ---\n\n" +
                    "TextMesh Pro - Unity Technologies\n" +
                    "Universal RP - Unity Technologies\n" +
                    "Fonts - 꾸불림체 (Kkubullim Font)\n\n\n" +
-                   "--- MUSIC & SOUND ---\n\n" +
-                   "Original Sound Track\n" +
-                   "- Grassland Coast (Theme of Shore)\n" +
-                   "- Coral Reef (Vibrant Sea)\n" +
-                   "- Seaweed Forest (Shadows in Kelp)\n" +
-                   "- Deep Sea Cliff (Abyss Call)\n" +
-                   "- Deep Sea Ruins (Echoes of Ancient)\n\n" +
-                   "Sound Effects\n" +
-                   "- Interaction & UI Feedback\n" +
-                   "- Ink Ability & Camouflage Suite\n" +
-                   "- Environmental Ambience\n\n\n" +
                    "--- SPECIAL THANKS ---\n\n" +
                    "Advisors: 프로젝트에 소중한 조언을 주신 모든 분들\n" +
                    "Beta Testers: 안정적인 플레이를 위해 도움 주신 테스터분들\n" +
