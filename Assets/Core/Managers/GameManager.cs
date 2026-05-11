@@ -235,6 +235,45 @@ namespace HideAndInk.Core.Managers
                 Debug.LogWarning($"[GameManager] Zone_{targetZone} 오브젝트를 찾을 수 없음!");
             }
 
+            // === Player 위치 복원 (먼저 실행) ===
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Vector3 playerPos = Vector3.zero;
+            if (player != null)
+            {
+                playerPos = SaveManager.PendingPlayerPosition;
+
+                // 저장된 위치가 zero이면 활성화된 Zone의 위치로 fallback
+                if (playerPos == Vector3.zero)
+                {
+                    if (activatedZone != null)
+                    {
+                        playerPos = activatedZone.transform.position;
+                        playerPos.y = player.transform.position.y;
+                        Debug.Log($"[GameManager] 저장 위치가 zero → {activatedZone.name} 위치({playerPos})로 fallback");
+                    }
+                }
+
+                if (playerPos != Vector3.zero)
+                {
+                    player.transform.position = playerPos;
+                    var rb = player.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.position = playerPos;
+                        rb.linearVelocity = Vector3.zero;
+                    }
+                    Debug.Log($"[GameManager] Player 위치 복원: {playerPos}");
+                }
+                else
+                {
+                    Debug.LogWarning("[GameManager] Player 위치를 복원할 수 없음 (targetPos가 zero)");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[GameManager] Player 태그 오브젝트를 찾을 수 없음");
+            }
+
             // === Ground 동기화 ===
             ZoneChanger.SyncGroundObjects(targetZone);
 
@@ -251,49 +290,11 @@ namespace HideAndInk.Core.Managers
                 Debug.Log($"[GameManager] Underwater Effects 비활성화 (Zone {targetZone})");
             }
 
-            // === 치메라 이동 ===
-            MoveCameraToZone(targetZone, activatedZone);
+            // === 치메라를 Player 위치로 즉시 이동 ===
+            MoveCameraToPlayer(player, playerPos);
 
             // === Canvas_Ingame 설정 ===
             UpdateCanvasIngame(targetZone);
-
-            // === Player 위치 복원 ===
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-            {
-                Vector3 targetPos = SaveManager.PendingPlayerPosition;
-
-                // 저장된 위치가 zero이면 활성화된 Zone의 위치로 fallback
-                if (targetPos == Vector3.zero)
-                {
-                    if (activatedZone != null)
-                    {
-                        targetPos = activatedZone.transform.position;
-                        targetPos.y = player.transform.position.y;
-                        Debug.Log($"[GameManager] 저장 위치가 zero → {activatedZone.name} 위치({targetPos})로 fallback");
-                    }
-                }
-
-                if (targetPos != Vector3.zero)
-                {
-                    player.transform.position = targetPos;
-                    var rb = player.GetComponent<Rigidbody>();
-                    if (rb != null)
-                    {
-                        rb.position = targetPos;
-                        rb.linearVelocity = Vector3.zero;
-                    }
-                    Debug.Log($"[GameManager] Player 위치 복원: {targetPos}");
-                }
-                else
-                {
-                    Debug.LogWarning("[GameManager] Player 위치를 복원할 수 없음 (targetPos가 zero)");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[GameManager] Player 태그 오브젝트를 찾을 수 없음");
-            }
 
             // 이어하기 정보 초기화
             SaveManager.ClearContinueZone();
@@ -301,29 +302,33 @@ namespace HideAndInk.Core.Managers
         }
 
         /// <summary>
-        /// 활성화된 Zone 위치로 치메라를 이동합니다.
+        /// 플레이어 위치로 치메라를 즉시 이동시킵니다.
         /// </summary>
-        private static void MoveCameraToZone(int zoneNumber, GameObject zoneObj)
+        private static void MoveCameraToPlayer(GameObject player, Vector3 playerPos)
         {
             Camera mainCam = Camera.main;
             if (mainCam == null) return;
 
-            // Zone 오브젝트의 위치로 치메라 이동
-            if (zoneObj != null)
+            if (player != null && playerPos != Vector3.zero)
             {
-                Vector3 newPos = mainCam.transform.position;
-                newPos.x = zoneObj.transform.position.x;
-                newPos.y = zoneObj.transform.position.y;
-                mainCam.transform.position = newPos;
-                Debug.Log($"[GameManager] 치메라 이동: {newPos} (Zone_{zoneNumber})");
+                // 플레이어 위치로 치메라 즉시 이동 (Z는 치메라 기존 값 유지)
+                Vector3 camPos = mainCam.transform.position;
+                camPos.x = playerPos.x;
+                camPos.y = playerPos.y;
+                mainCam.transform.position = camPos;
+                Debug.Log($"[GameManager] 치메라를 플레이어 위치로 이동: {camPos}");
             }
 
-            // CameraFollow가 있으면 타겟 위치로 스냅
+            // CameraFollow가 있으면 활성화하고 즉시 한 번 업데이트
             var cameraFollow = Object.FindObjectOfType<HideAndInk.CameraSystem.CameraFollow>();
             if (cameraFollow != null)
             {
                 cameraFollow.enabled = true;
-                Debug.Log("[GameManager] CameraFollow 활성화");
+                // 즉시 한 번 업데이트해서 치메라가 플레이어를 정확히 따라가도록
+                var followType = cameraFollow.GetType();
+                var updateMethod = followType.GetMethod("LateUpdate", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                updateMethod?.Invoke(cameraFollow, null);
+                Debug.Log("[GameManager] CameraFollow 활성화 및 즉시 업데이트");
             }
 
             // ParallaxController 재초기화 (이어하기 시 치메라 위치가 바뀌면서 배경이 엉망이 되는 문제 방지)
