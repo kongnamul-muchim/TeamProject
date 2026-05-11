@@ -122,13 +122,8 @@ MonoBehaviour:
   m_FreeGlyphRects:
   - m_X: 0
     m_Y: 0
-<<<<<<< Updated upstream
     m_Width: 4095
     m_Height: 4095
-=======
-    m_Width: 1023
-    m_Height: 1023
->>>>>>> Stashed changes
   m_FontFeatureTable:
     m_MultipleSubstitutionRecords: []
     m_LigatureSubstitutionRecords: []
