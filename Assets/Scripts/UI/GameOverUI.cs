@@ -86,6 +86,9 @@ namespace HideAndInk.Scripts.UI
                 if (btn != null) titleButton = btn.GetComponent<Button>();
             }
 
+            // 버튼 참조 확인 로그
+            Debug.Log($"[GameOverUI] Awake - Continue: {(continueButton != null ? continueButton.name : "NULL")}, Restart: {(restartButton != null ? restartButton.name : "NULL")}, Title: {(titleButton != null ? titleButton.name : "NULL")}");
+
             // 버튼 리스너 등록
             if (continueButton != null)
                 continueButton.onClick.AddListener(OnContinueClicked);
@@ -244,6 +247,9 @@ namespace HideAndInk.Scripts.UI
                 }
             }
 
+            // 버튼 상태 확인 로그
+            Debug.Log($"[GameOverUI] OnPlayerDeath - Continue: {(continueButton != null ? $"active={continueButton.gameObject.activeInHierarchy}, interactable={continueButton.interactable}" : "NULL")}");
+
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
             ForceVignetteToMax();
 
@@ -261,7 +267,11 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void EnableButtonInteraction(Button button)
         {
-            if (button == null) return;
+            if (button == null)
+            {
+                Debug.LogWarning("[GameOverUI] EnableButtonInteraction: button is NULL");
+                return;
+            }
             button.interactable = true;
             var img = button.GetComponent<Image>();
             if (img != null)
@@ -274,6 +284,7 @@ namespace HideAndInk.Scripts.UI
                     img.color = color;
                 }
             }
+            Debug.Log($"[GameOverUI] Button enabled: {button.name}, interactable={button.interactable}, active={button.gameObject.activeInHierarchy}");
         }
 
         /// <summary>
@@ -336,6 +347,7 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnContinueClicked()
         {
+            Debug.Log("[GameOverUI] OnContinueClicked called!");
             _sfxService?.Play(SfxId.ButtonClick);
 
             if (SaveManager.HasSaveData())
