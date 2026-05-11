@@ -54,6 +54,7 @@ namespace HideAndInk.Core.Managers
 
         // ─── 프롤로그 트리거 ──────────────────────────────────────
         private bool _pendingPrologue;      // Title → NewGame 시 예약됨
+        public static bool IsProloguePending => Instance != null && Instance._pendingPrologue;
 
         /// <summary>
         /// TitleController.OnNewGameClicked()에서 호출
@@ -68,6 +69,7 @@ namespace HideAndInk.Core.Managers
         // 테스트: Play 누르면 바로 프롤로그 실행 (에디터 전용)
         [Header("Debug")]
         [SerializeField] private bool playPrologueOnStart = false;
+        public bool WillPlayPrologueOnStart => playPrologueOnStart;
 
         private void Awake()
         {
@@ -133,7 +135,6 @@ namespace HideAndInk.Core.Managers
         {
             if (_pendingPrologue)
             {
-                _pendingPrologue = false;
                 Debug.Log("[GameManager] 씬 로드 완료 → 프롤로그 예약 감지, 실행합니다.");
                 StartCoroutine(PlayPrologueDelayed());
             }
@@ -150,6 +151,7 @@ namespace HideAndInk.Core.Managers
                 Debug.Log("[GameManager] PlayPrologueOnStart: 프롤로그를 시작합니다.");
                 story.PlayPrologue();
             }
+            _pendingPrologue = false;
         }
 
         /// <summary>
