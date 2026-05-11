@@ -22,9 +22,11 @@
 
 ### [ THIRD-PARTY ASSETS ]
 *   **TextMesh Pro** - Unity Technologies
-*   **QuickOutline** - Chris Nolet (Asset Store)
 *   **Universal RP** - Unity Technologies
-*   **Open Source Fonts** - Google Fonts (Noto Sans, Inter)
+
+### [ MUSIC & SOUND ]
+*   **BGM** - (출처 또는 작곡가 이름을 입력하세요. 예: SOSOMI, Bensound)
+*   **Sound Effects** - (사용하신 효과음 팩이나 사이트 이름을 입력하세요. 예: Freesound, Sonniss)
 
 ### [ SPECIAL THANKS ]
 * 프로젝트에 소중한 조언을 주신 모든 분들
