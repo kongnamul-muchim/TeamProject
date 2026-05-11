@@ -273,6 +273,9 @@ namespace HideAndInk.Scripts.UI
         {
             HideGameOver();
 
+            // 게임 상태 초기화 (재시작 시 Dead 상태가 남아있는 문제 방지)
+            _stateMachine?.Restart();
+
             // 시간 복원 (FadeInObj 애니메이션이 동작하도록)
             Time.timeScale = 1f;
 
