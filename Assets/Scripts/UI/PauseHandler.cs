@@ -18,6 +18,8 @@ namespace HideAndInk.Scripts.UI
         private ISfxService _sfxService;
         private IGameStateMachine _stateMachine;
 
+        private UnityEngine.UI.Slider _draggingSlider; // Time.timeScale=0에서 드래그 중인 Slider 추적
+
         private void Awake()
         {
             // SFX 서비스 해결
@@ -151,22 +153,35 @@ namespace HideAndInk.Scripts.UI
 
         private void Update()
         {
-            // Time.timeScale = 0일 때 EventSystem이 멈추므로 직접 클릭 체크
+            // Time.timeScale = 0일 때 EventSystem이 멈추므로 직접 입력 처리
             if (Time.timeScale == 0f && pausePopup != null && pausePopup.activeSelf)
             {
-                CheckPopupButtonClicks();
+                HandlePausePopupInput();
             }
         }
 
         /// <summary>
-        /// Time.timeScale = 0 상태에서 팝업 버튼 클릭을 직접 체크
-        /// GraphicRaycaster 사용
+        /// Time.timeScale = 0 상태에서 팝업 입력 처리 (클릭 + 드래그)
         /// </summary>
-        private void CheckPopupButtonClicks()
+        private void HandlePausePopupInput()
         {
+            // 드래그 중이면 계속 Slider 업데이트
+            if (_draggingSlider != null)
+            {
+                if (Input.GetMouseButton(0))
+                {
+                    UpdateSliderValue(_draggingSlider);
+                }
+                else
+                {
+                    _draggingSlider = null; // 마우스 놓음
+                }
+                return;
+            }
+
+            // 클릭 시작 시에만 Raycast
             if (!Input.GetMouseButtonDown(0)) return;
 
-            // GraphicRaycaster로 정확히 어떤 UI가 클릭되는지 확인
             var canvas = pausePopup.GetComponentInParent<UnityEngine.Canvas>();
             if (canvas == null) return;
             
@@ -179,63 +194,56 @@ namespace HideAndInk.Scripts.UI
             var results = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
             raycaster.Raycast(pointerEventData, results);
             
-            Debug.Log($"[PauseHandler] Raycast 결과 수: {results.Count}");
-            
-                foreach (var result in results)
+            foreach (var result in results)
+            {
+                var go = result.gameObject;
+                
+                if (go.name == "Btn_Continue")
                 {
-                    var go = result.gameObject;
-                    Debug.Log($"[PauseHandler] Raycast: {go.name}");
-                    
-                    if (go.name == "Btn_Continue")
+                    ResumeGame();
+                    return;
+                }
+                else if (go.name == "Btn_GoTitle")
+                {
+                    GoToTitleScene();
+                    return;
+                }
+                else if (go.name == "Btn_Close")
+                {
+                    ResumeGame();
+                    return;
+                }
+                else if (go.name == "BGMToggle" || go.name == "FXToggle" || 
+                         go.name == "Checkmark")
+                {
+                    var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
+                    if (toggle == null) toggle = go.GetComponent<UnityEngine.UI.Toggle>();
+                    if (toggle != null)
                     {
-                        Debug.Log("[PauseHandler] Btn_Continue GraphicRaycast 클릭 감지!");
-                        ResumeGame();
+                        toggle.isOn = !toggle.isOn;
+                        toggle.onValueChanged?.Invoke(toggle.isOn);
                         return;
-                    }
-                    else if (go.name == "Btn_GoTitle")
-                    {
-                        Debug.Log("[PauseHandler] Btn_GoTitle GraphicRaycast 클릭 감지!");
-                        GoToTitleScene();
-                        return;
-                    }
-                    else if (go.name == "Btn_Close")
-                    {
-                        Debug.Log("[PauseHandler] Btn_Close GraphicRaycast 클릭 감지!");
-                        ResumeGame();
-                        return;
-                    }
-                    else if (go.name == "BGMToggle" || go.name == "FXToggle" || 
-                             go.name == "Checkmark")
-                    {
-                        // Toggle 영역 클릭 (Background는 Slider와 겹칠 수 있으므로 제외)
-                        var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
-                        if (toggle == null) toggle = go.GetComponent<UnityEngine.UI.Toggle>();
-                        if (toggle != null)
-                        {
-                            toggle.isOn = !toggle.isOn;
-                            toggle.onValueChanged?.Invoke(toggle.isOn);
-                            return;
-                        }
-                    }
-                    else if (go.name == "BGM_Slider" || go.name == "FX_Slider" || 
-                             go.name == "Handle" || go.name == "Fill" || go.name == "Background")
-                    {
-                        // Slider 영역 클릭
-                        var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
-                        if (slider == null) slider = go.GetComponent<UnityEngine.UI.Slider>();
-                        if (slider != null)
-                        {
-                            HandleSliderClick(slider);
-                            return;
-                        }
                     }
                 }
+                else if (go.name == "BGM_Slider" || go.name == "FX_Slider" || 
+                         go.name == "Handle" || go.name == "Fill" || go.name == "Background")
+                {
+                    var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
+                    if (slider == null) slider = go.GetComponent<UnityEngine.UI.Slider>();
+                    if (slider != null)
+                    {
+                        _draggingSlider = slider;
+                        UpdateSliderValue(slider);
+                        return;
+                    }
+                }
+            }
         }
 
         /// <summary>
-        /// Time.timeScale = 0 상태에서 Slider 클릭 처리
+        /// Time.timeScale = 0 상태에서 Slider 값 업데이트 (클릭/드래그 공용)
         /// </summary>
-        private void HandleSliderClick(UnityEngine.UI.Slider slider)
+        private void UpdateSliderValue(UnityEngine.UI.Slider slider)
         {
             var rectTransform = slider.GetComponent<RectTransform>();
             if (rectTransform == null) return;
@@ -251,7 +259,6 @@ namespace HideAndInk.Scripts.UI
             {
                 slider.value = newValue;
                 slider.onValueChanged?.Invoke(slider.value);
-                Debug.Log($"[PauseHandler] Slider 값 변경: {slider.gameObject.name} = {slider.value}");
             }
         }
 
