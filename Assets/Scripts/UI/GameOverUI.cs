@@ -235,6 +235,11 @@ namespace HideAndInk.Scripts.UI
             EnableButtonInteraction(restartButton);
             EnableButtonInteraction(titleButton);
 
+            // 버튼들을 gameOverPanel의 마지막 자식으로 이동 (raycast 우선순위 확보)
+            if (continueButton != null) continueButton.transform.SetAsLastSibling();
+            if (restartButton != null) restartButton.transform.SetAsLastSibling();
+            if (titleButton != null) titleButton.transform.SetAsLastSibling();
+
             // CanvasGroup Raycast 차단 해제
             if (gameOverPanel != null)
             {
@@ -247,8 +252,8 @@ namespace HideAndInk.Scripts.UI
                 }
             }
 
-            // 버튼 상태 확인 로그
-            Debug.Log($"[GameOverUI] OnPlayerDeath - Continue: {(continueButton != null ? $"active={continueButton.gameObject.activeInHierarchy}, interactable={continueButton.interactable}" : "NULL")}");
+            // gameOverPanel 내의 버튼이 아닌 모든 Image의 raycastTarget 비활성화
+            DisableNonButtonRaycasts(gameOverPanel);
 
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
             ForceVignetteToMax();
@@ -285,6 +290,25 @@ namespace HideAndInk.Scripts.UI
                 }
             }
             Debug.Log($"[GameOverUI] Button enabled: {button.name}, interactable={button.interactable}, active={button.gameObject.activeInHierarchy}");
+        }
+
+        /// <summary>
+        /// gameOverPanel 내에서 Button이 아닌 모든 Image의 raycastTarget을 비활성화합니다.
+        /// 버튼 클릭을 가로채는 배경 이미지/패널 등을 방지합니다.
+        /// </summary>
+        private static void DisableNonButtonRaycasts(GameObject panel)
+        {
+            if (panel == null) return;
+            var images = panel.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                // Button 컴포넌트가 없는 Image만 비활성화
+                if (img.GetComponent<Button>() == null && img.raycastTarget)
+                {
+                    img.raycastTarget = false;
+                    Debug.Log($"[GameOverUI] Raycast disabled on: {img.gameObject.name}");
+                }
+            }
         }
 
         /// <summary>
