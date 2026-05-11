@@ -18,7 +18,7 @@
 | **System Architecture & Core Programming** | 김동열 (Dongyeol Kim) |
 | **Gameplay Programming & Component Integration** | 박시연 (Siyeon Park) |
 | **Lead Art & Visual Direction** | 박미초 (Micho Park) |
-| **Technical Planning & Level Design** | 정지은 (Jieun Jung) |
+| **Environment Artist & Level Design** | 정지은 (Jieun Jung) |
 
 ### [ THIRD-PARTY ASSETS ]
 *   **TextMesh Pro** - Unity Technologies
