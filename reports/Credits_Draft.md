@@ -20,12 +20,18 @@
 | **Lead Art & Visual Direction** | 박미초 (Micho Park) |
 | **Technical Planning & Level Design** | 정지은 (Jieun Jung) |
 
+### [ THIRD-PARTY ASSETS ]
+*   **TextMesh Pro** - Unity Technologies
+*   **QuickOutline** - Chris Nolet (Asset Store)
+*   **Universal RP** - Unity Technologies
+*   **Open Source Fonts** - Google Fonts (Noto Sans, Inter)
+
 ### [ SPECIAL THANKS ]
 * 프로젝트에 소중한 조언을 주신 모든 분들
 * 두두의 여정을 끝까지 지켜봐 주신 플레이어 여러분
 
 ### [ COPYRIGHT ]
-© 2026 Team Hide & Ink. All rights reserved.  
+© 2026 Team 미지동시. All rights reserved.  
 Powered by Unity Engine
 
 ---
@@ -40,13 +46,6 @@ Powered by Unity Engine
 *   **애니메이션**:
     *   **Slow Scroll**: 텍스트가 아래에서 위로 천천히 흐르는 정석적인 방식.
     *   **Silhouette Interaction**: 화면 구석에 아기 문어 실루엣이 먹물을 내뿜으며 지나가는 애니메이션을 추가하여 'Hide & Ink'의 정체성 강조.
-
----
-
-## 3. 디자인 시안 (Mockup)
-
-팀원들과 공유하실 수 있는 시각적 예시 이미지입니다.
-(첨부된 시안 이미지를 함께 확인해 주세요.)
 
 ---
 
