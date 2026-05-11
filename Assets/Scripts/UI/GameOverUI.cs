@@ -223,7 +223,11 @@ namespace HideAndInk.Scripts.UI
             if (buttonRect.Contains(screenPosition))
             {
                 Debug.Log($"[GameOverUI] Direct click detected on: {button.name}");
-                button.onClick?.Invoke();
+                // onClick 리스너 우회 - 직접 메서드 호출
+                if (button == continueButton) OnContinueClicked();
+                else if (button == restartButton) OnRestartClicked();
+                else if (button == titleButton) OnTitleClicked();
+                else button.onClick?.Invoke();
             }
         }
 
