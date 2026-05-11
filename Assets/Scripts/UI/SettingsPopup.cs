@@ -35,12 +35,27 @@ namespace HideAndInk.Scripts.UI
             _sfx = SfxManager.Instance;
             _bgm = BgmManager.Instance;
 
-            // 게임 씬에서는 BgmManager가 없을 수 있으므로 BGM_Manager 오브젝트 직접 찾기
+            // 게임 씬에서는 BgmManager가 없을 수 있으므로 BGM_AudioSource 직접 찾기
             if (_bgm == null)
             {
+                // 1. BGM_Manager 오브젝트 이름으로 찾기
                 var bgmManagerObj = GameObject.Find("BGM_Manager");
                 if (bgmManagerObj != null)
                     _bgmAudioSource = bgmManagerObj.GetComponent<AudioSource>();
+                
+                // 2. 못 찾으면 씬의 모든 AudioSource 중에서 loop=true이고 clip이 있는 것 찾기
+                if (_bgmAudioSource == null)
+                {
+                    var allAudioSources = FindObjectsOfType<AudioSource>();
+                    foreach (var source in allAudioSources)
+                    {
+                        if (source.loop && source.clip != null)
+                        {
+                            _bgmAudioSource = source;
+                            break;
+                        }
+                    }
+                }
             }
 
             // 코드에서 Slider/Toggle 직접 찾기 (Inspector 연결과 무관)

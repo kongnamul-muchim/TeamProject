@@ -214,7 +214,7 @@ namespace HideAndInk.Scripts.UI
                     return;
                 }
                 else if (go.name == "BGMToggle" || go.name == "FXToggle" || 
-                         go.name == "Checkmark")
+                         go.name.Contains("Checkmark") || go.name.Contains("Background_Off"))
                 {
                     var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
                     if (toggle == null) toggle = go.GetComponent<UnityEngine.UI.Toggle>();
