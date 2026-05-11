@@ -193,23 +193,51 @@ namespace HideAndInk.Core.Managers
             int targetZone = SaveManager.PendingZoneIndex;
             Debug.Log($"[GameManager] ContinueZoneHandler 없음 → 직접 Zone_{targetZone} 활성화");
 
-            // 씬 내 모든 Zone 오브젝트 찾기 (비활성 포함, 에셋/프리팹 제외)
+            // 씬 내 모든 Zone 오브젝트 찾기 (재귀 탐색, 비활성 포함)
             List<GameObject> allZones = new List<GameObject>();
             HashSet<int> addedIds = new HashSet<int>();
-            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
-            foreach (var go in allObjects)
+            
+            void SearchZoneRecursive(Transform parent)
             {
-                if (go == null) continue;
-                if (go.hideFlags != HideFlags.None) continue;
-                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
-                if (addedIds.Contains(go.GetInstanceID())) continue;
-                if (!go.name.StartsWith("Zone_")) continue;
-                
-                allZones.Add(go);
-                addedIds.Add(go.GetInstanceID());
+                foreach (Transform child in parent)
+                {
+                    if (child == null) continue;
+                    int id = child.gameObject.GetInstanceID();
+                    if (addedIds.Contains(id)) continue;
+                    
+                    if (child.name.StartsWith("Zone_"))
+                    {
+                        allZones.Add(child.gameObject);
+                        addedIds.Add(id);
+                    }
+                    
+                    // 자식이 Zone이든 아니든 계속 탐색
+                    SearchZoneRecursive(child);
+                }
+            }
+            
+            // 루트 오브젝트부터 시작
+            var rootObjects = scene.GetRootGameObjects();
+            foreach (var root in rootObjects)
+            {
+                if (root == null) continue;
+                if (root.name.StartsWith("Zone_"))
+                {
+                    int id = root.GetInstanceID();
+                    if (!addedIds.Contains(id))
+                    {
+                        allZones.Add(root);
+                        addedIds.Add(id);
+                    }
+                }
+                SearchZoneRecursive(root.transform);
             }
 
             Debug.Log($"[GameManager] 찾은 Zone 오브젝트 수: {allZones.Count}");
+            foreach (var z in allZones)
+            {
+                Debug.Log($"[GameManager] 발견: {z.name}");
+            }
 
             // targetZone과 일치하는 것만 활성화, 나머지는 비활성화
             int activatedCount = 0;
