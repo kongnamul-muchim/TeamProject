@@ -163,6 +163,13 @@ namespace HideAndInk.Core.Enemy.Boss
             // Zone 추적 초기화
             SubscribeToZoneChangers();
             UpdateZoneState(_currentZoneNumber);
+
+            // PatrolBehavior에 GroundBounds 전달 후 Patrol 상태 재초기화
+            if (_patrolBehavior != null)
+            {
+                _patrolBehavior.SetGroundBounds(_groundBounds);
+            }
+            _stateMachine.Initialize(EnemyAIState.Patrol);
         }
 
         private void Update()
