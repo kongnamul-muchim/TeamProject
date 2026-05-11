@@ -76,11 +76,29 @@ namespace HideAndInk.Scripts.UI
 
             Debug.Log($"[SettingsPopup] Start: _sfx={_sfx != null}, _bgm={_bgm != null}");
 
+            // 볼륨이 0이면 기본값(0.5)으로 복원 (Slider Handle이 0에 고정되는 문제 방지)
+            if (_bgm != null && _bgm.Volume <= 0f)
+            {
+                Debug.Log("[SettingsPopup] BGM Volume이 0이므로 기본값 0.5로 복원");
+                _bgm.Volume = 0.5f;
+            }
+            if (_sfx != null && _sfx.Volume <= 0f)
+            {
+                Debug.Log("[SettingsPopup] SFX Volume이 0이므로 기본값 0.5로 복원");
+                _sfx.Volume = 0.5f;
+            }
+
             // Slider/Toggle 초기값을 현재 오디오 서비스 상태와 동기화
             if (_bgm != null && bgmVolumeSlider != null)
+            {
                 bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
+                Debug.Log($"[SettingsPopup] BGM Slider 초기화: {_bgm.Volume}");
+            }
             if (_sfx != null && sfxVolumeSlider != null)
+            {
                 sfxVolumeSlider.SetValueWithoutNotify(_sfx.Volume);
+                Debug.Log($"[SettingsPopup] SFX Slider 초기화: {_sfx.Volume}");
+            }
             if (_bgm != null && bgmMuteToggle != null)
                 bgmMuteToggle.SetIsOnWithoutNotify(!_bgm.Muted);
             if (_sfx != null && sfxMuteToggle != null)
