@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 7566021691256251890}
   - component: {fileID: 5345241367204086980}
   - component: {fileID: 5345241367204086981}
+  - component: {fileID: 2667382024770957630}
   m_Layer: 0
   m_Name: Chichi_Robot
   m_TagString: Untagged
@@ -113,9 +114,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Siyeon1.ChichiStateMachine
   duduTransform: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
   chargeController: {fileID: 3878770650616212338}
-  idleDistance: 1.5
-  walkStartDistance: 3
-  walkStopDistance: 1.8
+  idleDistance: 1
+  walkStartDistance: 2
+  walkStopDistance: 1.5
   moveAwayDistance: 2
   moveAwayDuration: 0.4
 --- !u!114 &5374365525194118893
@@ -131,10 +132,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Siyeon1.ChichiMovementController
   stateMachine: {fileID: 4627533463234035377}
-  duduTransform: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+  duduTransform: {fileID: 0}
   rb: {fileID: 5345241367204086980}
-  walkSpeed: 2.5
-  guideMoveSpeed: 2
+  walkSpeed: 4
+  guideMoveSpeed: 5
   chargeApproachSpeed: 3.5
   chargeStopDistance: 0.12
   moveAwaySpeed: 3
@@ -271,3 +272,18 @@ MonoBehaviour:
   directionAngleThreshold: 45
   minSpriteChangeInterval: 0.15
   chargeStateCooldownTime: 0.5
+--- !u!114 &2667382024770957630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3221390537093528425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9010a40a08c462042b675f7e4f3d3649, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::ChichiChargeUI
+  yOffset: 1
+  fontSize: 50
+  textColor: {r: 0, g: 0, b: 0, a: 1}
