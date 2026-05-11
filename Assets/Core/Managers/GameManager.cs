@@ -325,6 +325,14 @@ namespace HideAndInk.Core.Managers
                 cameraFollow.enabled = true;
                 Debug.Log("[GameManager] CameraFollow 활성화");
             }
+
+            // ParallaxController 재초기화 (이어하기 시 치메라 위치가 바뀌면서 배경이 엉망이 되는 문제 방지)
+            var parallax = Object.FindObjectOfType<HideAndInk.ParallaxSystem.ParallaxController>();
+            if (parallax != null)
+            {
+                parallax.SetTargetCamera(mainCam);
+                Debug.Log("[GameManager] ParallaxController 재초기화");
+            }
         }
 
         /// <summary>
