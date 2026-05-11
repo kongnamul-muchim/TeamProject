@@ -440,9 +440,22 @@ namespace HideAndInk.Scripts.UI
                 var data = SaveManager.Load();
                 if (data != null)
                 {
-                    SaveManager.SetContinueZone(data.lastZoneIndex,
-                        data.GetPlayerPosition(), data.GetSquidPosition());
-                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 로드 - Zone_{data.lastZoneIndex}");
+                    Vector3 playerPos = data.GetPlayerPosition();
+                    Vector3 squidPos = data.GetSquidPosition();
+
+                    // 저장된 위치가 zero이면 현재 씬에서 플레이어 위치를 찾아 사용
+                    if (playerPos == Vector3.zero)
+                    {
+                        var player = GameObject.FindGameObjectWithTag("Player");
+                        if (player != null)
+                        {
+                            playerPos = player.transform.position;
+                            Debug.Log($"[GameOverUI] 저장된 Player 위치가 zero → 현재 위치 사용: {playerPos}");
+                        }
+                    }
+
+                    SaveManager.SetContinueZone(data.lastZoneIndex, playerPos, squidPos);
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 로드 - Zone_{data.lastZoneIndex}, PlayerPos={playerPos}");
                 }
             }
             else
@@ -452,8 +465,11 @@ namespace HideAndInk.Scripts.UI
                 Debug.Log($"[GameOverUI] FindCurrentActiveZone returned: {currentZone}");
                 if (currentZone > 0)
                 {
-                    SaveManager.SetContinueZone(currentZone);
-                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 없음 → 현재 Zone_{currentZone}에서 이어하기, PendingZoneIndex={SaveManager.PendingZoneIndex}");
+                    // 현재 플레이어 위치도 함께 저장
+                    var player = GameObject.FindGameObjectWithTag("Player");
+                    Vector3 playerPos = player != null ? player.transform.position : Vector3.zero;
+                    SaveManager.SetContinueZone(currentZone, playerPos, Vector3.zero);
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 없음 → 현재 Zone_{currentZone}에서 이어하기, PendingZoneIndex={SaveManager.PendingZoneIndex}, PlayerPos={playerPos}");
                 }
                 else
                 {
