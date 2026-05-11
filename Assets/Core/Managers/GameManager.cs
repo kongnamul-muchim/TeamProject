@@ -172,6 +172,7 @@ namespace HideAndInk.Core.Managers
 
         /// <summary>
         /// ContinueZoneHandler가 씬에 없을 때, SaveManager의 이어하기 정보를 바탕으로 직접 Zone을 활성화합니다.
+        /// ZoneChanger와 동일하게 Ground, Underwater Effects, 치메라, Canvas_Ingame도 함께 처리합니다.
         /// </summary>
         private void HandleContinueZoneFallback(Scene scene)
         {
@@ -210,6 +211,7 @@ namespace HideAndInk.Core.Managers
 
             // targetZone과 일치하는 것만 활성화, 나머지는 비활성화
             int activatedCount = 0;
+            GameObject activatedZone = null;
             foreach (var zone in allZones)
             {
                 string[] parts = zone.name.Split('_');
@@ -217,7 +219,11 @@ namespace HideAndInk.Core.Managers
                 {
                     bool isTarget = zoneNum == targetZone;
                     zone.SetActive(isTarget);
-                    if (isTarget) activatedCount++;
+                    if (isTarget)
+                    {
+                        activatedCount++;
+                        activatedZone = zone;
+                    }
                     Debug.Log($"[GameManager] {zone.name} → {(isTarget ? "활성화" : "비활성화")}");
                 }
             }
@@ -227,7 +233,29 @@ namespace HideAndInk.Core.Managers
                 Debug.LogWarning($"[GameManager] Zone_{targetZone} 오브젝트를 찾을 수 없음!");
             }
 
-            // Player 위치 복원
+            // === Ground 동기화 ===
+            ZoneChanger.SyncGroundObjects(targetZone);
+
+            // === Underwater Effects 설정 ===
+            if (ZoneChanger.IsFogZone(targetZone))
+            {
+                bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
+                ZoneChanger.SetUnderwaterEffect(true, isDark);
+                Debug.Log($"[GameManager] Underwater Effects {(isDark ? "어둡게" : "밝게")} 활성화 (Zone {targetZone})");
+            }
+            else
+            {
+                ZoneChanger.SetUnderwaterEffect(false);
+                Debug.Log($"[GameManager] Underwater Effects 비활성화 (Zone {targetZone})");
+            }
+
+            // === 치메라 이동 ===
+            MoveCameraToZone(targetZone, activatedZone);
+
+            // === Canvas_Ingame 설정 ===
+            UpdateCanvasIngame(targetZone);
+
+            // === Player 위치 복원 ===
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
@@ -236,16 +264,11 @@ namespace HideAndInk.Core.Managers
                 // 저장된 위치가 zero이면 활성화된 Zone의 위치로 fallback
                 if (targetPos == Vector3.zero)
                 {
-                    foreach (var zone in allZones)
+                    if (activatedZone != null)
                     {
-                        if (zone.activeInHierarchy)
-                        {
-                            targetPos = zone.transform.position;
-                            // 플레이어의 현재 y 높이는 유지 (땅에 붙이기)
-                            targetPos.y = player.transform.position.y;
-                            Debug.Log($"[GameManager] 저장 위치가 zero → {zone.name} 위치({targetPos})로 fallback");
-                            break;
-                        }
+                        targetPos = activatedZone.transform.position;
+                        targetPos.y = player.transform.position.y;
+                        Debug.Log($"[GameManager] 저장 위치가 zero → {activatedZone.name} 위치({targetPos})로 fallback");
                     }
                 }
 
@@ -273,6 +296,47 @@ namespace HideAndInk.Core.Managers
             // 이어하기 정보 초기화
             SaveManager.ClearContinueZone();
             Debug.Log("[GameManager] Zone fallback 처리 완료");
+        }
+
+        /// <summary>
+        /// 활성화된 Zone 위치로 치메라를 이동합니다.
+        /// </summary>
+        private static void MoveCameraToZone(int zoneNumber, GameObject zoneObj)
+        {
+            Camera mainCam = Camera.main;
+            if (mainCam == null) return;
+
+            // Zone 오브젝트의 위치로 치메라 이동
+            if (zoneObj != null)
+            {
+                Vector3 newPos = mainCam.transform.position;
+                newPos.x = zoneObj.transform.position.x;
+                newPos.y = zoneObj.transform.position.y;
+                mainCam.transform.position = newPos;
+                Debug.Log($"[GameManager] 치메라 이동: {newPos} (Zone_{zoneNumber})");
+            }
+
+            // CameraFollow가 있으면 타겟 위치로 스냅
+            var cameraFollow = Object.FindObjectOfType<HideAndInk.CameraSystem.CameraFollow>();
+            if (cameraFollow != null)
+            {
+                cameraFollow.enabled = true;
+                Debug.Log("[GameManager] CameraFollow 활성화");
+            }
+        }
+
+        /// <summary>
+        /// Canvas_Ingame을 Zone에 따라 활성화/비활성화합니다.
+        /// </summary>
+        private static void UpdateCanvasIngame(int zoneNumber)
+        {
+            var canvasIngame = GameObject.Find("Canvas_Ingame");
+            if (canvasIngame != null)
+            {
+                bool shouldBeActive = zoneNumber >= 1 && zoneNumber <= 6;
+                canvasIngame.SetActive(shouldBeActive);
+                Debug.Log($"[GameManager] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
+            }
         }
 
         private System.Collections.IEnumerator PlayPrologueDelayed()
