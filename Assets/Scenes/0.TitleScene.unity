@@ -1617,7 +1617,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
-        m_MethodName: SetBgmVolume
+        m_MethodName: SetSfxVolume
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3034,7 +3034,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
-        m_MethodName: SetSfxVolume
+        m_MethodName: SetBgmVolume
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
