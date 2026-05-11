@@ -48,27 +48,9 @@ namespace HideAndInk.Scripts.UI
         private ISfxService _sfx;
         private IBgmService _bgm;
 
-        private void Awake()
+        private void OnEnable()
         {
-            // 1순위: DI 컨테이너에서 해결
-            if (GameManager.Container != null)
-            {
-                if (GameManager.Container.IsRegistered<ISfxService>())
-                    _sfx = GameManager.Container.Resolve<ISfxService>();
-                if (GameManager.Container.IsRegistered<IBgmService>())
-                    _bgm = GameManager.Container.Resolve<IBgmService>();
-            }
-
-            // 2순위: Singleton 인스턴스 fallback (DI 미등록 시에도 작동)
-            if (_sfx == null)
-                _sfx = SfxManager.Instance;
-            if (_bgm == null)
-                _bgm = BgmManager.Instance;
-        }
-
-        private void Start()
-        {
-            // 항상 살아있는 Singleton Instance를 강제로 사용 (DI에 파괴 인스턴스가 등록되었을 수 있음)
+            // 항상 살아있는 Singleton Instance를 강제로 사용
             _sfx = SfxManager.Instance;
             _bgm = BgmManager.Instance;
 
@@ -87,6 +69,8 @@ namespace HideAndInk.Scripts.UI
                 bgmMuteToggle.SetIsOnWithoutNotify(_bgm.Muted);
             if (_sfx != null && sfxMuteToggle != null)
                 sfxMuteToggle.SetIsOnWithoutNotify(_sfx.Muted);
+
+            Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}");
         }
 
         /// <summary>
