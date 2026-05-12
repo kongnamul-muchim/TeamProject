@@ -42,6 +42,7 @@ public sealed class ChichiChargeUI : MonoBehaviour
             _chargeText.font = fontAsset;
         _chargeText.fontSize = fontSize;
         _chargeText.color = textColor;
+        _chargeText.fontStyle = FontStyles.Bold;
         _chargeText.alignment = TextAlignmentOptions.Center;
         _chargeText.textWrappingMode = TextWrappingModes.PreserveWhitespaceNoWrap;
 
