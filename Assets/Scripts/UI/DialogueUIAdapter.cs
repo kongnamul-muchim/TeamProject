@@ -323,6 +323,10 @@ public class DialogueUIAdapter : MonoBehaviour
         if (_typewriterCoroutine != null)
             StopCoroutine(_typewriterCoroutine);
 
+        // GameObject가 비활성화 상태면 활성화 후 코루틴 시작
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
         _isCurrentlyTyping = true;
         _typewriterCoroutine = StartCoroutine(TypewriterRoutine(text));
     }
