@@ -157,7 +157,9 @@ namespace HideAndInk.Gameplay
                 yield return new WaitForSecondsRealtime(1f);
             }
 
-            // 5. 타이틀 씬으로 넘어가기 전 시간 복구
+            // 5. 타이틀 씬으로 넘어가기 전 시간 복구 및 입력 차단 해제
+            // (StoryEvents.IsInputBlocked가 true인 채로 남으면 새 게임 프롤로그에서 입력이 막힘)
+            StoryEvents.IsInputBlocked = false;
             Time.timeScale = 1.0f;
             SceneManager.LoadScene(titleSceneName);
         }
