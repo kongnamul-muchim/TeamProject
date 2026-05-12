@@ -84,7 +84,18 @@ namespace HideAndInk.Core.Audio
                 }
             }
 
-            // 2. 못 찾으면 자기 오브젝트에 추가
+            // 2. 자기 오브젝트에 이미 AudioSource가 있는지 확인 (BGM_Player_01 등)
+            if (_source == null)
+            {
+                _source = GetComponent<AudioSource>();
+                if (_source != null)
+                {
+                    _source.loop = true;
+                    _source.volume = 1f;
+                }
+            }
+
+            // 3. 그래도 없으면 새로 추가
             if (_source == null)
             {
                 _source = gameObject.AddComponent<AudioSource>();
