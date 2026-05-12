@@ -172,7 +172,7 @@ namespace HideAndInk.Core.Enemy.Boss
             _stateMachine.Initialize(EnemyAIState.Patrol);
         }
 
-        private void Update()
+        protected override void Update()
         {
             // Zone이 비활성화되면 보스 오브젝트 전체 비활성화
             if (!_isZoneActive)
@@ -186,6 +186,9 @@ namespace HideAndInk.Core.Enemy.Boss
                 }
                 return;
             }
+
+            // ★ base.Update() 호출 → EnemyAIController.UpdateAI/UpdateMovement/UpdateViewDirection 실행
+            base.Update();
         }
 
         protected override void ScanGroundBounds()

@@ -193,55 +193,35 @@ namespace HideAndInk.Core.Managers
             int targetZone = SaveManager.PendingZoneIndex;
             Debug.Log($"[GameManager] ContinueZoneHandler 없음 → 직접 Zone_{targetZone} 활성화");
 
-            // === ZoneChanger를 찾아서 ChangeZone 직접 호출 ===
-            // 해당 Zone으로 가는 ZoneChanger를 찾음
-            var zoneChangers = FindObjectsOfType<ZoneChanger>();
-            ZoneChanger targetChanger = null;
-            foreach (var changer in zoneChangers)
+            // === ZoneChanger 우회: 모든 Zone 오브젝트를 재귀 탐색하여 직접 활성화/비활성화 ===
+            // ContinueZoneHandler의 FindAllZoneObjects와 동일한 로직.
+            // ZoneChanger.ChangeZone()은 StageClear 효과음/BGM 변경 등 사이드 이펙트가 있어 이어하기에 부적합.
+            var rootObjects = scene.GetRootGameObjects();
+            var allZoneObjects = new List<GameObject>();
+            foreach (var root in rootObjects)
             {
-                if (changer.toZoneNumber == targetZone)
-                {
-                    targetChanger = changer;
-                    break;
-                }
+                CollectZoneObjectsRecursive(root.transform, allZoneObjects);
             }
 
-            if (targetChanger != null)
+            foreach (var zone in allZoneObjects)
             {
-                Debug.Log($"[GameManager] ZoneChanger 찾음: {targetChanger.name} → ChangeZone 직접 호출");
-                targetChanger.ChangeZone();
+                int zoneNum = ExtractZoneNumberFromName(zone.name);
+                if (zoneNum < 0) continue;
+                bool isTarget = zoneNum == targetZone;
+                zone.SetActive(isTarget);
+                Debug.Log($"[GameManager] {zone.name} → {(isTarget ? "활성화" : "비활성화")}");
+            }
+
+            ZoneChanger.SyncGroundObjects(targetZone);
+
+            if (ZoneChanger.IsFogZone(targetZone))
+            {
+                bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
+                ZoneChanger.SetUnderwaterEffect(true, isDark);
             }
             else
             {
-                Debug.LogWarning($"[GameManager] Zone_{targetZone}으로 가는 ZoneChanger를 찾을 수 없음 → 수동 처리");
-                
-                // 수동 처리: Zone 오브젝트 활성화/비활성화
-                var rootObjects = scene.GetRootGameObjects();
-                foreach (var root in rootObjects)
-                {
-                    if (root.name.StartsWith("Zone_"))
-                    {
-                        string[] parts = root.name.Split('_');
-                        if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
-                        {
-                            bool isTarget = zoneNum == targetZone;
-                            root.SetActive(isTarget);
-                            Debug.Log($"[GameManager] {root.name} → {(isTarget ? "활성화" : "비활성화")}");
-                        }
-                    }
-                }
-                
-                ZoneChanger.SyncGroundObjects(targetZone);
-                
-                if (ZoneChanger.IsFogZone(targetZone))
-                {
-                    bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
-                    ZoneChanger.SetUnderwaterEffect(true, isDark);
-                }
-                else
-                {
-                    ZoneChanger.SetUnderwaterEffect(false);
-                }
+                ZoneChanger.SetUnderwaterEffect(false);
             }
 
             // === Player 위치 복원 ===
@@ -338,6 +318,32 @@ namespace HideAndInk.Core.Managers
                 canvasIngame.SetActive(shouldBeActive);
                 Debug.Log($"[GameManager] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
             }
+        }
+
+        /// <summary>
+        /// 트랜스폼 트리를 재귀적으로 탐색하여 이름이 "Zone_{number}_" 패턴과 일치하는 오브젝트를 찾습니다.
+        /// ContinueZoneHandler.FindAllZoneObjects의 로직과 동일합니다.
+        /// </summary>
+        private static void CollectZoneObjectsRecursive(Transform parent, List<GameObject> results)
+        {
+            string name = parent.name.Trim();
+            if (name.StartsWith("Zone_") && ExtractZoneNumberFromName(name) > 0)
+                results.Add(parent.gameObject);
+
+            foreach (Transform child in parent)
+                CollectZoneObjectsRecursive(child, results);
+        }
+
+        /// <summary>
+        /// "Zone_{number}_..." 형식의 이름에서 숫자 부분을 추출합니다.
+        /// 예: "Zone_1_Object" → 1, "Zone_Object" → -1
+        /// </summary>
+        private static int ExtractZoneNumberFromName(string zoneName)
+        {
+            string[] parts = zoneName.Trim().Split('_');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out int number))
+                return number;
+            return -1;
         }
 
         private System.Collections.IEnumerator PlayPrologueDelayed()
