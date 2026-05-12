@@ -148,6 +148,8 @@ public class ZoneChanger : MonoBehaviour
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IBgmService>())
                 _bgmService = GameManager.Container.Resolve<IBgmService>();
 
+            Debug.Log($"[ZoneChanger] '{name}' BGM Service resolved: {(_bgmService != null ? "OK" : "NULL")}");
+
         // 게임 시작 시 현재 활성 Zone의 Ground 동기화
         // (deactivateZones[0]이 활성화되어 있으면 fromZoneNumber가 현재 활성 Zone)
         if (fromZoneNumber >= 0 && deactivateZones != null && deactivateZones.Length > 0)
@@ -206,6 +208,13 @@ public class ZoneChanger : MonoBehaviour
             $"칼라이동={enableCameraMove}, " +
             $"투명벽={createInvisibleWall}, " +
             $"위치={transform.position}");
+
+        // 게임 시작 시 현재 활성 Zone의 BGM도 재생 (Zone 1 시작 시)
+        if (fromZoneNumber >= 1 && fromZoneNumber <= 5 && _bgmService != null)
+        {
+            Debug.Log($"[ZoneChanger] Initial BGM play for Zone {fromZoneNumber}");
+            _bgmService.Play((BgmId)fromZoneNumber);
+        }
     }
 
     // 3D 콜라이더용 트리거
