@@ -192,6 +192,10 @@ public class ZoneChanger : MonoBehaviour
         int currentZone = fromZoneNumber >= 0 ? fromZoneNumber : toZoneNumber;
         UpdateCanvasIngame(currentZone);
 
+        // ZoneResetHandler가 없으면 자동 추가 (천력/잉크 리셋 보장)
+        if (GetComponent<ZoneResetHandler>() == null)
+            gameObject.AddComponent<ZoneResetHandler>();
+
         Debug.Log($"[ZoneChanger] '{name}' 초기화: " +
             $"비활성화={fromZoneNumber}({(deactivateZones != null ? deactivateZones.Length : 0)}개), " +
             $"활성화={toZoneNumber}({(activateZones != null ? activateZones.Length : 0)}개), " +
