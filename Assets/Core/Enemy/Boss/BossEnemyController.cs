@@ -137,6 +137,15 @@ namespace HideAndInk.Core.Enemy.Boss
             isDefaultFacingLeft = defaultFacingLeft;
             base.Start();
 
+            // ★ MorayEel 초기 Y 강제 고정 (씬 배치 Y와 무관)
+            if (_activeGimmick is RelentlessChaseGimmick)
+            {
+                Vector3 initPos = transform.position;
+                initPos.y = -3.8f;
+                transform.position = initPos;
+                Debug.Log($"[MorayY-DEBUG] Start() forced Y to -3.8 (was {transform.position.y:F5})");
+            }
+
             // EventBus 해결
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IEventBus>())
             {
@@ -169,6 +178,15 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _patrolBehavior.SetGroundBounds(_groundBounds);
             }
+            // ★ MorayEel: Start 시 Y 강제 고정 (씬 배치 Y와 무관)
+            if (_activeGimmick is RelentlessChaseGimmick)
+            {
+                Vector3 initPos = transform.position;
+                initPos.y = -3.8f;
+                transform.position = initPos;
+                Debug.Log($"[MorayY-DEBUG] Start() forced Y to -3.8");
+            }
+
             _stateMachine.Initialize(EnemyAIState.Patrol);
         }
 
@@ -898,6 +916,8 @@ namespace HideAndInk.Core.Enemy.Boss
                 // _movement.Stop()이 호출되면 charge가 중단됨
                 if (_movement != null)
                 {
+                    float yBefore = transform.position.y;
+
                     _movement.Update(deltaTime);
                     if (_movement.IsMoving)
                     {
@@ -922,10 +942,15 @@ namespace HideAndInk.Core.Enemy.Boss
                     }
 
                     // ★ Y 강제 고정 (IsMoving과 무관하게 매 프레임 적용)
-                    //    돌진 시작/종료/사이 텀 모두 Y=-3.8f 유지
                     Vector3 forceY = transform.position;
                     forceY.y = -3.8f;
                     transform.position = forceY;
+
+                    // ★ 디버그: Y가 -3.8 이외의 값으로 변경된 경우 추적
+                    if (Mathf.Abs(yBefore - (-3.8f)) > 0.01f && yBefore != -3.8f)
+                    {
+                        Debug.LogWarning($"[MorayY-DEBUG] Frame: pos.y was {yBefore:F5} before correction → forced to -3.8");
+                    }
                 }
             }
             else
