@@ -18,7 +18,7 @@ namespace HideAndInk.Core.Audio
         public static BgmManager Instance { get; private set; }
 
         [SerializeField] private BgmEntry[] bgmClips;
-        [SerializeField][Range(0f, 1f)] private float defaultVolume = 1f;
+        [Range(0f, 1f)] private float defaultVolume = 1f;
 
         private AudioSource _source;
         private Dictionary<BgmId, AudioClip> _clipMap;
