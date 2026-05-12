@@ -103,6 +103,10 @@ public class ZoneChanger : MonoBehaviour
     [Tooltip("이 Zone이 활성화될 때 켤 벽 이름 (예: Wall_01). 비워두면 사용 안 함")]
     public string activeWallName = "";
 
+    [Header("Zone 6+ 게임플레이 UI")]
+    [Tooltip("Zone 6부터 비활성화할 Canvas_Ingame 자식 이름들")]
+    public string[] gameplayUIElementsToHide = new string[] { "Panel_PlayerInfo", "Btn_Pause", "UI_SuspicionVinette" };
+
     [Header("Events")]
     [Tooltip("구역 전환 완료 시 호출 (매개변수: toZoneNumber)")]
     public UnityEvent<int> onZoneChanged;
@@ -549,23 +553,38 @@ public class ZoneChanger : MonoBehaviour
             ActivateSingleWallInContainer();
         }
 
-        // ── Canvas_Ingame: Zone 1~5 활성화, Zone 6부터 비활성화 ──
+        // ── Canvas_Ingame: 항상 활성화, Zone 6+ 에서는 게임플레이 UI 요소만 비활성화 ──
         UpdateCanvasIngame(toZoneNumber);
     }
 
     /// <summary>
-    /// Canvas_Ingame의 활성화 상태를 Zone 번호에 따라 설정합니다.
-    /// Zone 1~5에서는 활성화, Zone 6부터는 비활성화합니다.
+    /// Canvas_Ingame은 항상 활성화하고, Zone 6+에서는 게임플레이 UI 요소만 비활성화합니다.
+    /// DialogueUIAdapter, Popup_GameOver 등은 계속 사용 가능해야 합니다.
     /// </summary>
     private void UpdateCanvasIngame(int zoneNumber)
     {
         if (canvasIngame == null) return;
 
-        bool shouldBeActive = (zoneNumber >= 1 && zoneNumber <= 5);
-        if (canvasIngame.activeSelf != shouldBeActive)
+        // Canvas_Ingame은 항상 활성화 (DialogueUIAdapter, Popup_GameOver 등을 위해)
+        if (!canvasIngame.activeSelf)
         {
-            canvasIngame.SetActive(shouldBeActive);
-            Debug.Log($"[ZoneChanger] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
+            canvasIngame.SetActive(true);
+            Debug.Log($"[ZoneChanger] Canvas_Ingame = true (always active for UI children)");
+        }
+
+        // Zone 6+ 에서는 게임플레이 UI 요소만 비활성화
+        bool showGameplayUI = (zoneNumber >= 1 && zoneNumber <= 5);
+        foreach (string childName in gameplayUIElementsToHide)
+        {
+            Transform child = canvasIngame.transform.Find(childName);
+            if (child != null)
+            {
+                if (child.gameObject.activeSelf != showGameplayUI)
+                {
+                    child.gameObject.SetActive(showGameplayUI);
+                    Debug.Log($"[ZoneChanger] {childName} = {showGameplayUI} (Zone {zoneNumber})");
+                }
+            }
         }
     }
 
