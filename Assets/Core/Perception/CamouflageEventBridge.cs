@@ -342,7 +342,6 @@ namespace HideAndInk.Core.Perception
             Vector3 spawnPos = _visualTransform.position;
             spawnPos.y += inkMarkYOffset;
             spawnPos.y += inkMarkYMicroOffset; // Z-fighting 방지 미세 보정
-            spawnPos.z = -0.5f; // 배경보다 앞으로 (칵테일 샌드위치 문제 해결)
 
             // X축 -90°로 명시적 회전 (바닥에 눕힘)
             Quaternion spawnRotation = Quaternion.Euler(-90f, 0f, 0f);
@@ -350,13 +349,12 @@ namespace HideAndInk.Core.Perception
             GameObject inkMark = Instantiate(selectedMark, spawnPos, spawnRotation);
             inkMark.transform.localScale = inkMarkScale;
 
-            // Sorting Order 설정 (바닥보다 위에 표시)
+            // Sorting Layer/Priority 설정 — 배경보다 위, Player 아래 정도
             SpriteRenderer sr = inkMark.GetComponent<SpriteRenderer>();
             if (sr != null)
             {
+                sr.sortingLayerName = "midground";
                 sr.sortingOrder = inkMarkSortingOrder;
-                // 배경과 동일한 SortingLayer를 사용하되, Order로 구분
-                // 혹시 모를 중복 생성 시 Layer 변경 방지
             }
         }
 
@@ -373,16 +371,20 @@ namespace HideAndInk.Core.Perception
         }
 
         /// <summary>
-        /// VFX SpriteRenderer의 머티리얼 render queue를 Overlay로 강제.
-        /// Player의 OctopusCamouflage 쉐이더(ZTest Always)보다 무조건 앞에 오게 함.
+        /// VFX SpriteRenderer를 Player보다 무조건 앞에 렌더링.
+        /// Player: ZTest Always + XRayMaterialDualizer(2개 머티리얼)
+        /// VFX:   Sprite-Unlit-Default
+        /// 
+        /// → Sorting Layer를 "foreground"(가장 높은 레이어)로 변경.
+        ///   Sorting Layer는 ZTest/Queue와 관계없이 렌더 순서를 결정함.
         /// </summary>
         private void ForceRenderOnTop(SpriteRenderer sr)
         {
-            if (sr == null || sr.material == null) return;
-            // 항상 새 인스턴스 생성 (프리팹 에셋 영향 방지)
-            Material mat = new Material(sr.material);
-            sr.material = mat;
-            mat.renderQueue = (int)RenderQueue.Overlay; // 4000
+            if (sr == null) return;
+
+            // sorting layer를 "foreground"로 변경 (Default → foreground로 올림)
+            sr.sortingLayerName = "foreground";
+            sr.sortingOrder = 0;
         }
 
     }
