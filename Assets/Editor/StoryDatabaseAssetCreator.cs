@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 
@@ -55,3 +56,4 @@ public static class StoryDatabaseAssetCreator
         Debug.Log($"[StoryDatabaseAssetCreator] Created new asset: {assetPath}");
     }
 }
+#endif
