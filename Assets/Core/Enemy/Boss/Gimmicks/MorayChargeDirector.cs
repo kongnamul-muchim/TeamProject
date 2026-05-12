@@ -20,10 +20,14 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [SerializeField] private MorayChargeIndicator indicator;
         [Tooltip("인디케이터 너비")]
         [SerializeField] private float indicatorWidth = 2.5f;
-        [Tooltip("활성화 색상")]
-        [SerializeField] private Color activeColor = new Color(1f, 0.2f, 0.2f, 0.6f);
+        [Tooltip("인디케이터 높이 (입체 Box)")]
+        [SerializeField] private float indicatorHeight = 0.5f;
+        [Tooltip("Player가 구역 밖일 때 색상 (연붉은색)")]
+        [SerializeField] private Color safeColor = new Color(1f, 0.3f, 0.3f, 0.5f);
+        [Tooltip("Player가 구역 안일 때 색상 (붉은색)")]
+        [SerializeField] private Color dangerColor = new Color(1f, 0f, 0f, 0.85f);
         [Tooltip("임박 색상 (곧 돌진)")]
-        [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 0.9f);
+        [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 1f);
 
         [Header("돌진 설정")]
         [Tooltip("돌진 속도")]
@@ -88,6 +92,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         // 시퀀스 코루틴 (상태머신 대체)
         private Coroutine _sequenceCoroutine;
 
+        // Player 감지 (Prepare 단계)
+        private bool _isInPreparePhase;
+        private Coroutine _detectionCoroutine;
+
         // ──────────────────────────────────────────────
         // MonoBehaviour
         // ──────────────────────────────────────────────
@@ -142,6 +150,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
             if (indicator != null)
                 indicator.ClearAll();
+
+            _isInPreparePhase = false;
+            if (_detectionCoroutine != null)
+            {
+                StopCoroutine(_detectionCoroutine);
+                _detectionCoroutine = null;
+            }
         }
 
         /// <summary>
@@ -173,11 +188,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 CalculateChargePath(i);
             }
 
-            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (Ground 높이 사용, boss Y 무시)
+            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (Y = -3.8f 고정)
             if (_chargeStarts.Length > 0)
             {
                 Vector3 preparePos = _chargeStarts[0];
-                // _chargeStarts의 Y는 이미 CalculateChargePath에서 Ground 높이로 설정됨
+                preparePos.y = -3.8f;
                 OnPrepareTeleport?.Invoke(preparePos);
             }
 
@@ -192,7 +207,9 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             if (indicator == null) return;
             indicator.Width = indicatorWidth;
-            indicator.ActiveColor = activeColor;
+            indicator.Height = indicatorHeight;
+            indicator.SafeColor = safeColor;
+            indicator.DangerColor = dangerColor;
             indicator.ImminentColor = imminentColor;
         }
 
@@ -216,11 +233,18 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
             if (indicator != null)
                 indicator.ClearAll();
+
+            _isInPreparePhase = false;
+            if (_detectionCoroutine != null)
+            {
+                StopCoroutine(_detectionCoroutine);
+                _detectionCoroutine = null;
+            }
         }
 
         /// <summary>
         /// 강제 중단 (Player 이탈/사망 등 예외 상황)
-        /// 코루틴 정지 + 이벤트 발행 → Patrol 복귀 트리거
+        /// 코루틴 정리 + 이벤트 발행 → Patrol 복귀 트리거
         /// </summary>
         public void ForceInterrupt()
         {
@@ -228,6 +252,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 StopCoroutine(_sequenceCoroutine);
                 _sequenceCoroutine = null;
+            }
+
+            _isInPreparePhase = false;
+            if (_detectionCoroutine != null)
+            {
+                StopCoroutine(_detectionCoroutine);
+                _detectionCoroutine = null;
             }
 
             if (indicator != null)
@@ -257,6 +288,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 yield return new WaitForSeconds(minSquareInterval);
             }
 
+            // === Player 감지 시작 (Prepare ~ Charge 동안 실행) ===
+            _isInPreparePhase = true;
+            _detectionCoroutine = StartCoroutine(PlayerDetectionCoroutine());
+
             // === Charge Phase: N회 돌진 ===
             for (int i = 0; i < _totalCharges; i++)
             {
@@ -268,12 +303,65 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             }
 
             // === Complete ===
+            _isInPreparePhase = false;
+            if (_detectionCoroutine != null)
+            {
+                StopCoroutine(_detectionCoroutine);
+                _detectionCoroutine = null;
+            }
+
             if (indicator != null)
                 indicator.ClearAll();
             OnMovementStop?.Invoke();
             OnChargesComplete?.Invoke();
 
             _sequenceCoroutine = null;
+        }
+
+        /// <summary>
+        /// Prepare ~Charge 동안 Player가 각 인디케이터 구역 안에 있는지 감지
+        /// (Imminent 상태는 제외 — 돌진 직전이므로 의미 없음)
+        /// </summary>
+        private System.Collections.IEnumerator PlayerDetectionCoroutine()
+        {
+            WaitForSeconds interval = new WaitForSeconds(0.1f); // 0.1초마다 체크
+
+            while (_isInPreparePhase && indicator != null)
+            {
+                for (int i = 0; i < _totalCharges; i++)
+                {
+                    if (i >= _chargeStarts.Length) break;
+                    if (i >= _chargeEnds.Length) break;
+
+                    // OverlapBox로 Player 감지
+                    bool inZone = IsPlayerInIndicatorZone(
+                        _chargeStarts[i], _chargeEnds[i], indicatorWidth
+                    );
+                    indicator.SetPlayerInZone(i, inZone);
+                }
+
+                yield return interval;
+            }
+        }
+
+        /// <summary>
+        /// 특정 돌진 경로(인디케이터)에 Player가 있는지 OverlapBox로 검사
+        /// CheckChargeHit와 동일한 로직, 충돌 플래그 없음
+        /// </summary>
+        private bool IsPlayerInIndicatorZone(Vector3 start, Vector3 end, float width)
+        {
+            if (_playerTransform == null) return false;
+
+            Vector3 dir = (end - start).normalized;
+            float distance = Vector3.Distance(start, end);
+            Vector3 center = (start + end) * 0.5f;
+            Vector3 halfExtents = new Vector3(width * 0.5f, 2f, distance * 0.5f);
+
+            int playerLayer = 1 << LayerMask.NameToLayer("Player");
+            if (playerLayer == 0) return false;
+
+            Collider[] hits = Physics.OverlapBox(center, halfExtents, Quaternion.LookRotation(dir), playerLayer);
+            return hits.Length > 0;
         }
 
         private System.Collections.IEnumerator ExecuteSingleChargeCoroutine(int index)
@@ -287,10 +375,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            // ★ Ground 높이로 통일 (boss Y 무시, Raycast로 찾은 groundY 사용)
-            float groundY = GetGroundY(start, start.y);
-            start.y = groundY;
-            end.y = groundY;
+            // ★ Y 고정: -3.8f (곰치가 공중에서 돌진, 땅에 박히지 않음)
+            float chargeY = -3.8f;
+            start.y = chargeY;
+            end.y = chargeY;
 
             OnChargeExecute?.Invoke(start, end);
             OnSpeedOverride?.Invoke(chargeSpeed);

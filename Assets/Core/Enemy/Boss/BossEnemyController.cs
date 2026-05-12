@@ -1290,7 +1290,7 @@ namespace HideAndInk.Core.Enemy.Boss
         /// <summary>
         /// Moray Charge 종료 후 위치 보정:
         /// 1. XZ를 GroundBounds 내로 클램핑
-        /// 2. 현재 위치에서 Ground Y를 Raycast로 탐색 후 적용
+        /// 2. Y → -3.8f 고정 (곰치 공중 유지)
         /// </summary>
         private void RestorePositionAfterCharge()
         {
@@ -1306,26 +1306,8 @@ namespace HideAndInk.Core.Enemy.Boss
                 pos.z = _groundBounds.ClampZ(pos.z);
             }
 
-            // 2단계: Y → Ground 높이로 보정 (Raycast)
-            if (groundLayer.value != 0)
-            {
-                float checkHeight = pos.y + 10f;
-                if (Physics.Raycast(new Vector3(pos.x, checkHeight, pos.z), Vector3.down,
-                    out RaycastHit hit, 20f, groundLayer))
-                {
-                    pos.y = hit.point.y + 0.05f;
-                }
-                else
-                {
-                    // 아래쪽 실패 시 위쪽도 체크
-                    float checkLow = pos.y - 0.1f;
-                    if (checkLow > -100f && Physics.Raycast(new Vector3(pos.x, checkLow, pos.z), Vector3.up,
-                        out hit, 20f, groundLayer))
-                    {
-                        pos.y = hit.point.y + 0.05f;
-                    }
-                }
-            }
+            // 2단계: Y 고정 (-3.8f, 곰치가 항상 공중에 있도록)
+            pos.y = -3.8f;
 
             transform.position = pos;
         }

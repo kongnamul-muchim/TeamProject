@@ -14,19 +14,30 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         [Header("네모 설정")]
         [Tooltip("인디케이터 너비")]
         [SerializeField] private float indicatorWidth = 2.5f;
-        [Tooltip("활성화 색상")]
-        [SerializeField] private Color activeColor = new Color(1f, 0.2f, 0.2f, 0.6f);
-        [Tooltip("임박 색상")]
-        [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 0.9f);
-        [Tooltip("높이 오프셋")]
-        [SerializeField] private float heightOffset = 0f; // 바닥 높이 (Director가 _floorY로 조정)
+        [Tooltip("인디케이터 높이 (박스 두께)")]
+        [SerializeField] private float indicatorHeight = 0.5f;
+        [Tooltip("Player가 구역 밖일 때 색상 (연붉은색)")]
+        [SerializeField] private Color safeColor = new Color(1f, 0.3f, 0.3f, 0.5f);
+        [Tooltip("Player가 구역 안일 때 색상 (붉은색)")]
+        [SerializeField] private Color dangerColor = new Color(1f, 0f, 0f, 0.85f);
+        [Tooltip("임박 색상 (곧 돌진)")]
+        [SerializeField] private Color imminentColor = new Color(1f, 0f, 0f, 1f);
         [Tooltip("오브젝트 풀 크기")]
-        [SerializeField] private int poolSize = 5; // 최대 동시 네모 수
+        [SerializeField] private int poolSize = 5;
 
-        // Director가 값을 적용할 수 있도록 public setter (중복 설정 방지)
+        // Director가 값을 적용할 수 있도록 public setter
         public float Width { set => indicatorWidth = value; }
-        public Color ActiveColor { set => activeColor = value; }
+        public float Height { set => indicatorHeight = value; }
+        public Color SafeColor { set => safeColor = value; }
+        public Color DangerColor { set => dangerColor = value; }
         public Color ImminentColor { set => imminentColor = value; }
+
+        private enum IndicatorState
+        {
+            Safe,
+            Danger,
+            Imminent
+        }
 
         private struct ChargePath
         {
@@ -36,6 +47,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             public MeshRenderer renderer;
             public MeshFilter filter;
             public bool isActive;
+            public IndicatorState state;
         }
 
         private List<ChargePath> _paths = new List<ChargePath>();
@@ -52,7 +64,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             _baseMaterial = new Material(shader);
             if (_baseMaterial != null)
             {
-                _baseMaterial.color = activeColor;
+                _baseMaterial.color = safeColor;
                 _baseMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
             }
 
@@ -85,12 +97,12 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             vertices[3] = Vector3.zero;
             mesh.vertices = vertices;
             mesh.triangles = new int[6] { 0, 1, 2, 0, 2, 3 };
-            mesh.colors = new Color[4] { activeColor, activeColor, activeColor, activeColor };
+            mesh.colors = new Color[8] { safeColor, safeColor, safeColor, safeColor, safeColor, safeColor, safeColor, safeColor };
             mesh.RecalculateNormals();
             mf.mesh = mesh;
 
             mr.material = _baseMaterial != null ? Instantiate(_baseMaterial) : null;
-            if (mr.material != null) mr.material.color = activeColor;
+            if (mr.material != null) mr.material.color = safeColor;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.sortingLayerName = "Default";
             mr.sortingOrder = -1;
@@ -141,10 +153,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 mf.mesh = mesh;
             }
 
-            // Local 좌표로 mesh 작성 (world - center)
-            UpdateMeshGeometryLocal(mesh, start - center, end - center);
+            // Local 좌표로 mesh 작성 (world - center) — 입체 Box
+            UpdateMeshGeometryBox(mesh, start - center, end - center, indicatorHeight);
 
-            if (mr.material != null) mr.material.color = activeColor;
+            if (mr.material != null) mr.material.color = safeColor;
 
             ChargePath path = new ChargePath
             {
@@ -153,33 +165,60 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 gameObject = go,
                 renderer = mr,
                 filter = mf,
-                isActive = true
+                isActive = true,
+                state = IndicatorState.Safe
             };
 
             _paths.Add(path);
             return _paths.Count - 1;
         }
 
-        private void UpdateMeshGeometryLocal(Mesh mesh, Vector3 localStart, Vector3 localEnd)
+        /// <summary>
+        /// 입체 Box 메쉬 생성 (8버텍스, 12삼각형)
+        /// 바닥면이 지면에 붙고, 윗면이 indicatorHeight만큼 솟음
+        /// </summary>
+        private void UpdateMeshGeometryBox(Mesh mesh, Vector3 localStart, Vector3 localEnd, float boxHeight)
         {
             Vector3 dir = (localEnd - localStart).normalized;
+            if (dir.sqrMagnitude < 0.001f) dir = Vector3.right;
             Vector3 perp = Vector3.Cross(dir, Vector3.up).normalized;
+            if (perp.sqrMagnitude < 0.001f) perp = Vector3.forward;
             float halfW = indicatorWidth * 0.5f;
-            float h = heightOffset;
 
-            Vector3[] vertices = new Vector3[4];
-            vertices[0] = localStart + perp * halfW + Vector3.up * h;
-            vertices[1] = localStart - perp * halfW + Vector3.up * h;
-            vertices[2] = localEnd - perp * halfW + Vector3.up * h;
-            vertices[3] = localEnd + perp * halfW + Vector3.up * h;
+            // 8개 버텍스 (아래4 + 위4)
+            Vector3[] vertices = new Vector3[8];
+            // Bottom
+            vertices[0] = localStart + perp * halfW;               // 0: 우측-시작
+            vertices[1] = localStart - perp * halfW;               // 1: 좌측-시작
+            vertices[2] = localEnd - perp * halfW;                 // 2: 좌측-끝
+            vertices[3] = localEnd + perp * halfW;                 // 3: 우측-끝
+            // Top
+            vertices[4] = localStart + perp * halfW + Vector3.up * boxHeight;
+            vertices[5] = localStart - perp * halfW + Vector3.up * boxHeight;
+            vertices[6] = localEnd - perp * halfW + Vector3.up * boxHeight;
+            vertices[7] = localEnd + perp * halfW + Vector3.up * boxHeight;
             mesh.vertices = vertices;
 
-            mesh.triangles = new int[6] { 0, 1, 2, 0, 2, 3 };
-
-            Color[] colors = new Color[4]
+            // 12개 삼각형 (36 indices)
+            mesh.triangles = new int[36]
             {
-                activeColor, activeColor, activeColor, activeColor
+                // Bottom (0,1,2,3) — 뒷면이지만 Cull Off이므로 표시됨
+                0, 3, 2,  0, 2, 1,
+                // Top (4,5,6,7)
+                4, 5, 6,  4, 6, 7,
+                // Start face (0,1,5,4)
+                0, 4, 5,  0, 5, 1,
+                // End face (3,7,6,2)
+                3, 2, 6,  3, 6, 7,
+                // Left face (1,2,6,5)
+                1, 5, 6,  1, 6, 2,
+                // Right face (0,3,7,4)
+                0, 7, 3,  0, 4, 7
             };
+
+            // 현재 state에 맞는 색상 사용 (Pool 생성 시에는 safeColor)
+            Color c = safeColor;
+            Color[] colors = new Color[8] { c, c, c, c, c, c, c, c };
             mesh.colors = colors;
 
             mesh.RecalculateNormals();
@@ -224,12 +263,40 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 path.filter.mesh = mesh;
             }
 
-            UpdateMeshGeometryLocal(mesh, start - center, end - center);
+            UpdateMeshGeometryBox(mesh, start - center, end - center, indicatorHeight);
             _paths[index] = path;
         }
 
         /// <summary>
+        /// Player가 인디케이터 구역 안에 있는지 설정
+        /// Safe ↔ Danger 색상 전환 (Imminent 상태는 오버라이드 하지 않음)
+        /// </summary>
+        public void SetPlayerInZone(int chargeIndex, bool inZone)
+        {
+            if (chargeIndex < 0 || chargeIndex >= _paths.Count) return;
+            if (!_paths[chargeIndex].isActive) return;
+
+            // Imminent 상태면 Player 감지 무시
+            if (_paths[chargeIndex].state == IndicatorState.Imminent) return;
+
+            var path = _paths[chargeIndex];
+            path.state = inZone ? IndicatorState.Danger : IndicatorState.Safe;
+            Color targetColor = inZone ? dangerColor : safeColor;
+
+            if (path.renderer != null && path.renderer.material != null)
+                path.renderer.material.color = targetColor;
+            if (path.filter != null && path.filter.mesh != null)
+            {
+                Color[] colors = new Color[8] { targetColor, targetColor, targetColor, targetColor, targetColor, targetColor, targetColor, targetColor };
+                path.filter.mesh.colors = colors;
+            }
+
+            _paths[chargeIndex] = path;
+        }
+
+        /// <summary>
         /// 임박 색상 설정 (곧 돌진할 네모를 진하게)
+        /// Safe/Danger 상태를 Imminent로 오버라이드
         /// </summary>
         public void SetImminent(int chargeIndex)
         {
@@ -237,15 +304,31 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             {
                 if (!_paths[i].isActive) continue;
 
-                Color targetColor = (i == chargeIndex) ? imminentColor : activeColor;
-                if (_paths[i].renderer != null && _paths[i].renderer.material != null)
+                var path = _paths[i];
+                if (i == chargeIndex)
                 {
-                    _paths[i].renderer.material.color = targetColor;
+                    path.state = IndicatorState.Imminent;
+                    _paths[i] = path;
+
+                    if (path.renderer != null && path.renderer.material != null)
+                        path.renderer.material.color = imminentColor;
+                    if (path.filter != null && path.filter.mesh != null)
+                    {
+                        Color[] colors = new Color[8] { imminentColor, imminentColor, imminentColor, imminentColor, imminentColor, imminentColor, imminentColor, imminentColor };
+                        path.filter.mesh.colors = colors;
+                    }
                 }
-                if (_paths[i].filter != null && _paths[i].filter.mesh != null)
+                else
                 {
-                    Color[] colors = new Color[4] { targetColor, targetColor, targetColor, targetColor };
-                    _paths[i].filter.mesh.colors = colors;
+                    // 나머지는 Safe/Danger 유지 (Player 감지 결과 반영)
+                    Color targetColor = path.state == IndicatorState.Danger ? dangerColor : safeColor;
+                    if (path.renderer != null && path.renderer.material != null)
+                        path.renderer.material.color = targetColor;
+                    if (path.filter != null && path.filter.mesh != null)
+                    {
+                        Color[] colors = new Color[8] { targetColor, targetColor, targetColor, targetColor, targetColor, targetColor, targetColor, targetColor };
+                        path.filter.mesh.colors = colors;
+                    }
                 }
             }
         }
