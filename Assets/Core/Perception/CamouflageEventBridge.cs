@@ -6,6 +6,7 @@ using HideAndInk.Core.Events;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
 using HideAndInk.Core.VFX;
+using UnityEngine.Rendering;
 
 namespace HideAndInk.Core.Perception
 {
@@ -52,7 +53,7 @@ namespace HideAndInk.Core.Perception
         [SerializeField] private int endVFXSortingOrder = 10;
 
         [Tooltip("VFX Z값 미세 보정 (Player보다 약간 앞으로, Z-fighting 방지)")]
-        [SerializeField] private float vfxZOffset = 0.1f;
+        [SerializeField] private float vfxZOffset = -0.1f;
 
         [Header("End VFX 타이밍")]
         [Tooltip("Start VFX 생성 후 End VFX를 생성할 최소 지연 시간 (초)")]
@@ -71,6 +72,7 @@ namespace HideAndInk.Core.Perception
         private IEventBus _eventBus;
 
         private Transform _playerTransform;
+        private Transform _visualTransform; // Visual 자식 Transform 기준
         private GameObject _activeStartVFX;
         private Transform _startVFXTarget; // Start VFX가 따라다닐 타겟 (Player 또는 타겟 오브젝트)
         private readonly List<GameObject> _activeEndVFXs = new List<GameObject>();
@@ -81,6 +83,9 @@ namespace HideAndInk.Core.Perception
         private void Awake()
         {
             _playerTransform = transform;
+            _visualTransform = transform.Find("Visual");
+            if (_visualTransform == null)
+                _visualTransform = _playerTransform; // fallback
 
             // DI 컨테이너에서 서비스 해결
             if (GameManager.Container != null)
@@ -135,7 +140,7 @@ namespace HideAndInk.Core.Perception
                 _activeStartVFX.transform.position = pos;
             }
 
-            // End VFX: Player 위치를 따라다니되 Z값 보정
+            // End VFX: Visual 위치를 따라다니되 Z값 보정
             for (int i = _activeEndVFXs.Count - 1; i >= 0; i--)
             {
                 if (_activeEndVFXs[i] == null)
@@ -143,7 +148,7 @@ namespace HideAndInk.Core.Perception
                     _activeEndVFXs.RemoveAt(i);
                     continue;
                 }
-                Vector3 pos = _playerTransform.position;
+                Vector3 pos = _visualTransform.position;
                 pos.z += vfxZOffset;
                 _activeEndVFXs[i].transform.position = pos;
             }
@@ -180,10 +185,10 @@ namespace HideAndInk.Core.Perception
                 Destroy(_activeStartVFX);
             }
 
-            // Start VFX 생성 (Player 위치에 고정)
+            // Start VFX 생성 (Visual 위치 기준)
             if (camouflageStartVFX != null)
             {
-                Vector3 spawnPos = _playerTransform.position;
+                Vector3 spawnPos = _visualTransform.position;
                 spawnPos.z += vfxZOffset;
 
                 GameObject vfx = Instantiate(camouflageStartVFX, spawnPos, Quaternion.identity);
@@ -194,11 +199,12 @@ namespace HideAndInk.Core.Perception
                 if (sr != null)
                 {
                     sr.sortingOrder = startVFXSortingOrder;
+                    ForceRenderOnTop(sr);
                 }
 
                 ApplyVFXSpeed(vfx);
                 _activeStartVFX = vfx;
-                _startVFXTarget = _playerTransform;
+                _startVFXTarget = _visualTransform;
                 _startVFXSpawnTime = Time.time; // Start VFX 생성 시간 기록
 
                 // Start VFX는 Perfect 상태까지 유지해야 하므로 VFXSelfDestruct 제거
@@ -269,7 +275,7 @@ namespace HideAndInk.Core.Perception
                 return;
             }
 
-            Vector3 spawnPos = _playerTransform.position;
+            Vector3 spawnPos = _visualTransform.position;
             spawnPos.z += vfxZOffset;
 
             GameObject vfx = Instantiate(camouflageEndVFX, spawnPos, Quaternion.identity);
@@ -298,6 +304,7 @@ namespace HideAndInk.Core.Perception
             if (sr != null)
             {
                 sr.sortingOrder = endVFXSortingOrder;
+                ForceRenderOnTop(sr);
             }
 
             ApplyVFXSpeed(vfx);
@@ -332,7 +339,7 @@ namespace HideAndInk.Core.Perception
 
             GameObject selectedMark = inkMarkVFXs[UnityEngine.Random.Range(0, inkMarkVFXs.Length)];
 
-            Vector3 spawnPos = _playerTransform.position;
+            Vector3 spawnPos = _visualTransform.position;
             spawnPos.y += inkMarkYOffset;
             spawnPos.y += inkMarkYMicroOffset; // Z-fighting 방지 미세 보정
             spawnPos.z = -0.5f; // 배경보다 앞으로 (칵테일 샌드위치 문제 해결)
@@ -363,6 +370,19 @@ namespace HideAndInk.Core.Perception
             {
                 animator.speed = vfxSpeedMultiplier;
             }
+        }
+
+        /// <summary>
+        /// VFX SpriteRenderer의 머티리얼 render queue를 Overlay로 강제.
+        /// Player의 OctopusCamouflage 쉐이더(ZTest Always)보다 무조건 앞에 오게 함.
+        /// </summary>
+        private void ForceRenderOnTop(SpriteRenderer sr)
+        {
+            if (sr == null || sr.material == null) return;
+            // 항상 새 인스턴스 생성 (프리팹 에셋 영향 방지)
+            Material mat = new Material(sr.material);
+            sr.material = mat;
+            mat.renderQueue = (int)RenderQueue.Overlay; // 4000
         }
 
     }

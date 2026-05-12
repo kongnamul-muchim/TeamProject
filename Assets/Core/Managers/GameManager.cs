@@ -364,6 +364,26 @@ namespace HideAndInk.Core.Managers
             return Vector3.zero;
         }
 
+        /// <summary>
+        /// 씬에서 현재 활성화된 Zone 번호 중 가장 큰 값을 찾습니다.
+        /// </summary>
+        private static int FindCurrentActiveZone()
+        {
+            int maxZone = -1;
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (go == null) continue;
+                if (go.hideFlags != HideFlags.None) continue;
+                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+                if (!go.name.StartsWith("Zone_")) continue;
+                if (!go.activeInHierarchy) continue;
+
+                int zoneNum = ExtractZoneNumberFromName(go.name);
+                if (zoneNum > maxZone) maxZone = zoneNum;
+            }
+            return maxZone;
+        }
+
         private System.Collections.IEnumerator PlayPrologueDelayed()
         {
             // 한 프레임 대기 → 모든 Start()가 실행된 후 안전하게 호출
@@ -543,12 +563,18 @@ namespace HideAndInk.Core.Managers
                     deathMessage, wasCamouflaged
                 ));
 
-                // === 이어하기용 위치 저장 ===
-                // 사망 직전 위치를 임시 저장 (SaveManager static이므로 씬 리로드 후에도 유지)
+                // === 이어하기용 위치 + Zone 저장 ===
+                // 사망 직전 위치와 Zone을 임시 저장 (SaveManager static이므로 씬 리로드 후에도 유지)
                 if (deathPos != Vector3.zero)
                 {
                     SaveManager.PendingPlayerPosition = deathPos;
                     Debug.Log($"[GameManager] 사망 위치 저장: {deathPos}");
+                }
+                int activeZone = FindCurrentActiveZone();
+                if (activeZone > 0)
+                {
+                    SaveManager.PendingZoneIndex = activeZone;
+                    Debug.Log($"[GameManager] 사망 Zone 저장: Zone_{activeZone}");
                 }
 
                 // === 사망 처리 ===

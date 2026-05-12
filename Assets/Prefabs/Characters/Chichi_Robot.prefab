@@ -86,8 +86,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 149697889
+  m_SortingLayer: 6
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -371718041, guid: 8d00f5fe51731a04288d4615f5dc8413, type: 3}
@@ -172,7 +172,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HideAndInk::HideAndInk.Siyeon1.ChichiChargeController
   stateMachine: {fileID: 4627533463234035377}
   inkTank: {fileID: 8403246396701951367}
-  duduTransform: {fileID: 550867572031012631, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
+  duduTransform: {fileID: 0}
   chichiContactCollider: {fileID: 7566021691256251890}
   duduContactCollider: {fileID: 1773651626226977474, guid: 41b06e986c75bcd41a480ef4efebbf40, type: 3}
   chargeKey: 120
@@ -284,6 +284,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9010a40a08c462042b675f7e4f3d3649, type: 3}
   m_Name: 
   m_EditorClassIdentifier: HideAndInk::ChichiChargeUI
-  yOffset: 1
-  fontSize: 50
-  textColor: {r: 0, g: 0, b: 0, a: 1}
+  yOffset: 0.5
+  fontAsset: {fileID: 11400000, guid: 1cbe63b04bc604a4280022a56b52b9ef, type: 2}
+  fontSize: 15
+  textColor: {r: 0.38431373, g: 0.5254902, b: 0.8784314, a: 1}
+  sortingLayerName: foreground
+  sortingOrder: 100

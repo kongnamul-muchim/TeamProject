@@ -2,6 +2,7 @@ using UnityEngine;
 using HideAndInk.Core.Managers;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Events;
+using HideAndInk.Scripts.UI;
 
 namespace HideAndInk.Core.Player
 {
@@ -34,6 +35,7 @@ namespace HideAndInk.Core.Player
         private bool _isInvincible;
         private bool _blinkTargetWasActive;
         private bool _isDashInvincibility; // 대시용 무적 여부 (깜빡임 없음)
+        private bool _isDead; // 사망 상태 플래그 (중복 트리거 방지)
 
         // 마지막 사망 원인 (GameManager에서 읽어서 이벤트 발행)
         private DeathCause _lastDeathCause = DeathCause.Unknown;
@@ -63,6 +65,16 @@ namespace HideAndInk.Core.Player
 
         private void Update()
         {
+            // ── 안전장치: 사망 조건 체크 (UI 전부 비활성화 or 체력 0 이하) ──
+            if (!_isDead)
+            {
+                bool allHeartsDisabled = PlayerHPUI.Instance != null && PlayerHPUI.Instance.AreAllHeartsDisabled();
+                if (_currentLives <= 0 || allHeartsDisabled)
+                {
+                    TryTriggerDeath();
+                }
+            }
+
             if (_isInvincible)
             {
                 _invincibilityTimer -= Time.deltaTime;
@@ -83,6 +95,27 @@ namespace HideAndInk.Core.Player
 #if UNITY_EDITOR
                     Debug.Log("[PlayerLives] Invincibility ended.");
 #endif
+                }
+            }
+        }
+
+        /// <summary>
+        /// 사망 전환 공통 로직 (중복 방지)
+        /// </summary>
+        private void TryTriggerDeath()
+        {
+            if (_isDead) return;
+            _isDead = true;
+
+            OnPlayerDied?.Invoke();
+
+            var gameManager = GameManager.Instance;
+            if (gameManager != null)
+            {
+                var stateMachine = gameManager.GetGameStateMachine();
+                if (stateMachine != null && stateMachine.CanTransitionTo(GameState.Dead))
+                {
+                    stateMachine.TransitionTo(GameState.Dead);
                 }
             }
         }
@@ -146,18 +179,7 @@ namespace HideAndInk.Core.Player
 
             if (_currentLives <= 0)
             {
-                OnPlayerDied?.Invoke();
-
-                // GameManager를 통해 Dead 상태로 전환
-                var gameManager = GameManager.Instance;
-                if (gameManager != null)
-                {
-                    var stateMachine = gameManager.GetGameStateMachine();
-                    if (stateMachine != null && stateMachine.CanTransitionTo(GameState.Dead))
-                    {
-                        stateMachine.TransitionTo(GameState.Dead);
-                    }
-                }
+                TryTriggerDeath();
             }
         }
 
@@ -168,6 +190,7 @@ namespace HideAndInk.Core.Player
         {
             _currentLives = maxLives;
             _isInvincible = false;
+            _isDead = false;
             _invincibilityTimer = 0f;
             OnLifeChanged?.Invoke(_currentLives);
 
@@ -177,9 +200,17 @@ namespace HideAndInk.Core.Player
         }
 
         /// <summary>
-        /// 남은 목숨이 없는지 확인
+        /// 남은 목숨이 없는지 확인 (UI 전부 비활성화 or 체력 0 이하)
         /// </summary>
-        public bool IsDead => _currentLives <= 0;
+        public bool IsDead
+        {
+            get
+            {
+                if (_currentLives <= 0) return true;
+                if (PlayerHPUI.Instance != null && PlayerHPUI.Instance.AreAllHeartsDisabled()) return true;
+                return false;
+            }
+        }
 
         /// <summary>
         /// 마지막 사망 원인 (GameManager가 PlayerDeathEvent 발행 시 사용)

@@ -60,4 +60,4 @@ MonoBehaviour:
   - id: 3
     clips:
     - {fileID: 8300000, guid: 12ce138601313d64caa266b4506cbfe4, type: 3}
-  defaultVolume: 0.5
+  defaultVolume: 1

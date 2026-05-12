@@ -429,13 +429,21 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// [이어하기] 저장된 지점에서 재시작
+        /// 사망 시점의 Zone 정보(GameManager가 저장)를 최우선으로 사용.
         /// </summary>
         private void OnContinueClicked()
         {
             Debug.Log("[GameOverUI] OnContinueClicked called!");
             _sfxService?.Play(SfxId.ButtonClick);
 
-            if (SaveManager.HasSaveData())
+            // 1순위: GameManager가 사망 시점에 저장한 Zone + 위치 정보
+            if (SaveManager.IsContinueMode && SaveManager.PendingPlayerPosition != Vector3.zero)
+            {
+                Debug.Log($"[GameOverUI] 이어하기: 사망 시점 정보 사용 - Zone_{SaveManager.PendingZoneIndex}, PlayerPos={SaveManager.PendingPlayerPosition}");
+                // PendingZoneIndex, PendingPlayerPosition, PendingSquidPosition은 이미 설정됨
+            }
+            // 2순위: JSON 세이브 파일
+            else if (SaveManager.HasSaveData())
             {
                 var data = SaveManager.Load();
                 if (data != null)
@@ -443,7 +451,6 @@ namespace HideAndInk.Scripts.UI
                     Vector3 playerPos = data.GetPlayerPosition();
                     Vector3 squidPos = data.GetSquidPosition();
 
-                    // 저장된 위치가 zero이면 현재 씬에서 플레이어 위치를 찾아 사용
                     if (playerPos == Vector3.zero)
                     {
                         var player = GameObject.FindGameObjectWithTag("Player");
@@ -458,14 +465,13 @@ namespace HideAndInk.Scripts.UI
                     Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 로드 - Zone_{data.lastZoneIndex}, PlayerPos={playerPos}");
                 }
             }
+            // 3순위: 현재 활성화된 Zone 스캔
             else
             {
-                // 저장 데이터가 없으면 현재 활성 Zone을 찾아서 이어하기
                 int currentZone = FindCurrentActiveZone();
                 Debug.Log($"[GameOverUI] FindCurrentActiveZone returned: {currentZone}");
                 if (currentZone > 0)
                 {
-                    // 현재 플레이어 위치도 함께 저장
                     var player = GameObject.FindGameObjectWithTag("Player");
                     Vector3 playerPos = player != null ? player.transform.position : Vector3.zero;
                     SaveManager.SetContinueZone(currentZone, playerPos, Vector3.zero);

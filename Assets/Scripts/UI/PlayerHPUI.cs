@@ -25,13 +25,40 @@ namespace HideAndInk.Scripts.UI
         [Tooltip("깜빡임 주파수")]
         [SerializeField] private float blinkFrequency = 10f;
 
+        /// <summary>
+        /// 씬의 유일한 PlayerHPUI 인스턴스
+        /// </summary>
+        public static PlayerHPUI Instance { get; private set; }
+
         private int _lastLives;
         private bool _initialized;
 
         private void Awake()
         {
+            Instance = this;
             Debug.Log($"[PlayerHPUI] Awake - serialized playerLives={(playerLives != null ? "OK" : "NULL")}, Instance={(PlayerLives.Instance != null ? "OK" : "NULL")}");
             TryBind();
+        }
+
+        /// <summary>
+        /// 모든 하트 이미지가 비활성화되었는지 확인
+        /// </summary>
+        public bool AreAllHeartsDisabled()
+        {
+            if (heartImages == null || heartImages.Length == 0) return false;
+            for (int i = 0; i < heartImages.Length; i++)
+            {
+                if (heartImages[i] != null && heartImages[i].enabled)
+                    return false;
+            }
+            return true;
+        }
+
+        private void OnDestroy()
+        {
+            if (playerLives != null)
+                playerLives.OnLifeChanged -= OnLifeChanged;
+            if (Instance == this) Instance = null;
         }
 
         private void Start()
@@ -74,12 +101,6 @@ namespace HideAndInk.Scripts.UI
             playerLives.OnLifeChanged += OnLifeChanged;
             UpdateHeartsImmediate(_lastLives);
             _initialized = true;
-        }
-
-        private void OnDestroy()
-        {
-            if (playerLives != null)
-                playerLives.OnLifeChanged -= OnLifeChanged;
         }
 
         private void OnLifeChanged(int currentLives)
