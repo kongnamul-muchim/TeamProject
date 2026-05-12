@@ -78,8 +78,9 @@ namespace HideAndInk.Core.Audio
                 _source = bgmManagerObj.GetComponent<AudioSource>();
                 if (_source != null)
                 {
-                    // 기존 AudioSource의 설정 유지
+                    // 기존 AudioSource의 설정 유지 + 볼륨 최대화
                     _source.loop = true;
+                    _source.volume = 1f;
                 }
             }
 
