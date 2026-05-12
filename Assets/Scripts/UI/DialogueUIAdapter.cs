@@ -400,6 +400,11 @@ public class DialogueUIAdapter : MonoBehaviour
         {
             HandleAdvanceInput();
         }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            HandleSkipInput();
+        }
     }
 
     private void HandleAdvanceInput()
@@ -442,5 +447,16 @@ public class DialogueUIAdapter : MonoBehaviour
             endDialogueSign.SetActive(true);
 
         StoryEvents.InvokeLineFullyRevealed();
+    }
+
+    private void HandleSkipInput()
+    {
+        StoryEvents.InvokeStorySkipped();
+
+        if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
+        {
+            var storyManager = GameManager.Container.Resolve<IStoryManager>();
+            storyManager.StopStory();
+        }
     }
 }

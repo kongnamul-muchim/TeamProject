@@ -723,9 +723,25 @@ public class ZoneChanger : MonoBehaviour
         {
             _isExecutingTutorials = true;
             StoryEvents.OnDialogueEnd += OnTutorialDialogueEnd;
+            StoryEvents.OnStorySkipped += OnStorySkipped;
             SetPauseButtonVisible(false);
             ExecuteNextTutorial();
         }
+    }
+
+    /// <summary>
+    /// ESC 스킵 시 튜토리얼 큐를 비우고 다음 튜토리얼이 실행되지 않도록 합니다.
+    /// </summary>
+    private void OnStorySkipped()
+    {
+        if (_tutorialQueue != null)
+            _tutorialQueue.Clear();
+
+        StoryEvents.OnDialogueEnd -= OnTutorialDialogueEnd;
+        StoryEvents.OnStorySkipped -= OnStorySkipped;
+        _isExecutingTutorials = false;
+        SetPauseButtonVisible(true);
+        Debug.Log("[ZoneChanger] ESC 스킵 감지 → 튜토리얼 큐 초기화");
     }
 
     /// <summary>
@@ -737,6 +753,7 @@ public class ZoneChanger : MonoBehaviour
         {
             // 모든 튜토리얼 실행 완료
             StoryEvents.OnDialogueEnd -= OnTutorialDialogueEnd;
+            StoryEvents.OnStorySkipped -= OnStorySkipped;
             _isExecutingTutorials = false;
             SetPauseButtonVisible(true);
             Debug.Log("[ZoneChanger] 모든 튜토리얼 트리거 실행 완료");
