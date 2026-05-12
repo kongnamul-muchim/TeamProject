@@ -45,6 +45,9 @@ namespace HideAndInk.UI
             // 코루틴 시작을 위해 오브젝트 자체를 활성화
             gameObject.SetActive(true);
 
+            // 크레딧 재생 중에는 일시정지 버튼 숨김
+            SetPauseButtonVisible(false);
+
             _onComplete = onComplete;
             _isCreditsPlaying = true;
 
@@ -122,9 +125,29 @@ namespace HideAndInk.UI
         {
             _isCreditsPlaying = false;
             
+            // 크레딧 종료 시 일시정지 버튼 다시 보이게 설정
+            SetPauseButtonVisible(true);
+            
             // [수정] 콜백을 실행하여 종료를 알리지만, 화면에서 즉시 사라지지는 않음 (페이드 아웃 연출을 위해)
             _onComplete?.Invoke();
             _onComplete = null;
+        }
+
+        /// <summary>
+        /// 일시정지 버튼(Btn_Pause)의 활성화 상태를 설정합니다.
+        /// </summary>
+        private void SetPauseButtonVisible(bool visible)
+        {
+            var pauseBtn = GameObject.Find("Btn_Pause");
+            if (pauseBtn != null)
+            {
+                pauseBtn.SetActive(visible);
+                Debug.Log($"[Credits] Pause button set to {visible}");
+            }
+            else
+            {
+                Debug.LogWarning("[Credits] Btn_Pause not found in scene.");
+            }
         }
 
         /// <summary>
