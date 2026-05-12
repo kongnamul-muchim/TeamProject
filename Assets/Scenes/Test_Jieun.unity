@@ -513,6 +513,10 @@ MonoBehaviour:
   - {fileID: 42591916}
   wallContainer: {fileID: 0}
   activeWallName: 
+  gameplayUIElementsToHide:
+  - Panel_PlayerInfo
+  - Btn_Pause
+  - UI_SuspicionVinette
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2500,7 +2504,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: dc599479a0ed19e42b211171f3adece6, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 1
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -4381,6 +4385,30 @@ PrefabInstance:
     - target: {fileID: 2347115142438330645, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667382024770957630, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: yOffset
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667382024770957630, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: fontSize
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667382024770957630, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 1cbe63b04bc604a4280022a56b52b9ef, type: 2}
+    - target: {fileID: 2667382024770957630, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: textColor.b
+      value: 0.8784314
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667382024770957630, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: textColor.g
+      value: 0.5254902
+      objectReference: {fileID: 0}
+    - target: {fileID: 2667382024770957630, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
+      propertyPath: textColor.r
+      value: 0.38431373
       objectReference: {fileID: 0}
     - target: {fileID: 3221390537093528425, guid: 2cd235be5c1badc4ca54879114969bbb, type: 3}
       propertyPath: m_Name
@@ -9290,6 +9318,10 @@ MonoBehaviour:
   - {fileID: 1123526421}
   wallContainer: {fileID: 0}
   activeWallName: 
+  gameplayUIElementsToHide:
+  - Panel_PlayerInfo
+  - Btn_Pause
+  - UI_SuspicionVinette
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -9360,7 +9392,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 55ea7f85d0869de46abae155f2299a35, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 1
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -9904,7 +9936,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: b87a87fb92c0bbc4f9f9412a0a31f63d, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 1
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -10621,6 +10653,10 @@ MonoBehaviour:
   - {fileID: 1362632146}
   wallContainer: {fileID: 0}
   activeWallName: 
+  gameplayUIElementsToHide:
+  - Panel_PlayerInfo
+  - Btn_Pause
+  - UI_SuspicionVinette
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -10924,7 +10960,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 74a6b9c1e4ac9214cb1d0014b48ea5a7, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 1
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -11291,6 +11327,10 @@ MonoBehaviour:
   - {fileID: 1231951802}
   wallContainer: {fileID: 0}
   activeWallName: 
+  gameplayUIElementsToHide:
+  - Panel_PlayerInfo
+  - Btn_Pause
+  - UI_SuspicionVinette
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -11468,7 +11508,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: eeab5b1205fbad1428826340ef4fd8c5, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 1
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -14638,8 +14678,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 960, y: -1500}
-  m_SizeDelta: {x: 1920, y: 3000}
+  m_AnchoredPosition: {x: 960, y: -2000}
+  m_SizeDelta: {x: 1920, y: 4000}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1723287481
 MonoBehaviour:
@@ -16184,6 +16224,10 @@ MonoBehaviour:
   - {fileID: 1279523734}
   wallContainer: {fileID: 0}
   activeWallName: 
+  gameplayUIElementsToHide:
+  - Panel_PlayerInfo
+  - Btn_Pause
+  - UI_SuspicionVinette
   onZoneChanged:
     m_PersistentCalls:
       m_Calls: []
