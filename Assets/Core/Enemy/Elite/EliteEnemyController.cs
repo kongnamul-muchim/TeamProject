@@ -493,6 +493,7 @@ namespace HideAndInk.Core.Enemy.Elite
             Gizmos.color = Color.red;
             Gizmos.DrawWireCube(center, size);
         }
+#endif
 
         /// <summary>
         /// 현재 바라보는 방향 계산 (에디터/런타임 공용)
@@ -528,6 +529,5 @@ namespace HideAndInk.Core.Enemy.Elite
             // 기본값: 왼쪽
             return true;
         }
-#endif
     }
 }
