@@ -1,6 +1,7 @@
 using HideAndInk.Core.Audio;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
+using HideAndInk.Scripts.Save;
 using UnityEngine;
 
 namespace HideAndInk.Scripts.UI
@@ -89,7 +90,44 @@ namespace HideAndInk.Scripts.UI
     {
         _sfxService?.Play(SfxId.ButtonClick);
         Time.timeScale = 1f;
+
+        // 타이틀에서 이어하기 버튼 활성화를 위해 현재 상태 JSON 저장
+        SaveCurrentStateForTitle();
+
         UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+    }
+
+    /// <summary>
+    /// 타이틀 화면에서 이어하기 버튼이 활성화되도록 현재 게임 상태를 JSON으로 저장합니다.
+    /// </summary>
+    private void SaveCurrentStateForTitle()
+    {
+        int currentZone = -1;
+        var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        foreach (var go in allObjects)
+        {
+            if (go == null || go.hideFlags != HideFlags.None) continue;
+            if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+            if (!go.name.StartsWith("Zone_") || !go.activeInHierarchy) continue;
+            string[] parts = go.name.Split('_');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
+            {
+                if (zoneNum > currentZone) currentZone = zoneNum;
+            }
+        }
+
+        if (currentZone > 0)
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            Vector3 playerPos = player != null ? player.transform.position : Vector3.zero;
+            SaveManager.Save(new SaveData(currentZone, playerPos, Vector3.zero));
+            SaveManager.SetContinueZone(currentZone, playerPos, Vector3.zero);
+            Debug.Log($"[PauseHandler] 타이틀 전환 전 저장: Zone_{currentZone}, Player={playerPos}");
+        }
+        else
+        {
+            Debug.LogWarning("[PauseHandler] 활성 Zone을 찾을 수 없어 저장하지 않음");
+        }
     }
 
         private void OnDestroy()

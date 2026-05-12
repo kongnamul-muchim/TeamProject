@@ -535,7 +535,32 @@ namespace HideAndInk.Scripts.UI
         private void OnTitleClicked()
         {
             _sfxService?.Play(SfxId.ButtonClick);
+
+            // 타이틀에서 이어하기 버튼 활성화를 위해 현재 상태 JSON 저장
+            SaveCurrentStateForTitle();
+
             TransitionToScene(titleSceneIndex);
+        }
+
+        /// <summary>
+        /// 타이틀 화면에서 이어하기 버튼이 활성화되도록 현재 게임 상태를 JSON으로 저장합니다.
+        /// (ZoneSaveHandler가 씬에 없어도 저장되도록 보장)
+        /// </summary>
+        private void SaveCurrentStateForTitle()
+        {
+            int currentZone = FindCurrentActiveZone();
+            if (currentZone > 0)
+            {
+                var player = GameObject.FindGameObjectWithTag("Player");
+                Vector3 playerPos = player != null ? player.transform.position : Vector3.zero;
+                SaveManager.Save(new SaveData(currentZone, playerPos, Vector3.zero));
+                SaveManager.SetContinueZone(currentZone, playerPos, Vector3.zero);
+                Debug.Log($"[GameOverUI] 타이틀 전환 전 저장: Zone_{currentZone}, Player={playerPos}");
+            }
+            else
+            {
+                Debug.LogWarning("[GameOverUI] 활성 Zone을 찾을 수 없어 저장하지 않음");
+            }
         }
 
         /// <summary>
