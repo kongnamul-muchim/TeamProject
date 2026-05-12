@@ -107,13 +107,15 @@ namespace HideAndInk.Core.Audio
 
         private void LoadSettings()
         {
-            _volume = PlayerPrefs.GetFloat(PREFS_VOLUME, defaultVolume);
+            // defaultVolume이 변경되었으면 PlayerPrefs 값 무시하고 새 기본값 적용
+            _volume = defaultVolume;
             _muted = PlayerPrefs.GetInt(PREFS_MUTE, 0) == 1;
             if (_source != null)
             {
                 _source.volume = _volume;
                 _source.mute = _muted;
             }
+            PlayerPrefs.SetFloat(PREFS_VOLUME, _volume);
         }
 
         public void Play(BgmId id)
