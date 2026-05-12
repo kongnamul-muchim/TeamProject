@@ -7,6 +7,7 @@ using HideAndInk.Core.Player;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Logging;
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Enemy;
 using HideAndInk.Scripts.Save;
 
 namespace HideAndInk.Core.Managers
@@ -193,94 +194,63 @@ namespace HideAndInk.Core.Managers
             int targetZone = SaveManager.PendingZoneIndex;
             Debug.Log($"[GameManager] ContinueZoneHandler 없음 → 직접 Zone_{targetZone} 활성화");
 
-            // === ZoneChanger를 찾아서 ChangeZone 직접 호출 ===
-            // 해당 Zone으로 가는 ZoneChanger를 찾음
-            var zoneChangers = FindObjectsOfType<ZoneChanger>();
-            ZoneChanger targetChanger = null;
-            foreach (var changer in zoneChangers)
+            // === ZoneChanger 우회: 모든 Zone 오브젝트를 재귀 탐색하여 직접 활성화/비활성화 ===
+            // ContinueZoneHandler의 FindAllZoneObjects와 동일한 로직.
+            // ZoneChanger.ChangeZone()은 StageClear 효과음/BGM 변경 등 사이드 이펙트가 있어 이어하기에 부적합.
+            var rootObjects = scene.GetRootGameObjects();
+            var allZoneObjects = new List<GameObject>();
+            foreach (var root in rootObjects)
             {
-                if (changer.toZoneNumber == targetZone)
-                {
-                    targetChanger = changer;
-                    break;
-                }
+                CollectZoneObjectsRecursive(root.transform, allZoneObjects);
             }
 
-            if (targetChanger != null)
+            foreach (var zone in allZoneObjects)
             {
-                Debug.Log($"[GameManager] ZoneChanger 찾음: {targetChanger.name} → ChangeZone 직접 호출");
-                targetChanger.ChangeZone();
+                int zoneNum = ExtractZoneNumberFromName(zone.name);
+                if (zoneNum < 0) continue;
+                bool isTarget = zoneNum == targetZone;
+                zone.SetActive(isTarget);
+                Debug.Log($"[GameManager] {zone.name} → {(isTarget ? "활성화" : "비활성화")}");
+            }
+
+            ZoneChanger.SyncGroundObjects(targetZone);
+
+            if (ZoneChanger.IsFogZone(targetZone))
+            {
+                bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
+                ZoneChanger.SetUnderwaterEffect(true, isDark);
             }
             else
             {
-                Debug.LogWarning($"[GameManager] Zone_{targetZone}으로 가는 ZoneChanger를 찾을 수 없음 → 수동 처리");
-                
-                // 수동 처리: Zone 오브젝트 활성화/비활성화
-                var rootObjects = scene.GetRootGameObjects();
-                foreach (var root in rootObjects)
-                {
-                    if (root.name.StartsWith("Zone_"))
-                    {
-                        string[] parts = root.name.Split('_');
-                        if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
-                        {
-                            bool isTarget = zoneNum == targetZone;
-                            root.SetActive(isTarget);
-                            Debug.Log($"[GameManager] {root.name} → {(isTarget ? "활성화" : "비활성화")}");
-                        }
-                    }
-                }
-                
-                ZoneChanger.SyncGroundObjects(targetZone);
-                
-                if (ZoneChanger.IsFogZone(targetZone))
-                {
-                    bool isDark = ZoneChanger.IsDarkFogZone(targetZone);
-                    ZoneChanger.SetUnderwaterEffect(true, isDark);
-                }
-                else
-                {
-                    ZoneChanger.SetUnderwaterEffect(false);
-                }
+                ZoneChanger.SetUnderwaterEffect(false);
             }
 
-            // === Player 위치 복원 ===
+            // === Player 위치 복원: Zone 시작점으로 텔레포트 (사망 위치 사용 안 함) ===
             var player = GameObject.FindGameObjectWithTag("Player");
-            Vector3 playerPos = Vector3.zero;
-            if (player != null)
+            Vector3 spawnPos = FindZoneSpawnPosition(targetZone);
+            if (player != null && spawnPos != Vector3.zero)
             {
-                playerPos = SaveManager.PendingPlayerPosition;
-
-                if (playerPos == Vector3.zero)
+                player.transform.position = spawnPos;
+                var rb = player.GetComponent<Rigidbody>();
+                if (rb != null)
                 {
-                    // 저장된 위치가 없으면 활성화된 Zone의 위치로
-                    var activeZones = GameObject.FindObjectsOfType<GameObject>();
-                    foreach (var z in activeZones)
-                    {
-                        if (z.name == $"Zone_{targetZone}_Object" || z.name == $"Zone_{targetZone}_Images")
-                        {
-                            playerPos = z.transform.position;
-                            playerPos.y = player.transform.position.y;
-                            break;
-                        }
-                    }
+                    rb.position = spawnPos;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
                 }
-
-                if (playerPos != Vector3.zero)
-                {
-                    player.transform.position = playerPos;
-                    var rb = player.GetComponent<Rigidbody>();
-                    if (rb != null)
-                    {
-                        rb.position = playerPos;
-                        rb.linearVelocity = Vector3.zero;
-                    }
-                    Debug.Log($"[GameManager] Player 위치 복원: {playerPos}");
-                }
+                Debug.Log($"[GameManager] Player → Zone_{targetZone} 시작점으로 텔레포트: {spawnPos}");
             }
+
+            // === Enemy 초기화: 모든 Enemy를 시작 위치/상태로 복원 ===
+            var allEnemies = FindObjectsOfType<EnemyAIController>();
+            foreach (var enemy in allEnemies)
+            {
+                enemy.ResetToInitialState();
+            }
+            Debug.Log($"[GameManager] Enemy 초기화 완료: {allEnemies.Length}개");
 
             // === 치메라를 Player 위치로 즉시 이동 ===
-            MoveCameraToPlayer(player, playerPos);
+            MoveCameraToPlayer(player, spawnPos);
 
             // 이어하기 정보 초기화
             SaveManager.ClearContinueZone();
@@ -297,10 +267,11 @@ namespace HideAndInk.Core.Managers
 
             if (player != null && playerPos != Vector3.zero)
             {
-                // 플레이어 위치로 치메라 즉시 이동 (Z는 치메라 기존 값 유지)
+                // 플레이어 위치로 치메라 즉시 이동
+                // Y는 지면 높이(playerPos.y) + 2로 설정 (카메라가 지면에 붙지 않도록)
                 Vector3 camPos = mainCam.transform.position;
                 camPos.x = playerPos.x;
-                camPos.y = playerPos.y;
+                camPos.y = playerPos.y + 2f;
                 mainCam.transform.position = camPos;
                 Debug.Log($"[GameManager] 치메라를 플레이어 위치로 이동: {camPos}");
             }
@@ -338,6 +309,59 @@ namespace HideAndInk.Core.Managers
                 canvasIngame.SetActive(shouldBeActive);
                 Debug.Log($"[GameManager] Canvas_Ingame = {shouldBeActive} (Zone {zoneNumber})");
             }
+        }
+
+        /// <summary>
+        /// 트랜스폼 트리를 재귀적으로 탐색하여 이름이 "Zone_{number}_" 패턴과 일치하는 오브젝트를 찾습니다.
+        /// ContinueZoneHandler.FindAllZoneObjects의 로직과 동일합니다.
+        /// </summary>
+        private static void CollectZoneObjectsRecursive(Transform parent, List<GameObject> results)
+        {
+            string name = parent.name.Trim();
+            if (name.StartsWith("Zone_") && ExtractZoneNumberFromName(name) > 0)
+                results.Add(parent.gameObject);
+
+            foreach (Transform child in parent)
+                CollectZoneObjectsRecursive(child, results);
+        }
+
+        /// <summary>
+        /// "Zone_{number}_..." 형식의 이름에서 숫자 부분을 추출합니다.
+        /// 예: "Zone_1_Object" → 1, "Zone_Object" → -1
+        /// </summary>
+        private static int ExtractZoneNumberFromName(string zoneName)
+        {
+            string[] parts = zoneName.Trim().Split('_');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out int number))
+                return number;
+            return -1;
+        }
+
+        /// <summary>
+        /// 이어하기 시 Player가 스폰될 위치를 찾습니다.
+        /// 1순위: ZoneChanger의 toZoneNumber == targetZone 위치
+        /// 2순위: 활성화된 Zone_Object의 Transform 위치
+        /// </summary>
+        private static Vector3 FindZoneSpawnPosition(int targetZone)
+        {
+            // 1순위: ZoneChanger 위치
+            foreach (var changer in FindObjectsOfType<ZoneChanger>())
+            {
+                if (changer.toZoneNumber == targetZone)
+                    return changer.transform.position;
+            }
+
+            // 2순위: 활성화된 Zone 오브젝트 위치
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (go == null || go.hideFlags != HideFlags.None) continue;
+                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+                if (go.name.Trim() == $"Zone_{targetZone}_Object")
+                    return go.transform.position;
+            }
+
+            Debug.LogWarning($"[GameManager] Zone_{targetZone}의 스폰 위치를 찾을 수 없습니다.");
+            return Vector3.zero;
         }
 
         private System.Collections.IEnumerator PlayPrologueDelayed()
