@@ -447,8 +447,17 @@ namespace HideAndInk.Core.Managers
             if (sfxManager != null)
                 _rootContainer.RegisterInstance<ISfxService>(sfxManager, ServiceLifetime.Singleton);
 
+            // bgmManager가 null이면 씬에서 자동 탐색
+            if (bgmManager == null)
+            {
+                bgmManager = FindObjectOfType<HideAndInk.Core.Audio.BgmManager>();
+                Debug.Log($"[GameManager] BgmManager auto-resolve: {(bgmManager != null ? "Found" : "Not Found")}");
+            }
+
             if (bgmManager != null)
                 _rootContainer.RegisterInstance<IBgmService>(bgmManager, ServiceLifetime.Singleton);
+            else
+                Debug.LogWarning("[GameManager] BgmManager not found. IBgmService will not be registered.");
         }
 
         /// <summary>

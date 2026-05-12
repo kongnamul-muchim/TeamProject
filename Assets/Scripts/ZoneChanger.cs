@@ -520,8 +520,29 @@ public class ZoneChanger : MonoBehaviour
             _sfxService?.Play(SfxId.StageClear);
 
             // BGM 전환 (Zone 1~5 → BgmId)
-            if (_bgmService != null && toZoneNumber >= 1 && toZoneNumber <= 5)
-                _bgmService.Play((BgmId)toZoneNumber);
+            if (toZoneNumber >= 1 && toZoneNumber <= 5)
+            {
+                // _bgmService가 null이면 씬에서 직접 탐색 (fallback)
+                if (_bgmService == null)
+                {
+                    var bgmManager = FindObjectOfType<HideAndInk.Core.Audio.BgmManager>();
+                    if (bgmManager != null)
+                    {
+                        _bgmService = bgmManager;
+                        Debug.Log($"[ZoneChanger] BGM Service fallback resolved: {bgmManager.name}");
+                    }
+                }
+
+                if (_bgmService != null)
+                {
+                    Debug.Log($"[ZoneChanger] Playing BGM for Zone {toZoneNumber}");
+                    _bgmService.Play((BgmId)toZoneNumber);
+                }
+                else
+                {
+                    Debug.LogWarning($"[ZoneChanger] BGM Service is null. Cannot play BGM for Zone {toZoneNumber}.");
+                }
+            }
         }
         else
         {
