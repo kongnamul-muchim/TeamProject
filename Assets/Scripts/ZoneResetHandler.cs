@@ -1,4 +1,6 @@
 
+using HideAndInk.Core.Interfaces;
+using HideAndInk.Core.Managers;
 using HideAndInk.Core.Player;
 using HideAndInk.Siyeon1;
 using UnityEngine;
@@ -27,14 +29,13 @@ public class ZoneResetHandler : MonoBehaviour
 
     private void OnZoneChanged(int toZoneNumber)
     {
-        // ※ 목숨 리셋 제거: Zone 변경 시마다 ResetLives()가 호출되면
-        //    전투 중 Zone 경계를 넘나들 때 플레이어가 죽지 않는 버그 발생.
-        //    목숨은 사망/재시작 시 GameManager.OnGameStateChanged에서만 리셋됨.
+        // Playing 상태에서만 초기화 (전투/사망 중에는 초기화하지 않음)
+        var stateMachine = GameManager.Container?.Resolve<IGameStateMachine>();
+        if (stateMachine == null || stateMachine.CurrentState != GameState.Playing)
+            return;
 
-        if (PlayerInk.Instance != null)
-            PlayerInk.Instance.AddInk(PlayerInk.Instance.MaxInk);
-
-        if (ChichiInkTank.Instance != null)
-            ChichiInkTank.Instance.ResetSectionUses();
+        PlayerLives.Instance?.ResetLives();
+        PlayerInk.Instance?.AddInk(PlayerInk.Instance.MaxInk);
+        ChichiInkTank.Instance?.ResetSectionUses();
     }
 }

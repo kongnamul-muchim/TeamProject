@@ -456,6 +456,14 @@ public class DialogueUIAdapter : MonoBehaviour
         if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
         {
             var storyManager = GameManager.Container.Resolve<IStoryManager>();
+
+            // 에필로그는 OnEpilogueWillEnd를 통해 정상 종료 연출(페이드→크레딧→타이틀)을 타야 함
+            if (storyManager.CurrentSection == StorySection.Epilogue)
+            {
+                StoryEvents.InvokeEpilogueWillEnd();
+                return;
+            }
+
             storyManager.StopStory();
         }
     }
