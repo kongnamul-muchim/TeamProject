@@ -828,12 +828,20 @@ public class ZoneChanger : MonoBehaviour
         }
         _epilogueTriggered = true;
         
-        yield return new WaitForSeconds(delaySeconds);
+        // Time.timeScale 영향을 받지 않는 실제 시간 대기
+        float timer = 0f;
+        while (timer < delaySeconds)
+        {
+            timer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        Debug.Log("[ZoneChanger] 10초 대기 완료. 에필로그 트리거 탐색 시작...");
 
         var epilogueTrigger = FindObjectOfType<HideAndInk.Gameplay.EpilogueTrigger>();
         if (epilogueTrigger != null)
         {
-            Debug.Log("[ZoneChanger] 에필로그 자동 실행!");
+            Debug.Log($"[ZoneChanger] EpilogueTrigger 찾음! ({epilogueTrigger.gameObject.name}) 에필로그 자동 실행!");
             epilogueTrigger.TriggerEpilogue();
         }
         else
