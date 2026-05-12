@@ -158,7 +158,7 @@ namespace HideAndInk.Core.Enemy.Elite
             if (IsPlayerCamouflaging()) return;
 
             // 현재 바라보는 방향 계산
-            bool isFacingLeft = IsCurrentlyFacingLeft();
+            bool isFacingLeft = CalculateFacingLeft();
             
             Vector3 toPlayer = _playerTransform.position - transform.position;
             
@@ -186,14 +186,6 @@ namespace HideAndInk.Core.Enemy.Elite
                 Vector3 directionToPlayer = toPlayer.normalized;
                 _behavior?.OnPlayerApproached(distanceX, _playerTransform.position, directionToPlayer);
             }
-        }
-
-        /// <summary>
-        /// 현재 스프라이트가 왼쪽을 보고 있는지 확인
-        /// </summary>
-        private bool IsCurrentlyFacingLeft()
-        {
-            return CalculateFacingLeft();
         }
 
         /// <summary>
@@ -402,7 +394,7 @@ namespace HideAndInk.Core.Enemy.Elite
             }
 
             // 현재 바라보는 방향 결정
-            bool isFacingLeft = IsCurrentlyFacingLeft();
+            bool isFacingLeft = CalculateFacingLeft();
             float direction = isFacingLeft ? -1f : 1f;
             
             // 직사각형 크기 계산
