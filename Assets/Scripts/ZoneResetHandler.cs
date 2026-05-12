@@ -27,8 +27,9 @@ public class ZoneResetHandler : MonoBehaviour
 
     private void OnZoneChanged(int toZoneNumber)
     {
-        if (PlayerLives.Instance != null)
-            PlayerLives.Instance.ResetLives();
+        // ※ 목숨 리셋 제거: Zone 변경 시마다 ResetLives()가 호출되면
+        //    전투 중 Zone 경계를 넘나들 때 플레이어가 죽지 않는 버그 발생.
+        //    목숨은 사망/재시작 시 GameManager.OnGameStateChanged에서만 리셋됨.
 
         if (PlayerInk.Instance != null)
             PlayerInk.Instance.AddInk(PlayerInk.Instance.MaxInk);
