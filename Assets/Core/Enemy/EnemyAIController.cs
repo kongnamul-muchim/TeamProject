@@ -98,14 +98,16 @@ namespace HideAndInk.Core.Enemy
 
         protected virtual void Awake()
         {
+            // ★ Awake에서 초기 위치 저장 (Start보다 먼저 실행되며,
+            //    ContinueZoneHandler/GameManager가 ResetToInitialState()를 호출해도 안전)
+            _initialPosition = transform.position;
+            _initialRotation = transform.rotation;
             FindPlayer();
             InitializeMovement();
         }
 
         protected virtual void Start()
         {
-            _initialPosition = transform.position;
-            _initialRotation = transform.rotation;
             ScanGroundBounds();
             InitializeAI();
         }

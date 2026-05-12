@@ -267,10 +267,11 @@ namespace HideAndInk.Core.Managers
 
             if (player != null && playerPos != Vector3.zero)
             {
-                // 플레이어 위치로 치메라 즉시 이동 (Z는 치메라 기존 값 유지)
+                // 플레이어 위치로 치메라 즉시 이동
+                // Y는 지면 높이(playerPos.y) + 2로 설정 (카메라가 지면에 붙지 않도록)
                 Vector3 camPos = mainCam.transform.position;
                 camPos.x = playerPos.x;
-                camPos.y = playerPos.y;
+                camPos.y = playerPos.y + 2f;
                 mainCam.transform.position = camPos;
                 Debug.Log($"[GameManager] 치메라를 플레이어 위치로 이동: {camPos}");
             }
