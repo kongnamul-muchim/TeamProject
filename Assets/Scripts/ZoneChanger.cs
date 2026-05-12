@@ -525,6 +525,10 @@ public class ZoneChanger : MonoBehaviour
             if (toZoneNumber == 1)
                 ExecuteTutorialTriggersInOrder();
 
+            // Zone 6: 10초 후 에필로그 자동 실행
+            if (toZoneNumber == 6)
+                StartCoroutine(TriggerEpilogueDelayed(10f));
+
             // 구역 전환 효과음 재생
             _sfxService?.Play(SfxId.StageClear);
 
@@ -806,6 +810,26 @@ public class ZoneChanger : MonoBehaviour
         
         var story = GameManager.Container.Resolve<IStoryManager>();
         return story != null && story.IsDialoguePlaying;
+    }
+
+    /// <summary>
+    /// Zone 6 진입 후 지정된 시간(초) 후 에필로그 트리거를 자동 실행합니다.
+    /// </summary>
+    private IEnumerator TriggerEpilogueDelayed(float delaySeconds)
+    {
+        Debug.Log($"[ZoneChanger] Zone 6 에필로그 {delaySeconds}초 후 자동 실행 예약");
+        yield return new WaitForSeconds(delaySeconds);
+
+        var epilogueTrigger = FindObjectOfType<HideAndInk.Gameplay.EpilogueTrigger>();
+        if (epilogueTrigger != null)
+        {
+            Debug.Log("[ZoneChanger] 에필로그 자동 실행!");
+            epilogueTrigger.TriggerEpilogue();
+        }
+        else
+        {
+            Debug.LogWarning("[ZoneChanger] EpilogueTrigger를 찾을 수 없습니다.");
+        }
     }
 
     /// <summary>

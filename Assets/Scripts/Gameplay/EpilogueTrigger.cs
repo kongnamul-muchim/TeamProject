@@ -42,9 +42,18 @@ namespace HideAndInk.Gameplay
         {
             if (!_isTriggered && other.CompareTag("Player"))
             {
-                _isTriggered = true;
-                StartCoroutine(Sequence_ArriveEpilogue());
+                TriggerEpilogue();
             }
+        }
+
+        /// <summary>
+        /// 에필로그를 외부에서 직접 실행 (ZoneChanger 등에서 호출)
+        /// </summary>
+        public void TriggerEpilogue()
+        {
+            if (_isTriggered) return;
+            _isTriggered = true;
+            StartCoroutine(Sequence_ArriveEpilogue());
         }
 
         // [흐름 1] 도착 -> 페이드아웃 -> 에필로그 세팅 -> 페이드인
