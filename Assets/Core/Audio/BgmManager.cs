@@ -151,6 +151,7 @@ namespace HideAndInk.Core.Audio
             _source.Stop();
             _source.clip = clip;
             CurrentBgm = id;
+            _source.volume = _volume;
             _source.Play();
 
             if (fadeDuration > 0f)
