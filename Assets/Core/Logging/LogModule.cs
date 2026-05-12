@@ -136,7 +136,7 @@ namespace HideAndInk.Core.Logging
             }
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
             Application.logMessageReceived -= OnLogReceived;
             DisposeWriters();
