@@ -86,6 +86,11 @@ namespace HideAndInk.CameraSystem
         }
 
         /// <summary>
+        /// 칩메라 추적 오프셋 (외부에서 안전하게 읽기용)
+        /// </summary>
+        public Vector3 Offset => offset;
+
+        /// <summary>
         /// 카메라 추적을 일시정지합니다. 트랜지션 중 카메라 수동 이동 시 사용.
         /// </summary>
         public void Pause()

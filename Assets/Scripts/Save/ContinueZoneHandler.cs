@@ -164,6 +164,19 @@ public class ContinueZoneHandler : MonoBehaviour
                 TeleportSquidToZone(targetZone);
             }
         }
+
+        // ---- CameraFollow target 재설정 및 치메라 위치 동기화 ----
+        var cameraFollow = FindObjectOfType<HideAndInk.CameraSystem.CameraFollow>();
+        if (cameraFollow != null && player != null)
+        {
+            cameraFollow.SetTarget(player);
+            var mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                mainCam.transform.position = player.position + cameraFollow.Offset;
+                Debug.Log($"[ContinueZoneHandler] 치메라 동기화: {mainCam.transform.position}");
+            }
+        }
     }
 
     // =====================================================

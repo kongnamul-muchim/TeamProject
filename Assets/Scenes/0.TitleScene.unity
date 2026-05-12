@@ -805,6 +805,7 @@ GameObject:
   m_Component:
   - component: {fileID: 183367247}
   - component: {fileID: 2000000001}
+  - component: {fileID: 2000000002}
   m_Layer: 5
   m_Name: Popup_Setting
   m_TagString: Untagged
@@ -854,7 +855,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &183732723
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1610,14 +1611,14 @@ MonoBehaviour:
   m_MinValue: 0
   m_MaxValue: 1
   m_WholeNumbers: 0
-  m_Value: 1
+  m_Value: 0.5
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
         m_MethodName: SetSfxVolume
-        m_Mode: 4
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -1658,8 +1659,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 127812107}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -0}
   m_SizeDelta: {x: 50, y: -5}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2011,8 +2012,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3364848}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -0}
   m_SizeDelta: {x: 50, y: -5}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2745,7 +2746,7 @@ MonoBehaviour:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
         m_MethodName: SetSfxMute
-        m_Mode: 6
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -3034,7 +3035,7 @@ MonoBehaviour:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
         m_MethodName: SetBgmVolume
-        m_Mode: 4
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -3750,7 +3751,7 @@ MonoBehaviour:
       - m_Target: {fileID: 2000000001}
         m_TargetAssemblyTypeName: HideAndInk.Scripts.UI.SettingsPopup, HideAndInk
         m_MethodName: SetBgmMute
-        m_Mode: 6
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -3949,10 +3950,26 @@ MonoBehaviour:
   titleSceneName: 0.TitleScene
   fadeInObjPrefab: {fileID: 0}
   useSceneTransition: 1
-  bgmVolumeSlider: {fileID: 0}
-  sfxVolumeSlider: {fileID: 0}
-  bgmMuteToggle: {fileID: 0}
-  sfxMuteToggle: {fileID: 0}
+  bgmVolumeSlider: {fileID: 1581208521}
+  sfxVolumeSlider: {fileID: 441534797}
+  bgmMuteToggle: {fileID: 1851125428}
+  sfxMuteToggle: {fileID: 1443556256}
+--- !u!114 &2000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 183367246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9b07db0bd32cf844aaca898134c4c61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: HideAndInk::HideAndInk.Scripts.UI.SettingsAudioController
+  bgmSlider: {fileID: 1581208521}
+  sfxSlider: {fileID: 441534797}
+  bgmMuteToggle: {fileID: 1851125428}
+  sfxMuteToggle: {fileID: 1443556256}
 --- !u!1001 &3174233295518632336
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3968,7 +3985,7 @@ PrefabInstance:
     - target: {fileID: 2825616333842440882, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
       propertyPath: 'sfxClips.Array.data[3].clips.Array.data[0]'
       value: 
-      objectReference: {fileID: 8300000, guid: 73b39e3a36c273048bf4fafb8ec2185b, type: 3}
+      objectReference: {fileID: 8300000, guid: ac70151d9447a644a870359ffa7027ad, type: 3}
     - target: {fileID: 2825616333842440882, guid: a3ed6cb19a4d00b46b4c188e0acf1c04, type: 3}
       propertyPath: 'sfxClips.Array.data[4].clips.Array.data[0]'
       value: 

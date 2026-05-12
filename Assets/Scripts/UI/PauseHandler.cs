@@ -18,6 +18,8 @@ namespace HideAndInk.Scripts.UI
         private ISfxService _sfxService;
         private IGameStateMachine _stateMachine;
 
+        private UnityEngine.UI.Slider _draggingSlider; // Time.timeScale=0에서 드래그 중인 Slider 추적
+
         private void Awake()
         {
             // SFX 서비스 해결
@@ -47,13 +49,13 @@ namespace HideAndInk.Scripts.UI
                 _stateMachine.OnStateChanged += OnGameStateChanged;
             }
 
-        // 초기 상태: 팝업 닫힘
-        if (pausePopup != null)
-            pausePopup.SetActive(false);
-            
-        // 팝업 버튼 자동 연결
-        ConnectPopupButtons();
-    }
+            // 초기 상태: 팝업 닫힘
+            if (pausePopup != null)
+                pausePopup.SetActive(false);
+                
+            // 팝업 버튼 자동 연결
+            ConnectPopupButtons();
+        }
     
     /// <summary>
     /// Popup_Pause 안의 모든 Button을 찾아서 리스너 연결
@@ -151,22 +153,35 @@ namespace HideAndInk.Scripts.UI
 
         private void Update()
         {
-            // Time.timeScale = 0일 때 EventSystem이 멈추므로 직접 클릭 체크
+            // Time.timeScale = 0일 때 EventSystem이 멈추므로 직접 입력 처리
             if (Time.timeScale == 0f && pausePopup != null && pausePopup.activeSelf)
             {
-                CheckPopupButtonClicks();
+                HandlePausePopupInput();
             }
         }
 
         /// <summary>
-        /// Time.timeScale = 0 상태에서 팝업 버튼 클릭을 직접 체크
-        /// GraphicRaycaster 사용
+        /// Time.timeScale = 0 상태에서 팝업 입력 처리 (클릭 + 드래그)
         /// </summary>
-        private void CheckPopupButtonClicks()
+        private void HandlePausePopupInput()
         {
+            // 드래그 중이면 계속 Slider 업데이트
+            if (_draggingSlider != null)
+            {
+                if (Input.GetMouseButton(0))
+                {
+                    UpdateSliderValue(_draggingSlider);
+                }
+                else
+                {
+                    _draggingSlider = null; // 마우스 놓음
+                }
+                return;
+            }
+
+            // 클릭 시작 시에만 Raycast
             if (!Input.GetMouseButtonDown(0)) return;
 
-            // GraphicRaycaster로 정확히 어떤 UI가 클릭되는지 확인
             var canvas = pausePopup.GetComponentInParent<UnityEngine.Canvas>();
             if (canvas == null) return;
             
@@ -179,31 +194,70 @@ namespace HideAndInk.Scripts.UI
             var results = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
             raycaster.Raycast(pointerEventData, results);
             
-            Debug.Log($"[PauseHandler] Raycast 결과 수: {results.Count}");
-            
             foreach (var result in results)
             {
                 var go = result.gameObject;
-                Debug.Log($"[PauseHandler] Raycast: {go.name}");
+                Debug.Log($"[PauseHandler] Raycast hit: {go.name}");
                 
                 if (go.name == "Btn_Continue")
                 {
-                    Debug.Log("[PauseHandler] Btn_Continue GraphicRaycast 클릭 감지!");
                     ResumeGame();
                     return;
                 }
                 else if (go.name == "Btn_GoTitle")
                 {
-                    Debug.Log("[PauseHandler] Btn_GoTitle GraphicRaycast 클릭 감지!");
                     GoToTitleScene();
                     return;
                 }
                 else if (go.name == "Btn_Close")
                 {
-                    Debug.Log("[PauseHandler] Btn_Close GraphicRaycast 클릭 감지!");
                     ResumeGame();
                     return;
                 }
+                
+                // Toggle 먼저 체크 (자식 오브젝트 클릭 시에도 parent Toggle 찾기)
+                var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
+                if (toggle != null)
+                {
+                    toggle.isOn = !toggle.isOn;
+                    toggle.onValueChanged?.Invoke(toggle.isOn);
+                    Debug.Log($"[PauseHandler] Toggle clicked: {toggle.gameObject.name}, isOn={toggle.isOn}");
+                    return;
+                }
+                
+                // Slider 체크 (자식 오브젝트 클릭 시에도 parent Slider 찾기)
+                var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
+                if (slider != null)
+                {
+                    _draggingSlider = slider;
+                    UpdateSliderValue(slider);
+                    Debug.Log($"[PauseHandler] Slider clicked: {slider.gameObject.name}, value={slider.value}");
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Time.timeScale = 0 상태에서 Slider 값 업데이트 (클릭/드래그 공용)
+        /// SettingsPopup이 OnEnable에서 이벤트를 연결했으므로 Invoke는 하지 않음
+        /// </summary>
+        private void UpdateSliderValue(UnityEngine.UI.Slider slider)
+        {
+            var rectTransform = slider.GetComponent<RectTransform>();
+            if (rectTransform == null) return;
+
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rectTransform, Input.mousePosition, null, out Vector2 localPoint);
+
+            float normalizedValue = Mathf.InverseLerp(
+                rectTransform.rect.xMin, rectTransform.rect.xMax, localPoint.x);
+            
+            float newValue = Mathf.Clamp01(normalizedValue);
+            if (Mathf.Abs(slider.value - newValue) > 0.001f)
+            {
+                slider.value = newValue;
+                // Slider 컴포넌트가 자동으로 onValueChanged 발동
+                // (Time.timeScale=0에서도 value setter는 작동함)
             }
         }
 
@@ -227,7 +281,7 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// Popup_Pause 안의 모든 Image RaycastTarget을 확인하고,
-        /// Button과 연결되지 않은 Image는 RaycastTarget OFF로 설정
+        /// Button/Slider/Toggle과 연결되지 않은 Image는 RaycastTarget OFF로 설정
         /// </summary>
         private void DisablePopupRaycastBlockers()
         {
@@ -237,9 +291,17 @@ namespace HideAndInk.Scripts.UI
             
             foreach (var img in images)
             {
-                // 버튼과 연결된 Image는 제외 (버튼 클릭을 막지 않도록)
+                // 버튼과 연결된 Image는 제외
                 var parentButton = img.GetComponentInParent<UnityEngine.UI.Button>();
                 if (parentButton != null) continue;
+                
+                // Slider와 연결된 Image는 제외 (Handle, Fill, Background 등)
+                var parentSlider = img.GetComponentInParent<UnityEngine.UI.Slider>();
+                if (parentSlider != null) continue;
+                
+                // Toggle과 연결된 Image는 제외 (Background, Checkmark 등)
+                var parentToggle = img.GetComponentInParent<UnityEngine.UI.Toggle>();
+                if (parentToggle != null) continue;
                 
                 // RaycastTarget이 켜져 있으면 OFF
                 if (img.raycastTarget)

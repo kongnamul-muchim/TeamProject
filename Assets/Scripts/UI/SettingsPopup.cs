@@ -7,36 +7,16 @@ using UnityEngine.SceneManagement;
 
 namespace HideAndInk.Scripts.UI
 {
-    /// <summary>
-    /// 일시정지 팝업 내 설정
-    /// Btn_GoTitle / Toggle / Slider → 인스펙터에서 직접 연결
-    /// 
-    /// 타이틀 복귀:
-    /// - FadeInObj 프리팹 (1순위) → TitleController와 동일한 2페이즈 전환
-    /// - PatternTransitionController (2순위)
-    /// - 바로 로드 (3순위)
-    /// - titleSceneBuildIndex (우선) / titleSceneName (fallback)
-    /// </summary>
     public sealed class SettingsPopup : MonoBehaviour
     {
-        /// <summary>
-        /// FadeInObj 트랜지션으로 타이틀 씬에 진입 중이면 true.
-        /// TitleController가 entry transition을 중복 실행하지 않도록 스킵하는 용도.
-        /// </summary>
         public static bool IsFadeInTransitionActive { get; set; }
 
         [Header("타이틀 화면")]
-        [Tooltip("타이틀 씬 Build Index (기본 0, 우선 사용)")]
         [SerializeField] private int titleSceneBuildIndex = 0;
-
-        [Tooltip("타이틀 씬 이름 (Build Index 무효 시 fallback)")]
         [SerializeField] private string titleSceneName = "0.TitleScene";
 
         [Header("출구 전환 설정")]
-        [Tooltip("FadeInObj 프리팹 (지정 시 1순위 전환으로 사용)")]
         [SerializeField] private GameObject fadeInObjPrefab;
-
-        [Tooltip("타이틀 복귀 시 PatternTransition 사용 (2순위)")]
         [SerializeField] private bool useSceneTransition = true;
 
         [Header("Audio UI")]
@@ -47,48 +27,118 @@ namespace HideAndInk.Scripts.UI
 
         private ISfxService _sfx;
         private IBgmService _bgm;
+        private AudioSource _bgmAudioSource; // BGM_Manager 오브젝트의 직접 제어용
 
-        private void Awake()
+        private void OnEnable()
         {
-            if (GameManager.Container != null)
+            // 항상 살아있는 Singleton Instance를 강제로 사용
+            _sfx = SfxManager.Instance;
+            _bgm = BgmManager.Instance;
+
+            // 게임 씬에서는 BgmManager가 없을 수 있으므로 BGM_AudioSource 직접 찾기
+            if (_bgm == null)
             {
-                if (GameManager.Container.IsRegistered<ISfxService>())
-                    _sfx = GameManager.Container.Resolve<ISfxService>();
-                if (GameManager.Container.IsRegistered<IBgmService>())
-                    _bgm = GameManager.Container.Resolve<IBgmService>();
+                // 1. BGM_Manager 오브젝트 이름으로 찾기
+                var bgmManagerObj = GameObject.Find("BGM_Manager");
+                if (bgmManagerObj != null)
+                    _bgmAudioSource = bgmManagerObj.GetComponent<AudioSource>();
+                
+                // 2. 못 찾으면 씬의 모든 AudioSource 중에서 loop=true이고 clip이 있는 것 찾기
+                if (_bgmAudioSource == null)
+                {
+                    var allAudioSources = FindObjectsOfType<AudioSource>();
+                    foreach (var source in allAudioSources)
+                    {
+                        if (source.loop && source.clip != null)
+                        {
+                            _bgmAudioSource = source;
+                            break;
+                        }
+                    }
+                }
             }
-        }
 
-        private void Start()
-        {
-            // Slider/Toggle 초기값을 현재 오디오 서비스 상태와 동기화
-            if (_bgm != null && bgmVolumeSlider != null)
-                bgmVolumeSlider.SetValueWithoutNotify(_bgm.Volume);
+            // 코드에서 Slider/Toggle 직접 찾기 (Inspector 연결과 무관)
+            if (bgmVolumeSlider == null)
+                bgmVolumeSlider = GetComponentInChildren<UnityEngine.UI.Slider>(true);
+            if (sfxVolumeSlider == null)
+                sfxVolumeSlider = GetComponentInChildren<UnityEngine.UI.Slider>(true);
+            if (bgmMuteToggle == null)
+                bgmMuteToggle = GetComponentInChildren<UnityEngine.UI.Toggle>(true);
+            if (sfxMuteToggle == null)
+                sfxMuteToggle = GetComponentInChildren<UnityEngine.UI.Toggle>(true);
+
+            // 볼륨이 0이면 기본값(0.5)으로 복원
+            if (_bgm != null && _bgm.Volume <= 0f)
+                _bgm.Volume = 0.5f;
+            if (_bgmAudioSource != null && _bgmAudioSource.volume <= 0f)
+                _bgmAudioSource.volume = 0.5f;
+            if (_sfx != null && _sfx.Volume <= 0f)
+                _sfx.Volume = 0.5f;
+
+            // Slider/Toggle 초기값 동기화
+            float bgmVol = _bgm != null ? _bgm.Volume : (_bgmAudioSource != null ? _bgmAudioSource.volume : 0.5f);
+            bool bgmMuted = _bgm != null ? _bgm.Muted : (_bgmAudioSource != null ? _bgmAudioSource.mute : false);
+            
+            if (bgmVolumeSlider != null)
+                bgmVolumeSlider.SetValueWithoutNotify(bgmVol);
             if (_sfx != null && sfxVolumeSlider != null)
                 sfxVolumeSlider.SetValueWithoutNotify(_sfx.Volume);
-            if (_bgm != null && bgmMuteToggle != null)
-                bgmMuteToggle.SetIsOnWithoutNotify(!_bgm.Muted);
+            // 토글 ON = 소리 켜짐 (음소거 해제)
+            if (bgmMuteToggle != null)
+                bgmMuteToggle.SetIsOnWithoutNotify(!bgmMuted);
             if (_sfx != null && sfxMuteToggle != null)
                 sfxMuteToggle.SetIsOnWithoutNotify(!_sfx.Muted);
+
+            // 이벤트 연결 (코드에서만 관리)
+            ConnectAudioEvents();
+
+            Debug.Log($"[SettingsPopup] OnEnable: _sfx={_sfx != null}, _bgm={_bgm != null}, audioSource={_bgmAudioSource != null}, sliders={bgmVolumeSlider != null}/{sfxVolumeSlider != null}");
         }
 
-        /// <summary>
-        /// Btn_GoTitle → 인스펙터 OnClick 연결
-        /// 전환 순서: FadeInObj 프리팹 > PatternTransition > 즉시 로드
-        /// </summary>
+        private void OnDisable()
+        {
+            DisconnectAudioEvents();
+        }
+
+        private void ConnectAudioEvents()
+        {
+            DisconnectAudioEvents(); // 중복 방지
+            
+            if (bgmVolumeSlider != null)
+                bgmVolumeSlider.onValueChanged.AddListener(SetBgmVolume);
+            if (sfxVolumeSlider != null)
+                sfxVolumeSlider.onValueChanged.AddListener(SetSfxVolume);
+            if (bgmMuteToggle != null)
+                bgmMuteToggle.onValueChanged.AddListener(SetBgmMute);
+            if (sfxMuteToggle != null)
+                sfxMuteToggle.onValueChanged.AddListener(SetSfxMute);
+        }
+
+        private void DisconnectAudioEvents()
+        {
+            if (bgmVolumeSlider != null)
+                bgmVolumeSlider.onValueChanged.RemoveListener(SetBgmVolume);
+            if (sfxVolumeSlider != null)
+                sfxVolumeSlider.onValueChanged.RemoveListener(SetSfxVolume);
+            if (bgmMuteToggle != null)
+                bgmMuteToggle.onValueChanged.RemoveListener(SetBgmMute);
+            if (sfxMuteToggle != null)
+                sfxMuteToggle.onValueChanged.RemoveListener(SetSfxMute);
+        }
+
         public void OnGoTitleClicked()
         {
             _sfx?.Play(SfxId.ButtonClick);
             Time.timeScale = 1f;
 
-            // 1순위: FadeInObj 프리팹 (TitleController와 동일한 2페이즈 전환)
             if (fadeInObjPrefab != null)
             {
                 var fadeObj = Instantiate(fadeInObjPrefab);
                 var controller = fadeObj.GetComponent<FadeInObjController>();
                 if (controller != null)
                 {
-                    IsFadeInTransitionActive = true; // TitleController가 entry transition 스킵
+                    IsFadeInTransitionActive = true;
                     controller.PlayCoverAndTransition(titleSceneBuildIndex);
                     return;
                 }
@@ -99,34 +149,29 @@ namespace HideAndInk.Scripts.UI
                 }
             }
 
-            // 2순위: PatternTransitionController
             var transition = PatternTransitionController.Instance;
             if (useSceneTransition && transition != null)
             {
                 transition.PlayIn(() =>
                 {
                     DontDestroyOnLoad(transition.gameObject);
-
                     SceneManager.sceneLoaded += OnTitleSceneLoaded;
                     LoadTitleScene();
                 });
                 return;
             }
 
-            // 3순위: 바로 로드
             LoadTitleScene();
         }
 
         private void LoadTitleScene()
         {
-            // Build Index 우선
             if (titleSceneBuildIndex >= 0 && titleSceneBuildIndex < SceneManager.sceneCountInBuildSettings)
             {
                 SceneManager.LoadScene(titleSceneBuildIndex);
                 return;
             }
 
-            // fallback: 씬 이름
             if (!string.IsNullOrEmpty(titleSceneName))
             {
                 SceneManager.LoadScene(titleSceneName);
@@ -139,7 +184,6 @@ namespace HideAndInk.Scripts.UI
         private void OnTitleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             SceneManager.sceneLoaded -= OnTitleSceneLoaded;
-
             var transition = PatternTransitionController.Instance;
             if (transition != null)
                 transition.PlayOut();
@@ -150,13 +194,28 @@ namespace HideAndInk.Scripts.UI
             SceneManager.sceneLoaded -= OnTitleSceneLoaded;
         }
 
-        // =====================================================
-        // 아래 메서드들은 Toggle/Slider → 인스펙터 OnValueChanged 연결용
-        // =====================================================
-
-        public void SetBgmMute(bool isOn) { if (_bgm != null) _bgm.Muted = !isOn; }
-        public void SetSfxMute(bool isOn) { if (_sfx != null) _sfx.Muted = !isOn; }
-        public void SetBgmVolume(float value) { if (_bgm != null) _bgm.Volume = value; }
-        public void SetSfxVolume(float value) { if (_sfx != null) _sfx.Volume = value; }
+        public void SetBgmMute(bool isOn)
+        {
+            bool muted = !isOn;
+            Debug.Log($"[SettingsPopup] SetBgmMute({isOn}) -> muted={muted}, _bgm={_bgm != null}, _audioSource={_bgmAudioSource != null}");
+            if (_bgm != null) _bgm.Muted = muted;
+            if (_bgmAudioSource != null) _bgmAudioSource.mute = muted;
+        }
+        public void SetSfxMute(bool isOn)
+        {
+            Debug.Log($"[SettingsPopup] SetSfxMute({isOn}), _sfx={_sfx != null}");
+            if (_sfx != null) _sfx.Muted = !isOn;
+        }
+        public void SetBgmVolume(float value)
+        {
+            Debug.Log($"[SettingsPopup] SetBgmVolume({value}), _bgm={_bgm != null}, _audioSource={_bgmAudioSource != null}");
+            if (_bgm != null) _bgm.Volume = value;
+            if (_bgmAudioSource != null) _bgmAudioSource.volume = value;
+        }
+        public void SetSfxVolume(float value)
+        {
+            Debug.Log($"[SettingsPopup] SetSfxVolume({value}), _sfx={_sfx != null}");
+            if (_sfx != null) _sfx.Volume = value;
+        }
     }
 }

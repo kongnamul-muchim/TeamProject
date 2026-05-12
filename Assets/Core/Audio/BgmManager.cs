@@ -71,9 +71,25 @@ namespace HideAndInk.Core.Audio
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            _source = gameObject.AddComponent<AudioSource>();
-            _source.loop = true;
-            _source.playOnAwake = false;
+            // 1. 기존 BGM_Manager 오브젝트의 AudioSource를 우선 찾기
+            var bgmManagerObj = GameObject.Find("BGM_Manager");
+            if (bgmManagerObj != null)
+            {
+                _source = bgmManagerObj.GetComponent<AudioSource>();
+                if (_source != null)
+                {
+                    // 기존 AudioSource의 설정 유지
+                    _source.loop = true;
+                }
+            }
+
+            // 2. 못 찾으면 자기 오브젝트에 추가
+            if (_source == null)
+            {
+                _source = gameObject.AddComponent<AudioSource>();
+                _source.loop = true;
+                _source.playOnAwake = false;
+            }
 
             BuildClipMap();
             LoadSettings();

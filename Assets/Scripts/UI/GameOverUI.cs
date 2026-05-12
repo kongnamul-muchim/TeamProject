@@ -86,6 +86,9 @@ namespace HideAndInk.Scripts.UI
                 if (btn != null) titleButton = btn.GetComponent<Button>();
             }
 
+            // 버튼 참조 확인 로그
+            Debug.Log($"[GameOverUI] Awake - Continue: {(continueButton != null ? continueButton.name : "NULL")}, Restart: {(restartButton != null ? restartButton.name : "NULL")}, Title: {(titleButton != null ? titleButton.name : "NULL")}");
+
             // 버튼 리스너 등록
             if (continueButton != null)
                 continueButton.onClick.AddListener(OnContinueClicked);
@@ -178,6 +181,56 @@ namespace HideAndInk.Scripts.UI
             _eventBus?.Subscribe<PlayerDeathEvent>(OnPlayerDeath);
         }
 
+        private void Update()
+        {
+            // 게임 오버 패널이 활성화된 상태에서만 마우스 클릭 감지
+            if (gameOverPanel == null || !gameOverPanel.activeInHierarchy) return;
+            
+            if (Input.GetMouseButtonDown(0))
+            {
+                TryInvokeButtonClick(Input.mousePosition);
+            }
+        }
+
+        /// <summary>
+        /// 마우스 위치가 버튼 RectTransform 내에 있으면 해당 버튼의 onClick을 직접 호출합니다.
+        /// EventSystem raycast 문제 우회용.
+        /// </summary>
+        private void TryInvokeButtonClick(Vector2 screenPosition)
+        {
+            TryInvokeButton(continueButton, screenPosition);
+            TryInvokeButton(restartButton, screenPosition);
+            TryInvokeButton(titleButton, screenPosition);
+        }
+
+        private void TryInvokeButton(Button button, Vector2 screenPosition)
+        {
+            if (button == null || !button.interactable || !button.gameObject.activeInHierarchy) return;
+            
+            var rectTransform = button.GetComponent<RectTransform>();
+            if (rectTransform == null) return;
+            
+            // Screen Space - Overlay Canvas 기준으로 RectTransform의 world bounds 계산
+            Vector3[] corners = new Vector3[4];
+            rectTransform.GetWorldCorners(corners);
+            
+            // world corners를 screen space로 변환
+            Vector2 min = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+            Vector2 max = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+            
+            Rect buttonRect = new Rect(min.x, min.y, max.x - min.x, max.y - min.y);
+            
+            if (buttonRect.Contains(screenPosition))
+            {
+                Debug.Log($"[GameOverUI] Direct click detected on: {button.name}");
+                // onClick 리스너 우회 - 직접 메서드 호출
+                if (button == continueButton) OnContinueClicked();
+                else if (button == restartButton) OnRestartClicked();
+                else if (button == titleButton) OnTitleClicked();
+                else button.onClick?.Invoke();
+            }
+        }
+
         private void OnDestroy()
         {
             _eventBus?.Unsubscribe<PlayerDeathEvent>(OnPlayerDeath);
@@ -198,7 +251,7 @@ namespace HideAndInk.Scripts.UI
             var canvasIngame = GameObject.Find("Canvas_Ingame")?.transform;
             if (canvasIngame != null)
             {
-                // 다른 팝업이 열려있으면 닫기 (Pause 등)
+                // 다른 팝업이 열리있으면 닫기 (Pause 등)
                 var popupPause = canvasIngame.Find("Popup_Pause")?.gameObject;
                 if (popupPause != null && popupPause.activeSelf)
                 {
@@ -227,6 +280,31 @@ namespace HideAndInk.Scripts.UI
                 gameOverPanel.transform.SetAsLastSibling(); // 최상위로
             }
 
+            // 버튼 클릭 가능하도록 강제 활성화
+            EnableButtonInteraction(continueButton);
+            EnableButtonInteraction(restartButton);
+            EnableButtonInteraction(titleButton);
+
+            // 버튼들을 gameOverPanel의 마지막 자식으로 이동 (raycast 우선순위 확보)
+            if (continueButton != null) continueButton.transform.SetAsLastSibling();
+            if (restartButton != null) restartButton.transform.SetAsLastSibling();
+            if (titleButton != null) titleButton.transform.SetAsLastSibling();
+
+            // CanvasGroup Raycast 차단 해제
+            if (gameOverPanel != null)
+            {
+                var canvasGroup = gameOverPanel.GetComponent<CanvasGroup>();
+                if (canvasGroup != null)
+                {
+                    canvasGroup.blocksRaycasts = true;
+                    canvasGroup.interactable = true;
+                    canvasGroup.alpha = 1f;
+                }
+            }
+
+            // gameOverPanel 내의 버튼이 아닌 모든 Image의 raycastTarget 비활성화
+            DisableNonButtonRaycasts(gameOverPanel);
+
             // UI_SuspicionVinette alpha 강제 고정 (SuspicionMeterUI가 덮어쓰는 것 방지)
             ForceVignetteToMax();
 
@@ -237,6 +315,61 @@ namespace HideAndInk.Scripts.UI
             var eventSystem = UnityEngine.EventSystems.EventSystem.current;
             if (eventSystem != null && eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>() == null)
                 eventSystem.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+
+        /// <summary>
+        /// 버튼의 interactable과 raycastTarget을 강제로 활성화합니다.
+        /// </summary>
+        private void EnableButtonInteraction(Button button)
+        {
+            if (button == null)
+            {
+                Debug.LogWarning("[GameOverUI] EnableButtonInteraction: button is NULL");
+                return;
+            }
+            button.interactable = true;
+            var img = button.GetComponent<Image>();
+            if (img != null)
+            {
+                img.raycastTarget = true;
+                if (img.color.a <= 0.01f)
+                {
+                    var color = img.color;
+                    color.a = 0.01f;
+                    img.color = color;
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[GameOverUI] Button {button.name} has NO Image component!");
+            }
+            
+            var rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                Debug.Log($"[GameOverUI] Button {button.name}: rect={rect.rect}, anchoredPosition={rect.anchoredPosition}, sizeDelta={rect.sizeDelta}");
+            }
+            
+            Debug.Log($"[GameOverUI] Button enabled: {button.name}, interactable={button.interactable}, active={button.gameObject.activeInHierarchy}");
+        }
+
+        /// <summary>
+        /// gameOverPanel 내에서 Button이 아닌 모든 Image의 raycastTarget을 비활성화합니다.
+        /// 버튼 클릭을 가로채는 배경 이미지/패널 등을 방지합니다.
+        /// </summary>
+        private static void DisableNonButtonRaycasts(GameObject panel)
+        {
+            if (panel == null) return;
+            var images = panel.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                // Button 컴포넌트가 없는 Image만 비활성화
+                if (img.GetComponent<Button>() == null && img.raycastTarget)
+                {
+                    img.raycastTarget = false;
+                    Debug.Log($"[GameOverUI] Raycast disabled on: {img.gameObject.name}");
+                }
+            }
         }
 
         /// <summary>
@@ -273,6 +406,9 @@ namespace HideAndInk.Scripts.UI
         {
             HideGameOver();
 
+            // 게임 상태 초기화 (재시작 시 Dead 상태가 남아있는 문제 방지)
+            _stateMachine?.Restart();
+
             // 시간 복원 (FadeInObj 애니메이션이 동작하도록)
             Time.timeScale = 1f;
 
@@ -296,19 +432,88 @@ namespace HideAndInk.Scripts.UI
         /// </summary>
         private void OnContinueClicked()
         {
+            Debug.Log("[GameOverUI] OnContinueClicked called!");
             _sfxService?.Play(SfxId.ButtonClick);
-            // 저장 데이터가 있으면 로드
+
             if (SaveManager.HasSaveData())
             {
                 var data = SaveManager.Load();
                 if (data != null)
                 {
-                    SaveManager.SetContinueZone(data.lastZoneIndex,
-                        data.GetPlayerPosition(), data.GetSquidPosition());
+                    Vector3 playerPos = data.GetPlayerPosition();
+                    Vector3 squidPos = data.GetSquidPosition();
+
+                    // 저장된 위치가 zero이면 현재 씬에서 플레이어 위치를 찾아 사용
+                    if (playerPos == Vector3.zero)
+                    {
+                        var player = GameObject.FindGameObjectWithTag("Player");
+                        if (player != null)
+                        {
+                            playerPos = player.transform.position;
+                            Debug.Log($"[GameOverUI] 저장된 Player 위치가 zero → 현재 위치 사용: {playerPos}");
+                        }
+                    }
+
+                    SaveManager.SetContinueZone(data.lastZoneIndex, playerPos, squidPos);
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 로드 - Zone_{data.lastZoneIndex}, PlayerPos={playerPos}");
+                }
+            }
+            else
+            {
+                // 저장 데이터가 없으면 현재 활성 Zone을 찾아서 이어하기
+                int currentZone = FindCurrentActiveZone();
+                Debug.Log($"[GameOverUI] FindCurrentActiveZone returned: {currentZone}");
+                if (currentZone > 0)
+                {
+                    // 현재 플레이어 위치도 함께 저장
+                    var player = GameObject.FindGameObjectWithTag("Player");
+                    Vector3 playerPos = player != null ? player.transform.position : Vector3.zero;
+                    SaveManager.SetContinueZone(currentZone, playerPos, Vector3.zero);
+                    Debug.Log($"[GameOverUI] 이어하기: 저장 데이터 없음 → 현재 Zone_{currentZone}에서 이어하기, PendingZoneIndex={SaveManager.PendingZoneIndex}, PlayerPos={playerPos}");
+                }
+                else
+                {
+                    Debug.LogWarning("[GameOverUI] 이어하기: 저장 데이터 없고 활성 Zone도 찾을 수 없음 → Zone_1에서 시작");
+                    SaveManager.SetContinueZone(1);
                 }
             }
 
+            Debug.Log($"[GameOverUI] TransitionToScene called with PendingZoneIndex={SaveManager.PendingZoneIndex}");
             TransitionToScene(gameSceneIndex);
+        }
+
+        /// <summary>
+        /// 씬에서 현재 활성화된 Zone 번호를 찾습니다.
+        /// active 상태인 Zone 오브젝트 중 번호가 가장 큰 것을 반환합니다.
+        /// </summary>
+        private int FindCurrentActiveZone()
+        {
+            int maxZone = -1;
+            var scene = SceneManager.GetActiveScene();
+            
+            Debug.Log($"[GameOverUI] FindCurrentActiveZone - Scene: {scene.name}");
+            
+            // 씬 내 모든 오브젝트를 검사 (비활성 포함)
+            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (var go in allObjects)
+            {
+                if (go == null) continue;
+                if (go.hideFlags != HideFlags.None) continue;
+                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+                if (!go.name.StartsWith("Zone_")) continue;
+                if (!go.activeInHierarchy) continue;
+                
+                string[] parts = go.name.Split('_');
+                if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
+                {
+                    Debug.Log($"[GameOverUI] Found active Zone: {go.name} → Zone {zoneNum}");
+                    if (zoneNum > maxZone)
+                        maxZone = zoneNum;
+                }
+            }
+            
+            Debug.Log($"[GameOverUI] FindCurrentActiveZone result: {maxZone}");
+            return maxZone;
         }
 
         /// <summary>

@@ -432,7 +432,7 @@ public class ZoneChanger : MonoBehaviour
         }
     }
 
-    void ChangeZone()
+    public void ChangeZone()
     {
         bool changed = false;
 
@@ -744,7 +744,7 @@ public class ZoneChanger : MonoBehaviour
     /// 씬 내 모든 Ground 오브젝트를 찾아, 현재 활성 Zone 번호에 해당하는 것만 활성화하고
     /// 나머지는 비활성화합니다.
     /// </summary>
-    private static void SyncGroundObjects(int activeZoneNumber)
+    public static void SyncGroundObjects(int activeZoneNumber)
     {
         GameObject[] allGrounds = FindAllGroundObjects();
         foreach (var ground in allGrounds)
@@ -764,7 +764,7 @@ public class ZoneChanger : MonoBehaviour
     /// <summary>
     /// Ground_01 ~ Ground_06 형식의 이름에서 번호를 추출합니다.
     /// </summary>
-    private static int ExtractGroundNumber(string name)
+    public static int ExtractGroundNumber(string name)
     {
         const string prefix = "Ground_";
         if (!name.Trim().StartsWith(prefix)) return -1;
@@ -780,7 +780,7 @@ public class ZoneChanger : MonoBehaviour
     /// <summary>
     /// 씬 내 모든 Ground 오브젝트(Ground_*)를 찾습니다. 비활성 오브젝트도 포함합니다.
     /// </summary>
-    static GameObject[] FindAllGroundObjects()
+    public static GameObject[] FindAllGroundObjects()
     {
         List<GameObject> grounds = new List<GameObject>();
         HashSet<int> added = new HashSet<int>();
@@ -807,7 +807,7 @@ public class ZoneChanger : MonoBehaviour
     /// Resources.FindObjectsOfTypeAll + 씬 루트 재귀 탐색 모두 사용하여
     /// 비활성 오브젝트도 확실히 찾습니다.
     /// </summary>
-    static GameObject[] FindZoneObjects(int zoneNumber)
+    public static GameObject[] FindZoneObjects(int zoneNumber)
     {
         string prefix = $"Zone_{zoneNumber}_";
         string groundName = $"Ground_{zoneNumber:D2}";
@@ -1047,16 +1047,12 @@ public class ZoneChanger : MonoBehaviour
     /// 해당 Zone 번호가 안개 효과가 적용되는 Zone인지 확인합니다.
     /// (Zone 1, 2, 3, 4, 5, 6)
     /// </summary>
-    private static bool IsFogZone(int zoneNumber)
+    public static bool IsFogZone(int zoneNumber)
     {
-        return zoneNumber == 1 || zoneNumber == 2 || zoneNumber == 3 || zoneNumber == 4 || zoneNumber == 5 || zoneNumber == 6;
+        return zoneNumber == 1 || zoneNumber == 2 || zoneNumber == 3 || zoneNumber == 6;
     }
 
-    /// <summary>
-    /// 해당 Zone 번호가 어두운 안개 효과를 사용하는 Zone인지 확인합니다.
-    /// (Zone 4, 5)
-    /// </summary>
-    private static bool IsDarkFogZone(int zoneNumber)
+    public static bool IsDarkFogZone(int zoneNumber)
     {
         return zoneNumber == 4 || zoneNumber == 5;
     }
@@ -1065,7 +1061,7 @@ public class ZoneChanger : MonoBehaviour
     /// URP Renderer의 FullScreenPassRendererFeature를 활성화/비활성화하고,
     /// Zone에 따라 머티리얼 설정을 조정합니다.
     /// </summary>
-    private static void SetUnderwaterEffect(bool active, bool isDark = false)
+    public static void SetUnderwaterEffect(bool active, bool isDark = false)
     {
         if (GraphicsSettings.currentRenderPipeline is not UniversalRenderPipelineAsset pipelineAsset)
         {
@@ -1115,7 +1111,7 @@ public class ZoneChanger : MonoBehaviour
     /// UnderwaterFog 머티리얼의 속성을 Zone에 맞게 조정합니다.
     /// isDark=true면 Zone 4/5용 어두운 설정, false면 일반 설정을 적용합니다.
     /// </summary>
-    private static void ApplyFogMaterialSettings(FullScreenPassRendererFeature feature, bool isDark)
+    public static void ApplyFogMaterialSettings(FullScreenPassRendererFeature feature, bool isDark)
     {
         var materialField = feature.GetType().GetField("passMaterial",
             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

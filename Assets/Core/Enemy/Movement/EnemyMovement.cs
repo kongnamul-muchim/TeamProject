@@ -235,7 +235,7 @@ namespace HideAndInk.Core.Enemy.Movement
 
             // 해당 위치 아래로 Raycast
             Vector3 checkPoint = new Vector3(position.x, position.y + 0.1f, position.z);
-            if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+            if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 10f, _groundLayer))
             {
                 return true;
             }
@@ -261,7 +261,7 @@ namespace HideAndInk.Core.Enemy.Movement
             Vector3 checkPoint = _enemy.Position + moveDirection * _groundCheckDistance;
 
             // 아래로 Raycast
-            if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 2f, _groundLayer))
+            if (Physics.Raycast(checkPoint, Vector3.down, out RaycastHit hit, 10f, _groundLayer))
             {
                 return true;
             }
