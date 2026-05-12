@@ -52,6 +52,10 @@ namespace HideAndInk.Core.Enemy
         [System.NonSerialized] protected Transform _playerTransform;
         [System.NonSerialized] protected HideAndInk.Player.CamouflageAdapter _camouflageAdapter;
 
+        // 초기 위치 (이어하기 시 복원용)
+        protected Vector3 _initialPosition;
+        protected Quaternion _initialRotation;
+
         // Ground 경계 정보
         protected GroundBounds _groundBounds;
         protected bool _isGroundBoundsScanned;
@@ -100,6 +104,8 @@ namespace HideAndInk.Core.Enemy
 
         protected virtual void Start()
         {
+            _initialPosition = transform.position;
+            _initialRotation = transform.rotation;
             ScanGroundBounds();
             InitializeAI();
         }
@@ -385,6 +391,22 @@ namespace HideAndInk.Core.Enemy
             {
                 _movement.Stop();
             }
+        }
+
+        /// <summary>
+        /// 이어하기 시 Enemy를 초기 위치/상태로 복원합니다.
+        /// BossEnemyController 등에서 오버라이드하여 추가 상태 초기화 가능.
+        /// </summary>
+        public virtual void ResetToInitialState()
+        {
+            transform.position = _initialPosition;
+            transform.rotation = _initialRotation;
+            _movement?.Stop();
+            _isActive = true;
+            gameObject.SetActive(true);
+#if UNITY_EDITOR
+            Debug.Log($"[EnemyAIController] 초기화: {name} → 위치 {_initialPosition}");
+#endif
         }
     }
 }

@@ -7,6 +7,7 @@ using HideAndInk.Core.Player;
 using HideAndInk.Core.Events;
 using HideAndInk.Core.Logging;
 using HideAndInk.Core.Audio;
+using HideAndInk.Core.Enemy;
 using HideAndInk.Scripts.Save;
 
 namespace HideAndInk.Core.Managers
@@ -224,43 +225,32 @@ namespace HideAndInk.Core.Managers
                 ZoneChanger.SetUnderwaterEffect(false);
             }
 
-            // === Player 위치 복원 ===
+            // === Player 위치 복원: Zone 시작점으로 텔레포트 (사망 위치 사용 안 함) ===
             var player = GameObject.FindGameObjectWithTag("Player");
-            Vector3 playerPos = Vector3.zero;
-            if (player != null)
+            Vector3 spawnPos = FindZoneSpawnPosition(targetZone);
+            if (player != null && spawnPos != Vector3.zero)
             {
-                playerPos = SaveManager.PendingPlayerPosition;
-
-                if (playerPos == Vector3.zero)
+                player.transform.position = spawnPos;
+                var rb = player.GetComponent<Rigidbody>();
+                if (rb != null)
                 {
-                    // 저장된 위치가 없으면 활성화된 Zone의 위치로
-                    var activeZones = GameObject.FindObjectsOfType<GameObject>();
-                    foreach (var z in activeZones)
-                    {
-                        if (z.name == $"Zone_{targetZone}_Object" || z.name == $"Zone_{targetZone}_Images")
-                        {
-                            playerPos = z.transform.position;
-                            playerPos.y = player.transform.position.y;
-                            break;
-                        }
-                    }
+                    rb.position = spawnPos;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
                 }
-
-                if (playerPos != Vector3.zero)
-                {
-                    player.transform.position = playerPos;
-                    var rb = player.GetComponent<Rigidbody>();
-                    if (rb != null)
-                    {
-                        rb.position = playerPos;
-                        rb.linearVelocity = Vector3.zero;
-                    }
-                    Debug.Log($"[GameManager] Player 위치 복원: {playerPos}");
-                }
+                Debug.Log($"[GameManager] Player → Zone_{targetZone} 시작점으로 텔레포트: {spawnPos}");
             }
 
+            // === Enemy 초기화: 모든 Enemy를 시작 위치/상태로 복원 ===
+            var allEnemies = FindObjectsOfType<EnemyAIController>();
+            foreach (var enemy in allEnemies)
+            {
+                enemy.ResetToInitialState();
+            }
+            Debug.Log($"[GameManager] Enemy 초기화 완료: {allEnemies.Length}개");
+
             // === 치메라를 Player 위치로 즉시 이동 ===
-            MoveCameraToPlayer(player, playerPos);
+            MoveCameraToPlayer(player, spawnPos);
 
             // 이어하기 정보 초기화
             SaveManager.ClearContinueZone();
@@ -344,6 +334,33 @@ namespace HideAndInk.Core.Managers
             if (parts.Length >= 2 && int.TryParse(parts[1], out int number))
                 return number;
             return -1;
+        }
+
+        /// <summary>
+        /// 이어하기 시 Player가 스폰될 위치를 찾습니다.
+        /// 1순위: ZoneChanger의 toZoneNumber == targetZone 위치
+        /// 2순위: 활성화된 Zone_Object의 Transform 위치
+        /// </summary>
+        private static Vector3 FindZoneSpawnPosition(int targetZone)
+        {
+            // 1순위: ZoneChanger 위치
+            foreach (var changer in FindObjectsOfType<ZoneChanger>())
+            {
+                if (changer.toZoneNumber == targetZone)
+                    return changer.transform.position;
+            }
+
+            // 2순위: 활성화된 Zone 오브젝트 위치
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (go == null || go.hideFlags != HideFlags.None) continue;
+                if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+                if (go.name.Trim() == $"Zone_{targetZone}_Object")
+                    return go.transform.position;
+            }
+
+            Debug.LogWarning($"[GameManager] Zone_{targetZone}의 스폰 위치를 찾을 수 없습니다.");
+            return Vector3.zero;
         }
 
         private System.Collections.IEnumerator PlayPrologueDelayed()
