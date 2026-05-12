@@ -917,8 +917,15 @@ namespace HideAndInk.Core.Enemy.Boss
                             }
                         }
 
+                        newPos.y = -3.8f;
                         transform.position = newPos;
                     }
+
+                    // ★ Y 강제 고정 (IsMoving과 무관하게 매 프레임 적용)
+                    //    돌진 시작/종료/사이 텀 모두 Y=-3.8f 유지
+                    Vector3 forceY = transform.position;
+                    forceY.y = -3.8f;
+                    transform.position = forceY;
                 }
             }
             else
