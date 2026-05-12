@@ -9,6 +9,8 @@ public sealed class ChichiChargeUI : MonoBehaviour
     [SerializeField] private float yOffset = 1.8f;
 
     [Header("Text Style")]
+    [Tooltip("텍스트 메시 프로 폰트 에셋")]
+    [SerializeField] private TMP_FontAsset fontAsset;
     [Tooltip("폰트 크기")]
     [SerializeField] private float fontSize = 2f;
     [Tooltip("텍스트 색상")]
@@ -36,6 +38,8 @@ public sealed class ChichiChargeUI : MonoBehaviour
         textGO.transform.SetParent(transform, false);
 
         _chargeText = textGO.AddComponent<TextMeshPro>();
+        if (fontAsset != null)
+            _chargeText.font = fontAsset;
         _chargeText.fontSize = fontSize;
         _chargeText.color = textColor;
         _chargeText.alignment = TextAlignmentOptions.Center;
