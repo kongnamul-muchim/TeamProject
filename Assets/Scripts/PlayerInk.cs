@@ -139,7 +139,7 @@ public class PlayerInk : MonoBehaviour
             var psRenderer = effect.GetComponent<ParticleSystemRenderer>();
             if (psRenderer != null)
             {
-                psRenderer.sortingLayerName = "Default";
+                psRenderer.sortingLayerName = "Player";
                 psRenderer.sortingOrder = 100;
             }
 
