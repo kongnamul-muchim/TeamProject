@@ -718,6 +718,7 @@ public class ZoneChanger : MonoBehaviour
         {
             _isExecutingTutorials = true;
             StoryEvents.OnDialogueEnd += OnTutorialDialogueEnd;
+            SetPauseButtonVisible(false);
             ExecuteNextTutorial();
         }
     }
@@ -732,6 +733,7 @@ public class ZoneChanger : MonoBehaviour
             // 모든 튜토리얼 실행 완료
             StoryEvents.OnDialogueEnd -= OnTutorialDialogueEnd;
             _isExecutingTutorials = false;
+            SetPauseButtonVisible(true);
             Debug.Log("[ZoneChanger] 모든 튜토리얼 트리거 실행 완료");
             return;
         }
@@ -747,6 +749,19 @@ public class ZoneChanger : MonoBehaviour
     private void OnTutorialDialogueEnd()
     {
         ExecuteNextTutorial();
+    }
+
+    /// <summary>
+    /// 일시정지 버튼(Btn_Pause)의 활성화 상태를 설정합니다.
+    /// </summary>
+    private void SetPauseButtonVisible(bool visible)
+    {
+        var pauseBtn = GameObject.Find("Btn_Pause");
+        if (pauseBtn != null)
+        {
+            pauseBtn.SetActive(visible);
+            Debug.Log($"[ZoneChanger] Pause button set to {visible}");
+        }
     }
 
     /// <summary>
