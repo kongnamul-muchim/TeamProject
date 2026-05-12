@@ -135,12 +135,16 @@ public class PlayerInk : MonoBehaviour
         ParticleSystem effect = GetOrCreateSmokeEffect();
         if (effect != null)
         {
-            // 파티클이 캐릭터/전경 위에 보이도록 SortingLayer 설정
+            // 파티클이 플레이어 뒤로 나오도록 SortingLayer 설정
             var psRenderer = effect.GetComponent<ParticleSystemRenderer>();
             if (psRenderer != null)
             {
                 psRenderer.sortingLayerName = "Player";
-                psRenderer.sortingOrder = 100;
+                int playerOrder = 0;
+                var playerSr = GetComponent<SpriteRenderer>();
+                if (playerSr != null)
+                    playerOrder = playerSr.sortingOrder;
+                psRenderer.sortingOrder = playerOrder - 1;
             }
 
             effect.gameObject.SetActive(true);
