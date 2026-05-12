@@ -93,6 +93,8 @@ namespace HideAndInk.Core.Audio
 
             BuildClipMap();
             LoadSettings();
+            // Inspector의 defaultVolume을 강제 적용 (setter를 통해 _source.volume까지 동기화)
+            Volume = defaultVolume;
         }
 
         private void BuildClipMap()
@@ -131,6 +133,8 @@ namespace HideAndInk.Core.Audio
             if (_fadeRoutine != null)
                 StopCoroutine(_fadeRoutine);
 
+            Debug.Log($"[BgmManager] Play({id}) called. defaultVolume={defaultVolume}, current _volume={_volume}, _source.volume={(_source != null ? _source.volume : -1)}");
+
             _fadeRoutine = StartCoroutine(PlayWithFade(clip, id, fadeDuration));
         }
 
@@ -152,6 +156,7 @@ namespace HideAndInk.Core.Audio
             _source.clip = clip;
             CurrentBgm = id;
             _source.volume = _volume;
+            Debug.Log($"[BgmManager] Playing {clip.name} at volume={_source.volume}");
             _source.Play();
 
             if (fadeDuration > 0f)
