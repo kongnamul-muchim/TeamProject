@@ -118,6 +118,7 @@ public class ZoneChanger : MonoBehaviour
         private ISfxService _sfxService;
         private IBgmService _bgmService;
         private bool _alreadyTriggered = false;
+        private bool _epilogueTriggered = false;
     private GameObject _autoCreatedWall;
     private GameObject _autoCreatedLeftBoundaryWall;
 
@@ -817,7 +818,16 @@ public class ZoneChanger : MonoBehaviour
     /// </summary>
     private IEnumerator TriggerEpilogueDelayed(float delaySeconds)
     {
-        Debug.Log($"[ZoneChanger] Zone 6 에필로그 {delaySeconds}초 후 자동 실행 예약");
+        Debug.Log($"[ZoneChanger] Zone 6 에필로그 {delaySeconds}초 후 자동 실행 예약 (toZoneNumber={toZoneNumber})");
+        
+        // 이미 예약된 에필로그가 있는지 확인
+        if (_epilogueTriggered)
+        {
+            Debug.Log("[ZoneChanger] 에필로그가 이미 예약/실행되었습니다. 중복 실행 방지.");
+            yield break;
+        }
+        _epilogueTriggered = true;
+        
         yield return new WaitForSeconds(delaySeconds);
 
         var epilogueTrigger = FindObjectOfType<HideAndInk.Gameplay.EpilogueTrigger>();
@@ -828,7 +838,7 @@ public class ZoneChanger : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[ZoneChanger] EpilogueTrigger를 찾을 수 없습니다.");
+            Debug.LogWarning("[ZoneChanger] EpilogueTrigger를 찾을 수 없습니다. 씬에 EpilogueTrigger 오브젝트가 있는지 확인하세요.");
         }
     }
 
