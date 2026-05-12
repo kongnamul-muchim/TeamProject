@@ -219,15 +219,24 @@ public class DialogueUIAdapter : MonoBehaviour
 
         _isDialogueActive = true;
 
-        // DialogeUI 활성화
+        // DialogeUI 활성화 (최상위로 이동하여 다른 UI 가림)
         if (dialogeUIRoot != null)
+        {
             dialogeUIRoot.SetActive(true);
+            dialogeUIRoot.transform.SetAsLastSibling();
+        }
 
         // PlayerInfo UI 숨김
         if (playerInfoPanel != null)
             playerInfoPanel.SetActive(false);
 
-        // 일시정지 버튼 숨김
+        // 일시정지 버튼 숨김 (null이면 씬에서 다시 찾기)
+        if (pauseButton == null)
+        {
+            var foundBtn = GameObject.Find("Btn_Pause");
+            if (foundBtn != null)
+                pauseButton = foundBtn;
+        }
         if (pauseButton != null)
             pauseButton.SetActive(false);
 
