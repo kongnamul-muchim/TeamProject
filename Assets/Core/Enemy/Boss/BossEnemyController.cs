@@ -141,9 +141,9 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_activeGimmick is RelentlessChaseGimmick)
             {
                 Vector3 initPos = transform.position;
-                initPos.y = -3.8f;
+                initPos.y = 0f;
                 transform.position = initPos;
-                Debug.Log($"[MorayY-DEBUG] Start() forced Y to -3.8 (was {transform.position.y:F5})");
+                Debug.Log($"[MorayY-DEBUG] Start() forced Y to 0 (was {transform.position.y:F5})");
             }
 
             // EventBus 해결
@@ -182,9 +182,9 @@ namespace HideAndInk.Core.Enemy.Boss
             if (_activeGimmick is RelentlessChaseGimmick)
             {
                 Vector3 initPos = transform.position;
-                initPos.y = -3.8f;
+                initPos.y = 0f;
                 transform.position = initPos;
-                Debug.Log($"[MorayY-DEBUG] Start() forced Y to -3.8");
+                Debug.Log($"[MorayY-DEBUG] Start() forced Y to 0");
             }
 
             _stateMachine.Initialize(EnemyAIState.Patrol);
@@ -937,19 +937,19 @@ namespace HideAndInk.Core.Enemy.Boss
                             }
                         }
 
-                        newPos.y = -3.8f;
+                        newPos.y = 0f;
                         transform.position = newPos;
                     }
 
                     // ★ Y 강제 고정 (IsMoving과 무관하게 매 프레임 적용)
                     Vector3 forceY = transform.position;
-                    forceY.y = -3.8f;
+                    forceY.y = 0f;
                     transform.position = forceY;
 
-                    // ★ 디버그: Y가 -3.8 이외의 값으로 변경된 경우 추적
-                    if (Mathf.Abs(yBefore - (-3.8f)) > 0.01f && yBefore != -3.8f)
+                    // ★ 디버그: Y가 0 이외의 값으로 변경된 경우 추적
+                    if (Mathf.Abs(yBefore - (0f)) > 0.01f && yBefore != 0f)
                     {
-                        Debug.LogWarning($"[MorayY-DEBUG] Frame: pos.y was {yBefore:F5} before correction → forced to -3.8");
+                        Debug.LogWarning($"[MorayY-DEBUG] Frame: pos.y was {yBefore:F5} before correction → forced to 0");
                     }
                 }
             }
@@ -1322,7 +1322,7 @@ namespace HideAndInk.Core.Enemy.Boss
         /// <summary>
         /// Moray Charge 종료 후 위치 보정:
         /// 1. XZ를 GroundBounds 내로 클램핑
-        /// 2. Y → -3.8f 고정 (곰치 공중 유지)
+        /// 2. Y → 0f 고정 (곰치 공중 유지)
         /// </summary>
         private void RestorePositionAfterCharge()
         {
@@ -1338,8 +1338,8 @@ namespace HideAndInk.Core.Enemy.Boss
                 pos.z = _groundBounds.ClampZ(pos.z);
             }
 
-            // 2단계: Y 고정 (-3.8f, 곰치가 항상 공중에 있도록)
-            pos.y = -3.8f;
+            // 2단계: Y 고정 (0f, 곰치가 항상 공중에 있도록)
+            pos.y = 0f;
 
             transform.position = pos;
         }

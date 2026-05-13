@@ -188,11 +188,11 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 CalculateChargePath(i);
             }
 
-            // Prepare 시작 → 화면 밖 진입점으로 순간이동 (Y = -3.8f 고정)
+                        // Prepare 시작 → 화면 밖 진입점으로 순간이동 (Y = 0f 고정)
             if (_chargeStarts.Length > 0)
             {
                 Vector3 preparePos = _chargeStarts[0];
-                preparePos.y = -3.8f;
+                preparePos.y = 0f;
                 OnPrepareTeleport?.Invoke(preparePos);
             }
 
@@ -375,8 +375,8 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            // ★ Y 고정: -3.8f (곰치가 공중에서 돌진, 땅에 박히지 않음)
-            float chargeY = -3.8f;
+            // ★ Y 고정: 0f (곰치가 공중에서 돌진, 땅에 박히지 않음)
+            float chargeY = 0f;
             start.y = chargeY;
             end.y = chargeY;
 
