@@ -1,6 +1,7 @@
 using UnityEngine;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Player;
+using HideAndInk.ParallaxSystem;
 using HideAndInk.Scripts.Save;
 
 namespace HideAndInk.Player
@@ -68,6 +69,16 @@ namespace HideAndInk.Player
                 playerInk = GetComponent<PlayerInk>();
             if (playerLives == null)
                 playerLives = GetComponent<PlayerLives>();
+
+            // ★ TransparencySortMode = CustomAxis(Z축) 환경에서
+            //    Player와 Enemy가 같은 sorting order를 가져야 Z depth로 판정됨
+            //    SortingOrderUpdater(Y축 기반)는 방해하므로 제거 후 고정값 사용
+            var updater = GetComponent<SortingOrderUpdater>();
+            if (updater != null)
+                Destroy(updater);
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && sr.sortingLayerName == "midground")
+                sr.sortingOrder = 0;
         }
 
         private void Start()

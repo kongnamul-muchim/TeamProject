@@ -106,29 +106,14 @@ namespace HideAndInk.Core.Enemy
             FindPlayer();
             InitializeMovement();
 
-            // ★ Enemy Sorting Layer를 midground로 설정
-            //    배경 레이어(Default/Background/distant/distant02 = 0~3)보다 위,
-            //    Player 레이어(6)보다 아래에서 렌더링되도록 함
-            //    (Swordfish는 씬에서 이미 midground로 설정되어 있음)
+            // ★ Enemy Sorting Layer = midground, 고정 sortingOrder = 0
+            //    TransparencySortMode = CustomAxis(Z축)이므로,
+            //    같은 sorting order면 Z depth로 렌더링 우선순위 결정됨
             var sr = GetComponent<SpriteRenderer>();
             if (sr != null && sr.sortingLayerName != "midground" && sr.sortingLayerName != "Player")
             {
                 sr.sortingLayerName = "midground";
                 sr.sortingOrder = 0;
-
-                // ★ 2차: Player와 동일한 SortingOrderUpdater 설정
-                //    Player: baseOrder=0, precision=10, yOffset=0.5
-                //    Enemy도 동일 설정 → 같은 Y에서 같은 order → Z depth로 판정
-                if (GetComponent<SortingOrderUpdater>() == null)
-                {
-                    var updater = gameObject.AddComponent<SortingOrderUpdater>();
-                    updater.SetTrackingTarget(transform);
-                    updater.SetSortingReference(transform);
-                    updater.SetBaseOrder(0);
-                    updater.SetPrecision(10);
-                    updater.SetYOffset(0.5f);
-                    updater.SetUpdateMode(SortingOrderUpdater.UpdateMode.LateUpdate);
-                }
             }
         }
 
