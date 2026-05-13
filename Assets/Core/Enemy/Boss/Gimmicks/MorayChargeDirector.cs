@@ -464,6 +464,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             float chargeZ = PredictChargeZ(index);
 
+            // ★ 안전장치: GroundBounds Z 클램핑 (PredictChargeZ에서 이미 했지만 혹시 모르니)
+            if (_groundBounds.HasValue)
+                chargeZ = _groundBounds.Value.ClampZ(chargeZ);
+
             // Camera Viewport 기준 X 범위 (해당 chargeZ depth에서 계산)
             float left, right;
             if (!TryGetViewBoundsAtZ(chargeZ, out left, out right))
@@ -514,17 +518,30 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         /// <summary>
         /// 돌진 Z 위치 — Ground Z 중앙 기준 (Player Z 무시)
+        /// GroundBounds로 클램핑하여 맵 밖 돌진 방지
         /// </summary>
         private float PredictChargeZ(int index)
         {
             // Player Z 위치 기준으로 돌진 Z 결정
             float centerZ = _playerTransform != null ? _playerTransform.position.z : 0f;
-            if (_totalCharges <= 1) return centerZ;
+            if (_totalCharges <= 1)
+            {
+                // ★ 단일 돌진도 GroundBounds Z 클램핑
+                if (_groundBounds.HasValue)
+                    centerZ = _groundBounds.Value.ClampZ(centerZ);
+                return centerZ;
+            }
 
             // 여러 돌진: Player Z 기준 ±5m 범위로 퍼뜨림
             float halfRange = 5f;
             float t = (float)index / (_totalCharges - 1);
-            return centerZ + (t - 0.5f) * 2f * halfRange;
+            float chargeZ = centerZ + (t - 0.5f) * 2f * halfRange;
+
+            // ★ GroundBounds Z 클램핑 (맵 밖 인디케이터 방지)
+            if (_groundBounds.HasValue)
+                chargeZ = _groundBounds.Value.ClampZ(chargeZ);
+
+            return chargeZ;
         }
 
         // ──────────────────────────────────────────────

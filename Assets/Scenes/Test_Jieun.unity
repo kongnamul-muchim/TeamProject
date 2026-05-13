@@ -1122,6 +1122,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MorayEel
       objectReference: {fileID: 0}
+    - target: {fileID: 5237008915573959048, guid: 5a3b9b61924097b49874ec809e64d5b0, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7092178077433725567, guid: 5a3b9b61924097b49874ec809e64d5b0, type: 3}
       propertyPath: m_LocalPosition.x
       value: -46.3

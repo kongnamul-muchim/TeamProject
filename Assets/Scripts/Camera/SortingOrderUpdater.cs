@@ -139,6 +139,10 @@ namespace HideAndInk.ParallaxSystem
             float y = sortingReference.position.y - yOffset;
             int newOrder = baseOrder - Mathf.RoundToInt(y * precision);
 
+            // ★ 배경이 Enemy(order=0)와 겹치지 않도록 상한 제한
+            //    모든 배경 오브젝트는 Enemy보다 항상 뒤에 있어야 함
+            newOrder = Mathf.Clamp(newOrder, int.MinValue, -1);
+
             // 변경이 있을 때만 적용 (불필요한 렌더링 최소화)
             if (newOrder != _lastOrder)
             {
