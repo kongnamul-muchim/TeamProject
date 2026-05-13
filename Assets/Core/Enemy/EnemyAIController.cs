@@ -106,18 +106,27 @@ namespace HideAndInk.Core.Enemy
             FindPlayer();
             InitializeMovement();
 
-            // ★ Enemy에 SortingOrderUpdater 추가 (Y위치 기반 동적 정렬)
-            //    배경/Player와 동일한 깊이 정렬 시스템 사용
-            //    Enemy가 배경보다 항상 앞에 렌더링되도록 baseOrder=1로 설정
-            if (GetComponent<SpriteRenderer>() != null && GetComponent<HideAndInk.ParallaxSystem.SortingOrderUpdater>() == null)
+            // ★ Enemy Sorting Layer를 midground로 설정
+            //    배경 레이어(Default/Background/distant/distant02 = 0~3)보다 위,
+            //    Player 레이어(6)보다 아래에서 렌더링되도록 함
+            //    (Swordfish는 씬에서 이미 midground로 설정되어 있음)
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && sr.sortingLayerName != "midground" && sr.sortingLayerName != "Player")
             {
-                var updater = gameObject.AddComponent<SortingOrderUpdater>();
-                updater.SetTrackingTarget(transform);
-                updater.SetSortingReference(transform);
-                updater.SetBaseOrder(1);  // 배경(baseOrder=0)보다 1 높게
-                updater.SetPrecision(10);
-                updater.SetYOffset(0f);
-                updater.SetUpdateMode(SortingOrderUpdater.UpdateMode.LateUpdate);
+                sr.sortingLayerName = "midground";
+                sr.sortingOrder = 0;
+
+                // Enemy에 SortingOrderUpdater 추가 (Y위치 기반 동적 정렬)
+                if (GetComponent<SortingOrderUpdater>() == null)
+                {
+                    var updater = gameObject.AddComponent<SortingOrderUpdater>();
+                    updater.SetTrackingTarget(transform);
+                    updater.SetSortingReference(transform);
+                    updater.SetBaseOrder(0);
+                    updater.SetPrecision(10);
+                    updater.SetYOffset(0f);
+                    updater.SetUpdateMode(SortingOrderUpdater.UpdateMode.LateUpdate);
+                }
             }
         }
 
