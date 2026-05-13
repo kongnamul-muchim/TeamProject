@@ -115,6 +115,16 @@ namespace HideAndInk.Core.Enemy
                 sr.sortingLayerName = "midground";
                 sr.sortingOrder = 0;
             }
+
+            // ★ Enemy Material → Custom/Sprite-ZWrite (ZWrite On)
+            //    OctopusCamouflage X-Ray 실루엣이 Enemy 뒷면에서도 동작하도록
+            //    depth buffer에 Enemy를 기록함 (의태 오브젝트와 동일한 원리)
+            if (sr != null && sr.sharedMaterial != null && sr.sharedMaterial.shader.name == "Sprites/Default")
+            {
+                var zwriteMat = Resources.Load<Material>("Materials/Sprite-ZWrite");
+                if (zwriteMat != null)
+                    sr.material = zwriteMat;
+            }
         }
 
         protected virtual void Start()
