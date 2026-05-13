@@ -85,18 +85,15 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             MeshFilter mf = go.AddComponent<MeshFilter>();
             MeshRenderer mr = go.AddComponent<MeshRenderer>();
 
-            // 풀용 기본 메쉬 (빈 메쉬, Spawn 시 업데이트)
+            // 풀용 기본 메쉬 (Spawn 시 UpdateMeshGeometryBox로 재설정)
             Mesh mesh = new Mesh();
-            mesh.name = "ChargeQuad_Pooled";
+            mesh.name = "ChargeBox_Pooled";
 
-            // 최소 크기 4각형 (Spawn 시 재설정)
-            Vector3[] vertices = new Vector3[4];
-            vertices[0] = Vector3.zero;
-            vertices[1] = Vector3.zero;
-            vertices[2] = Vector3.zero;
-            vertices[3] = Vector3.zero;
+            // 8개 버텍스 (Box 메쉬), Spawn 시점에 실제 크기로 업데이트
+            Vector3[] vertices = new Vector3[8];
+            for (int vi = 0; vi < 8; vi++) vertices[vi] = Vector3.zero;
             mesh.vertices = vertices;
-            mesh.triangles = new int[6] { 0, 1, 2, 0, 2, 3 };
+            mesh.triangles = new int[36] { 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0 };
             mesh.colors = new Color[8] { safeColor, safeColor, safeColor, safeColor, safeColor, safeColor, safeColor, safeColor };
             mesh.RecalculateNormals();
             mf.mesh = mesh;

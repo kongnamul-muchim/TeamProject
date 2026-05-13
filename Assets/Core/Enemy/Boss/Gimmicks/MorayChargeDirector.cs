@@ -389,7 +389,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float elapsed = 0f;
 
 #if UNITY_EDITOR
-            Debug.Log($"[MorayChargeDirector] Charge #{index}: Start=({start.x:F1},{start.z:F1}) End=({end.x:F1},{end.z:F1}) Dist={distance:F1} Duration={duration:F1}s");
+            Debug.Log($"[MorayChargeDirector] Charge #{index}: Start=({start.x:F1},{start.y:F1},{start.z:F1}) End=({end.x:F1},{end.y:F1},{end.z:F1}) Dist={distance:F1} Duration={duration:F1}s");
 #endif
 
             // 매 프레임 충돌 체크 + 종료 체크
