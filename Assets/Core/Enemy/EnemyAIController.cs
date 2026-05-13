@@ -116,7 +116,9 @@ namespace HideAndInk.Core.Enemy
                 sr.sortingLayerName = "midground";
                 sr.sortingOrder = 0;
 
-                // Enemy에 SortingOrderUpdater 추가 (Y위치 기반 동적 정렬)
+                // ★ 2차: Player와 동일한 SortingOrderUpdater 설정
+                //    Player: baseOrder=0, precision=10, yOffset=0.5
+                //    Enemy도 동일 설정 → 같은 Y에서 같은 order → Z depth로 판정
                 if (GetComponent<SortingOrderUpdater>() == null)
                 {
                     var updater = gameObject.AddComponent<SortingOrderUpdater>();
@@ -124,7 +126,7 @@ namespace HideAndInk.Core.Enemy
                     updater.SetSortingReference(transform);
                     updater.SetBaseOrder(0);
                     updater.SetPrecision(10);
-                    updater.SetYOffset(0f);
+                    updater.SetYOffset(0.5f);
                     updater.SetUpdateMode(SortingOrderUpdater.UpdateMode.LateUpdate);
                 }
             }
