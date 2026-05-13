@@ -127,6 +127,36 @@ namespace HideAndInk.ParallaxSystem
             sortingReference = newReference;
         }
 
+        /// <summary>기본 Sorting Order를 설정한다.</summary>
+        public void SetBaseOrder(int order)
+        {
+            baseOrder = order;
+        }
+
+        /// <summary>Y축 정밀도를 설정한다.</summary>
+        public void SetPrecision(int p)
+        {
+            precision = p;
+        }
+
+        /// <summary>Y 오프셋을 설정한다.</summary>
+        public void SetYOffset(float offset)
+        {
+            yOffset = offset;
+        }
+
+        /// <summary>업데이트 모드를 설정한다.</summary>
+        public void SetUpdateMode(UpdateMode updateMode)
+        {
+            mode = updateMode;
+        }
+
+        /// <summary>Sorting Layer 이름을 설정한다. 비우면 변경 안 함.</summary>
+        public void SetSortingLayerName(string layerName)
+        {
+            sortingLayerName = layerName;
+        }
+
         // ── 내부 메서드 ──
 
         private void ApplySortingOrder()
@@ -138,10 +168,6 @@ namespace HideAndInk.ParallaxSystem
             // 위에 있을수록(큰 Y) 뒤에 그려져야 함 → 작은 sortingOrder
             float y = sortingReference.position.y - yOffset;
             int newOrder = baseOrder - Mathf.RoundToInt(y * precision);
-
-            // ★ 배경이 Enemy(order=0)와 겹치지 않도록 상한 제한
-            //    모든 배경 오브젝트는 Enemy보다 항상 뒤에 있어야 함
-            newOrder = Mathf.Clamp(newOrder, int.MinValue, -1);
 
             // 변경이 있을 때만 적용 (불필요한 렌더링 최소화)
             if (newOrder != _lastOrder)

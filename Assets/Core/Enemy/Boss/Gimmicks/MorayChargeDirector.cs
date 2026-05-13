@@ -283,6 +283,13 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // === Prepare Phase: 네모 순차 생성 ===
             for (int i = 0; i < _totalCharges; i++)
             {
+                // ★ Player 멀어지면 즉시 중단
+                if (IsPlayerTooFar())
+                {
+                    ForceInterrupt();
+                    yield break;
+                }
+
                 if (indicator != null)
                     indicator.SpawnIndicator(_chargeStarts[i], _chargeEnds[i]);
                 yield return new WaitForSeconds(minSquareInterval);
@@ -295,11 +302,26 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // === Charge Phase: N회 돌진 ===
             for (int i = 0; i < _totalCharges; i++)
             {
+                // ★ Player 멀어지면 즉시 중단
+                if (IsPlayerTooFar())
+                {
+                    ForceInterrupt();
+                    yield break;
+                }
+
                 yield return StartCoroutine(ExecuteSingleChargeCoroutine(i));
 
                 // 돌진 사이 텀 (마지막이 아니면)
                 if (i < _totalCharges - 1)
+                {
+                    // ★ 텀 중에도 거리 체크
+                    if (IsPlayerTooFar())
+                    {
+                        ForceInterrupt();
+                        yield break;
+                    }
                     yield return new WaitForSeconds(chargeDelay);
+                }
             }
 
             // === Complete ===
@@ -623,6 +645,17 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _chargeHitFlags[_currentChargeIndex] = true;
                 OnPlayerHit?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// Player가 Boss로부터 너무 멀리 떨어졌는지 확인
+        /// Prepare/Charge 중에도 거리 체크를 위해 _isMorayCharging과 무관하게 동작
+        /// </summary>
+        private bool IsPlayerTooFar()
+        {
+            if (_playerTransform == null || _bossTransform == null) return false;
+            float dist = Vector3.Distance(_bossTransform.position, _playerTransform.position);
+            return dist > 45f;
         }
 
         public event Action OnPlayerHit;

@@ -4,6 +4,7 @@ using HideAndInk.Core.Enemy.Movement;
 using HideAndInk.Core.Enemy.AI;
 using HideAndInk.Core.Interfaces;
 using HideAndInk.Core.Managers;
+using HideAndInk.ParallaxSystem;
 
 namespace HideAndInk.Core.Enemy
 {
@@ -104,6 +105,20 @@ namespace HideAndInk.Core.Enemy
             _initialRotation = transform.rotation;
             FindPlayer();
             InitializeMovement();
+
+            // ★ Enemy에 SortingOrderUpdater 추가 (Y위치 기반 동적 정렬)
+            //    배경/Player와 동일한 깊이 정렬 시스템 사용
+            //    Enemy가 배경보다 항상 앞에 렌더링되도록 baseOrder=1로 설정
+            if (GetComponent<SpriteRenderer>() != null && GetComponent<HideAndInk.ParallaxSystem.SortingOrderUpdater>() == null)
+            {
+                var updater = gameObject.AddComponent<SortingOrderUpdater>();
+                updater.SetTrackingTarget(transform);
+                updater.SetSortingReference(transform);
+                updater.SetBaseOrder(1);  // 배경(baseOrder=0)보다 1 높게
+                updater.SetPrecision(10);
+                updater.SetYOffset(0f);
+                updater.SetUpdateMode(SortingOrderUpdater.UpdateMode.LateUpdate);
+            }
         }
 
         protected virtual void Start()
