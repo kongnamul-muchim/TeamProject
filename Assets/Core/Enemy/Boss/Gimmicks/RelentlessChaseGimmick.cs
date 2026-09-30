@@ -5,7 +5,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 {
     /// <summary>
     /// Zone 3 곰치 (Moray Eel) — 오케스트레이터
-    /// 
+    ///
     /// Patrol: 맵 배회 + 의심도 자동 상승
     /// Chase:  돌진 시퀀스
     /// 실제 돌진 로직은 MorayChargeDirector가 처리.

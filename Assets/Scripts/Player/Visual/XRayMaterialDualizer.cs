@@ -11,7 +11,7 @@ public class XRayMaterialDualizer : MonoBehaviour
     {
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
 
-        // 외곽선 머티리얼이 정상적으로 할당되어 있고, 
+        // 외곽선 머티리얼이 정상적으로 할당되어 있고,
         // 외부 스크립트에 의해 이미 배열이 생성되지 않은(기본 상태인) 경우에만 실행
         if (outlineMaterial != null && sr.materials.Length == 1)
         {

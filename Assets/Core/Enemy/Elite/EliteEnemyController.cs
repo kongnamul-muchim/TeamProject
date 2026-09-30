@@ -25,7 +25,7 @@ namespace HideAndInk.Core.Enemy.Elite
         [Header("행동 패턴 설정")]
         [Tooltip("정예 몬스터 행동 패턴 (ScriptableObject 또는 MonoBehaviour)")]
         [SerializeField] private MonoBehaviour eliteBehavior;
-        
+
         [Header("감지 범위 설정")]
         [Tooltip("Player 감지 활성화 여부 (바다거북 등 오브젝트 전용 몬스터는 false)")]
         [SerializeField] private bool detectPlayer = true;
@@ -50,7 +50,7 @@ namespace HideAndInk.Core.Enemy.Elite
         private Vector3 _targetPosition;
         private bool _isMoving;
         private IEliteBehavior _behavior;
-        
+
         // 감지 범위 시각화
         private GameObject _visualizerObj;
         private MeshRenderer _detectionRangeMeshRenderer;
@@ -79,7 +79,7 @@ namespace HideAndInk.Core.Enemy.Elite
         {
             isDefaultFacingLeft = true; // 정예: 기본 왼쪽
             base.Start();
-            
+
             // 스프라이트 렌더러 자동 할당 (없을 경우)
             if (eliteSpriteRenderer == null)
             {
@@ -140,7 +140,7 @@ namespace HideAndInk.Core.Enemy.Elite
 
             // 스프라이트 방향 업데이트
             UpdateSpriteDirection();
-            
+
             // 감지 범위 시각화 업데이트
             UpdateDetectionRangeVisualizer();
         }
@@ -159,20 +159,20 @@ namespace HideAndInk.Core.Enemy.Elite
 
             // 현재 바라보는 방향 계산
             bool isFacingLeft = IsCurrentlyFacingLeft();
-            
+
             Vector3 toPlayer = _playerTransform.position - transform.position;
-            
+
             // X축 방향 체크
             bool playerIsOnLeft = toPlayer.x < 0;
             bool playerIsOnRight = toPlayer.x > 0;
-            
+
             // 바라보는 방향으로만 감지
             bool isInDirection = isFacingLeft ? playerIsOnLeft : playerIsOnRight;
-            
+
             // X축 거리 체크
             float distanceX = Mathf.Abs(toPlayer.x);
             bool isInXRange = distanceX <= detectionRadius;
-            
+
             // Z축 너비 체크 (0이면 무한)
             bool isInZRange = true;
             if (detectionWidth > 0f)
@@ -180,7 +180,7 @@ namespace HideAndInk.Core.Enemy.Elite
                 float distanceZ = Mathf.Abs(toPlayer.z);
                 isInZRange = distanceZ <= detectionWidth * 0.5f;
             }
-            
+
             if (isInDirection && isInXRange && isInZRange)
             {
                 Vector3 directionToPlayer = toPlayer.normalized;
@@ -210,8 +210,8 @@ namespace HideAndInk.Core.Enemy.Elite
         private void UpdatePatrolMovement(float deltaTime)
         {
             // 목표 도달 감지 (EnemyMovement 내부 distance < 0.5f 기준)
-            bool hasReachedTarget = _movement != null && 
-                                    !_movement.IsMoving && 
+            bool hasReachedTarget = _movement != null &&
+                                    !_movement.IsMoving &&
                                     _movement.Velocity.sqrMagnitude < 0.01f;
 
             if (hasReachedTarget)
@@ -343,7 +343,7 @@ namespace HideAndInk.Core.Enemy.Elite
             // 정점 순서를 반시계 방향으로 변경 (법선이 위쪽을 향하도록)
             _detectionRangeMesh = new Mesh();
             _detectionRangeMesh.name = "DetectionRangeMesh";
-            
+
             _detectionRangeMesh.vertices = new Vector3[4]
             {
                 new Vector3(-0.5f, 0, 0.5f),   // 좌상
@@ -354,7 +354,7 @@ namespace HideAndInk.Core.Enemy.Elite
             _detectionRangeMesh.triangles = new int[6] { 0, 1, 2, 0, 2, 3 };
             _detectionRangeMesh.uv = new Vector2[4] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
             _detectionRangeMesh.RecalculateNormals();
-            
+
             _detectionRangeMeshFilter.mesh = _detectionRangeMesh;
 
             // 머티리얼 설정 (URP 호환 Shader 우선 사용)
@@ -366,7 +366,7 @@ namespace HideAndInk.Core.Enemy.Elite
             {
                 Material mat = new Material(shader);
                 mat.color = detectionRangeColor;
-                
+
                 // URP Unlit Shader는 투명도 처리를 위해 Rendering Mode 설정 필요
                 if (shader.name.Contains("Universal Render Pipeline"))
                 {
@@ -378,7 +378,7 @@ namespace HideAndInk.Core.Enemy.Elite
                     mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                     mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 }
-                
+
                 _detectionRangeMeshRenderer.material = mat;
                 _detectionRangeMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 _detectionRangeMeshRenderer.receiveShadows = false;
@@ -387,7 +387,7 @@ namespace HideAndInk.Core.Enemy.Elite
             {
                 Debug.LogWarning("[EliteEnemyController] No suitable shader found for detection range visualization.");
             }
-            
+
             _isMeshInitialized = true;
         }
 
@@ -404,11 +404,11 @@ namespace HideAndInk.Core.Enemy.Elite
             // 현재 바라보는 방향 결정
             bool isFacingLeft = IsCurrentlyFacingLeft();
             float direction = isFacingLeft ? -1f : 1f;
-            
+
             // 직사각형 크기 계산
             float width = detectionRadius;
             float height = detectionWidth > 0f ? detectionWidth : 20f;
-            
+
             // 부모 스케일 보정 (lossyScale로 나누어 월드 기준 크기 유지)
             Vector3 lossyScale = transform.lossyScale;
             Vector3 targetLocalScale = new Vector3(
@@ -417,7 +417,7 @@ namespace HideAndInk.Core.Enemy.Elite
                 height / lossyScale.z
             );
             _visualizerObj.transform.localScale = targetLocalScale;
-            
+
             // 위치 보정 (부모 스케일 영향 제거)
             Vector3 offset = new Vector3(
                 (direction * width * 0.5f) / lossyScale.x,
@@ -435,7 +435,7 @@ namespace HideAndInk.Core.Enemy.Elite
             {
                 _behavior.OnDeactivate();
             }
-            
+
             // 시각화 오브젝트 정리
             if (_visualizerObj != null)
             {
@@ -462,7 +462,7 @@ namespace HideAndInk.Core.Enemy.Elite
             if (!showDetectionRangeInScene) return;
 
             DrawDetectionRange();
-            
+
             // 선택 시 추가 정보 (중심점 강조)
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, 0.3f);
@@ -476,19 +476,19 @@ namespace HideAndInk.Core.Enemy.Elite
             // 현재 바라보는 방향 결정 (에디터에서도 작동하도록 직접 계산)
             bool isFacingLeft = CalculateFacingLeft();
             float direction = isFacingLeft ? -1f : 1f;
-            
+
             // 직사각형 영역 계산
             float xStart = transform.position.x;
             float xEnd = transform.position.x + (detectionRadius * direction);
-            
+
             // 직사각형 그리기
             Gizmos.color = new Color(1f, 0f, 0f, 0.2f); // 반투명 빨강
-            
+
             Vector3 center = new Vector3((xStart + xEnd) * 0.5f, transform.position.y, transform.position.z);
             Vector3 size = new Vector3(Mathf.Abs(xEnd - xStart), 0.1f, detectionWidth > 0f ? detectionWidth : 20f);
-            
+
             Gizmos.DrawCube(center, size);
-            
+
             // 테두리
             Gizmos.color = Color.red;
             Gizmos.DrawWireCube(center, size);
@@ -507,7 +507,7 @@ namespace HideAndInk.Core.Enemy.Elite
                 sr = GetComponentInChildren<SpriteRenderer>();
                 if (sr != null) eliteSpriteRenderer = sr; // 캐싱
             }
-            
+
             if (sr != null)
             {
                 if (isDefaultFacingLeft)

@@ -70,7 +70,7 @@ namespace HideAndInk.Player
             if (playerLives == null)
                 playerLives = GetComponent<PlayerLives>();
 
-            // ★ TransparencySortMode = CustomAxis(Z축) 환경
+            //  TransparencySortMode = CustomAxis(Z축) 환경
             //    Player SpriteRenderer는 루트가 아닌 "Visual" 자식에 있음
             //    Enemy(midground)와 같은 레이어/order여야 Z depth로 판정 가능
             var updater = GetComponentInChildren<SortingOrderUpdater>();

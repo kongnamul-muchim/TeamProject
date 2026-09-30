@@ -3,9 +3,9 @@ using HideAndInk.Core.Interfaces;
 
 namespace HideAndInk.Core.Events
 {
-    // ================================================================
+
     // Game Events (기존 GameEvents 대체)
-    // ================================================================
+
 
     /// <summary>플레이어 발각</summary>
     public struct PlayerDetectedEvent { }
@@ -47,9 +47,9 @@ namespace HideAndInk.Core.Events
     /// <summary>스테이지 클리어</summary>
     public struct StageClearEvent { }
 
-    // ================================================================
+
     // Camouflage Events (기존 CamouflageEvents 대체)
-    // ================================================================
+
 
     /// <summary>의태 상태 변경</summary>
     public struct CamouflageStateChangedEvent
@@ -79,9 +79,9 @@ namespace HideAndInk.Core.Events
         public CamouflageEndEvent(GameObject target) => Target = target;
     }
 
-    // ================================================================
+
     // Tide Events (기존 TideEvents 대체)
-    // ================================================================
+
 
     /// <summary>조류에 플레이어가 밀림</summary>
     public struct PlayerPushedByTideEvent
@@ -95,9 +95,9 @@ namespace HideAndInk.Core.Events
         }
     }
 
-    // ================================================================
+
     // Enemy Events (기존 EnemyEvents 대체)
-    // ================================================================
+
 
     /// <summary>플레이어 둔화 (성게 등)</summary>
     public struct PlayerSlowedEvent

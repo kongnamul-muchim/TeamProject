@@ -44,7 +44,7 @@ namespace HideAndInk.Core.Logging
             {
                 string filePath = Path.Combine(_logFolder, $"{tag}.md");
                 _writers[tag] = new StreamWriter(filePath, false);
-                
+
                 // 마크다운 헤더 작성
                 _writers[tag].WriteLine($"# {tag} Log\n");
                 _writers[tag].WriteLine("---");

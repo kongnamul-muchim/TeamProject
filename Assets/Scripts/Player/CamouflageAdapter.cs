@@ -229,9 +229,9 @@ namespace HideAndInk.Player
             }
         }
 
-        // ====================================================================
+
         // OnStateChanged 이벤트 핸들러 (polling 제거 → 단일 진리)
-        // ====================================================================
+
         private void HandleStateChanged(CamouflageState prev, CamouflageState cur)
         {
             // ── ENTER: None → 의태 활성 ──
@@ -300,9 +300,9 @@ namespace HideAndInk.Player
             }
         }
 
-        // ====================================================================
+
         // 코루틴: 8개 플래그 → 3개 코루틴
-        // ====================================================================
+
 
         /// <summary>색상 + Outline 복원 (RATE_RESTORE_DURATION 초)</summary>
         private void StartRestoreSequence()

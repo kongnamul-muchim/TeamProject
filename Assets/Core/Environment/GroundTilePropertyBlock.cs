@@ -5,12 +5,12 @@ namespace HideAndInk.Core.Environment
     /// <summary>
     /// MaterialPropertyBlock을 사용하여 공유 매터리얼의 개별 속성을 오버라이드합니다.
     /// 각 Ground 오브젝트에 부착하면 Inspector에서 Tiling, Color 등을 개별 제어할 수 있습니다.
-    /// 
+    ///
     /// 장점:
     /// - 매터리얼 인스턴스 생성 없이 개별 속성 제어 (메모리 절약)
     /// - GPU 인스팅싱 호환 (SRP Batcher 지원)
     /// - Inspector에서 직관적으로 값 조정 가능
-    /// 
+    ///
     /// 사용 방법:
     /// 1. Ground 오브젝트에 이 컴포넌트를 Add Component
     /// 2. Inspector에서 Tiling, Color 등 원하는 값으로 조정

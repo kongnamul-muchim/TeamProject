@@ -51,8 +51,8 @@ namespace HideAndInk.Core.Managers
         /// <summary>
         /// 서비스 등록
         /// </summary>
-        public void Register<TInterface, TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient) 
-            where TInterface : class 
+        public void Register<TInterface, TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient)
+            where TInterface : class
             where TImplementation : class, TInterface
         {
             var interfaceType = typeof(TInterface);
@@ -73,7 +73,7 @@ namespace HideAndInk.Core.Managers
         /// <summary>
         /// 구현체 직접 등록
         /// </summary>
-        public void Register<TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient) 
+        public void Register<TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient)
             where TImplementation : class
         {
             var implementationType = typeof(TImplementation);
@@ -91,7 +91,7 @@ namespace HideAndInk.Core.Managers
         /// <summary>
         /// 인스턴스 직접 등록
         /// </summary>
-        public void RegisterInstance<TInterface>(TInterface instance, ServiceLifetime lifetime = ServiceLifetime.Singleton) 
+        public void RegisterInstance<TInterface>(TInterface instance, ServiceLifetime lifetime = ServiceLifetime.Singleton)
             where TInterface : class
         {
             if (instance == null)
@@ -135,7 +135,7 @@ namespace HideAndInk.Core.Managers
         public IDIContainer CreateScope()
         {
             var scopeContainer = new DIContainer(parent: this);
-            
+
             foreach (var kvp in _services)
             {
                 scopeContainer._services[kvp.Key] = kvp.Value;

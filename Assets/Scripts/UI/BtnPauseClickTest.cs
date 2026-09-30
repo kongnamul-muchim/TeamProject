@@ -28,9 +28,9 @@ public class BtnPauseClickTest : MonoBehaviour, IPointerClickHandler, IPointerDo
         var rectTransform = GetComponent<RectTransform>();
         Vector2 localMousePosition;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            rectTransform, 
-            Input.mousePosition, 
-            null, 
+            rectTransform,
+            Input.mousePosition,
+            null,
             out localMousePosition);
 
         if (rectTransform.rect.Contains(localMousePosition))

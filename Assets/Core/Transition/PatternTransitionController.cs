@@ -7,17 +7,17 @@ namespace HideAndInk.Core.Transition
     /// <summary>
     /// 프랙탈 노이즈 트랜지션 셰이더를 제어하는 컨트롤러.
     /// Shader_PatternTransition 프리팹에 부착하여 사용합니다.
-    /// 
+    ///
     /// 사용 방법:
     /// 1. Shader_PatternTransition 프리팝에 이 스크립트를 부착
     /// 2. RawImage를 인스펙터에 드래그 할당
     /// 3. 다른 스크립트에서 PatternTransitionController.Instance.PlayIn/PlayOut 호출
-    /// 
+    ///
     /// 예시:
     ///   PatternTransitionController.Instance.PlayIn();      // 화면 덮기
     ///   PatternTransitionController.Instance.PlayOut();      // 화면 걷기
     ///   PatternTransitionController.Instance.PlayIn(() => { SceneManager.LoadScene("NextScene"); });
-    /// 
+    ///
     /// Progress 값의 의미:
     ///   0.0 = 완전 투명 (효과 없음)
     ///   0.5 = 완전 덮임 (화면 가림)

@@ -10,7 +10,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
     /// - 네모 생성/소멸
     /// - 돌진 경로 계산 (Player 이동 예측 포함)
     /// - 곰치 위치 이동 명령 (이벤트 발행)
-    /// 
+    ///
     /// RelentlessChaseGimmick에서 호출되어 실제 돌진 로직 수행
     /// </summary>
     public class MorayChargeDirector : MonoBehaviour
@@ -75,7 +75,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         private Vector3 _playerVelocity;
         private HideAndInk.Player.PlayerMovementAdapter _cachedMovement;
 
-        // ★ GroundBounds 캐싱 (CalculateChargePath에서 클램핑용)
+        //  GroundBounds 캐싱 (CalculateChargePath에서 클램핑용)
         private GroundBounds? _groundBounds;
 
         private int _currentChargeIndex;
@@ -124,7 +124,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 Vector2 vel2D = _cachedMovement.CurrentVelocity;
                 _playerVelocity = new Vector3(vel2D.x, 0f, vel2D.y);
             }
-            // ★ 상태 업데이트 제거: Prepare/Charge/Transition은 코루틴이 직접 관리
+            //  상태 업데이트 제거: Prepare/Charge/Transition은 코루틴이 직접 관리
         }
 
         // ──────────────────────────────────────────────
@@ -137,7 +137,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         public void Initialize(Transform bossTransform, GroundBounds bounds)
         {
             _bossTransform = bossTransform;
-            _groundBounds = bounds; // ★ GroundBounds 캐싱
+            _groundBounds = bounds; //  GroundBounds 캐싱
             _currentChargeIndex = 0;
             _totalCharges = 0;
             _lastDirection = -1;
@@ -283,7 +283,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // === Prepare Phase: 네모 순차 생성 ===
             for (int i = 0; i < _totalCharges; i++)
             {
-                // ★ Player 멀어지면 즉시 중단
+                //  Player 멀어지면 즉시 중단
                 if (IsPlayerTooFar())
                 {
                     ForceInterrupt();
@@ -302,7 +302,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // === Charge Phase: N회 돌진 ===
             for (int i = 0; i < _totalCharges; i++)
             {
-                // ★ Player 멀어지면 즉시 중단
+                //  Player 멀어지면 즉시 중단
                 if (IsPlayerTooFar())
                 {
                     ForceInterrupt();
@@ -314,7 +314,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 // 돌진 사이 텀 (마지막이 아니면)
                 if (i < _totalCharges - 1)
                 {
-                    // ★ 텀 중에도 거리 체크
+                    //  텀 중에도 거리 체크
                     if (IsPlayerTooFar())
                     {
                         ForceInterrupt();
@@ -397,7 +397,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             // 이벤트 발행: 곰치 이동 명령
             Vector3 start = _chargeStarts[index];
             Vector3 end = _chargeEnds[index];
-            // ★ Y 고정: 0f (곰치가 공중에서 돌진, 땅에 박히지 않음)
+            //  Y 고정: 0f (곰치가 공중에서 돌진, 땅에 박히지 않음)
             float chargeY = 0f;
             start.y = chargeY;
             end.y = chargeY;
@@ -486,7 +486,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         {
             float chargeZ = PredictChargeZ(index);
 
-            // ★ 안전장치: GroundBounds Z 클램핑 (PredictChargeZ에서 이미 했지만 혹시 모르니)
+            //  안전장치: GroundBounds Z 클램핑 (PredictChargeZ에서 이미 했지만 혹시 모르니)
             if (_groundBounds.HasValue)
                 chargeZ = _groundBounds.Value.ClampZ(chargeZ);
 
@@ -506,7 +506,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 }
             }
 
-            // ★ 1단계: Camera Viewport X → GroundBounds 클램핑 (Ground 밖 돌진 방지)
+            //  1단계: Camera Viewport X → GroundBounds 클램핑 (Ground 밖 돌진 방지)
             if (_groundBounds.HasValue)
             {
                 left = _groundBounds.Value.ClampX(left);
@@ -528,7 +528,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float startX = startDir == 0 ? left : right;
             float endX = endDir == 0 ? left : right;
 
-            // ★ 개선: boss 실제 Y 기준으로 GetGroundY 호출 (fallback도 boss Y 사용)
+            //  개선: boss 실제 Y 기준으로 GetGroundY 호출 (fallback도 boss Y 사용)
             float bossY = _bossTransform != null ? _bossTransform.position.y : indicatorFloorY;
             float startY = GetGroundY(new Vector3(startX, bossY, chargeZ), bossY);
             float endY = GetGroundY(new Vector3(endX, bossY, chargeZ), bossY);
@@ -548,7 +548,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float centerZ = _playerTransform != null ? _playerTransform.position.z : 0f;
             if (_totalCharges <= 1)
             {
-                // ★ 단일 돌진도 GroundBounds Z 클램핑
+                //  단일 돌진도 GroundBounds Z 클램핑
                 if (_groundBounds.HasValue)
                     centerZ = _groundBounds.Value.ClampZ(centerZ);
                 return centerZ;
@@ -559,7 +559,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float t = (float)index / (_totalCharges - 1);
             float chargeZ = centerZ + (t - 0.5f) * 2f * halfRange;
 
-            // ★ GroundBounds Z 클램핑 (맵 밖 인디케이터 방지)
+            //  GroundBounds Z 클램핑 (맵 밖 인디케이터 방지)
             if (_groundBounds.HasValue)
                 chargeZ = _groundBounds.Value.ClampZ(chargeZ);
 
@@ -573,7 +573,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
         /// <summary>
         /// 특정 World Z 위치에서의 Camera Viewport 좌/우 X 범위 반환
         /// Orthographic / Perspective 모두 대응
-        /// 
+        ///
         /// 원리: chargeZ 위치의 한 점을 Viewport depth로 변환 → 같은 depth에서
         /// Viewport 좌/우 edge의 World X 좌표 계산
         /// → charge indicator가 항상 화면 안에 표시됨
@@ -586,7 +586,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             float groundY = indicatorFloorY;
 
             // 1) chargeZ 위치의 depth (camera forward축 거리) 계산
-            // ★ refPoint X = camera X (고정 0이면 멀어질수록 viewport 밖)
+            //  refPoint X = camera X (고정 0이면 멀어질수록 viewport 밖)
             Vector3 refPoint = new Vector3(_mainCamera.transform.position.x, groundY, worldZ);
             Vector3 viewportPos = _mainCamera.WorldToViewportPoint(refPoint);
 

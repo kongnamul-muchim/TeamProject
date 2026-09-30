@@ -104,7 +104,7 @@ namespace HideAndInk.Core.Enemy.AI.Behaviors
             // Player 속도 계산 (X-Z 평면)
             Vector3 playerDelta = currentPlayerPos - _lastKnownPlayerPosition;
             playerDelta.y = 0f; // Y축 무시
-            
+
             if (deltaTime > 0.001f)
             {
                 Vector3 playerVelocity = playerDelta / deltaTime;

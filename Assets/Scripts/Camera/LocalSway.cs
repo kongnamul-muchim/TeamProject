@@ -5,7 +5,7 @@ namespace HideAndInk.CameraSystem
     /// <summary>
     /// 오브젝트의 로컬 X축을 사인파로 미세하게 흔들어 입체감을 준다.
     /// 카메라의 자식 오브젝트에 부착하여 사용.
-    /// 
+    ///
     /// 사용법: Main Camera의 자식 오브젝트에 부착 후
     /// Inspector에서 amplitude, frequency를 개별 조정
     /// </summary>

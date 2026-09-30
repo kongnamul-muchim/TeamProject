@@ -20,7 +20,7 @@ namespace HideAndInk.Scripts.UI
 
         private BgmManager _bgm;
         private SfxManager _sfx;
-        
+
         // 타이틀 씬의 실제 BGM AudioSource (BGM_Manager 오브젝트)
         private AudioSource _bgmAudioSource;
 
@@ -29,7 +29,7 @@ namespace HideAndInk.Scripts.UI
             // Singleton 인스턴스 찾기
             _bgm = BgmManager.Instance;
             _sfx = SfxManager.Instance;
-            
+
             // 타이틀 씬의 실제 BGM AudioSource 찾기 (BGM_Manager 오브젝트)
             var bgmManagerObj = GameObject.Find("BGM_Manager");
             if (bgmManagerObj != null)
@@ -86,7 +86,7 @@ namespace HideAndInk.Scripts.UI
             // BGM Slider 초기값: 실제 AudioSource 우선, 없으면 BgmManager
             float bgmVol = _bgmAudioSource != null ? _bgmAudioSource.volume : (_bgm != null ? _bgm.Volume : 0.5f);
             bool bgmMuted = _bgmAudioSource != null ? _bgmAudioSource.mute : (_bgm != null ? _bgm.Muted : false);
-            
+
             if (bgmSlider != null)
                 bgmSlider.SetValueWithoutNotify(bgmVol);
             if (_sfx != null && sfxSlider != null)

@@ -92,9 +92,9 @@ public class ContinueZoneHandler : MonoBehaviour
     private Transform GetPlayer() => playerTransform;
     private Transform GetSquid() => squidTransform;
 
-    // =====================================================
+
     // 새 게임
-    // =====================================================
+
 
     private void HandleNewGame(List<GameObject> allZones)
     {
@@ -105,9 +105,9 @@ public class ContinueZoneHandler : MonoBehaviour
         TeleportPlayerToZone(targetZone);
     }
 
-    // =====================================================
+
     // 이어하기
-    // =====================================================
+
 
     private void HandleContinue(List<GameObject> allZones)
     {
@@ -179,9 +179,9 @@ public class ContinueZoneHandler : MonoBehaviour
         }
     }
 
-    // =====================================================
+
     // Zone 활성화
-    // =====================================================
+
 
     private void ActivateZoneOnly(List<GameObject> allZones, int targetZone)
     {
@@ -194,9 +194,9 @@ public class ContinueZoneHandler : MonoBehaviour
         }
     }
 
-    // =====================================================
+
     // Zone 오브젝트 탐색
-    // =====================================================
+
 
     private List<GameObject> FindAllZoneObjects()
     {
@@ -240,9 +240,9 @@ public class ContinueZoneHandler : MonoBehaviour
         return -1;
     }
 
-    // =====================================================
+
     // 텔레포트
-    // =====================================================
+
 
     private void TeleportPlayerToZone(int zoneIndex)
     {

@@ -6,7 +6,7 @@ namespace HideAndInk.Editor
 {
     /// <summary>
     /// Y축 깊이 패럴랙스 시스템 원클릭 설정 에디터.
-    /// 
+    ///
     /// 메뉴: Tools > Depth Parallax > Setup Scene
     /// </summary>
     public static class DepthParallaxSetup

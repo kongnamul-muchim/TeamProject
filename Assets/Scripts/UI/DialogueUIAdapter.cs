@@ -357,8 +357,8 @@ public class DialogueUIAdapter : MonoBehaviour
         for (int i = 0; i < totalCharacters; i++)
         {
             char c = textDialoge.textInfo.characterInfo[i].character;
-            delays[i] = (c == '.' || c == '?' || c == '!' || c == ',') 
-                ? punctuationDelay 
+            delays[i] = (c == '.' || c == '?' || c == '!' || c == ',')
+                ? punctuationDelay
                 : charDelay;
         }
 
@@ -370,7 +370,7 @@ public class DialogueUIAdapter : MonoBehaviour
                 yield break;
 
             nextRevealTime += delays[i];
-            
+
             // 지연 시간이 끝날 때까지 대기
             while (Time.unscaledTime < nextRevealTime)
             {
@@ -416,7 +416,7 @@ public class DialogueUIAdapter : MonoBehaviour
         else
         {
             // 에필로그의 마지막 대사라면 UI를 끄기 전에 이벤트를 발생시켜 페이드아웃을 먼저 진행합니다.
-            if (_storyManager != null && _storyManager.CurrentSection == StorySection.Epilogue 
+            if (_storyManager != null && _storyManager.CurrentSection == StorySection.Epilogue
                 && _storyManager.CurrentLineIndex >= _storyManager.TotalLineCount - 1)
             {
                 StoryEvents.InvokeEpilogueWillEnd();

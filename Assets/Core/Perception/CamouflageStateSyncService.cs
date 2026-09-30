@@ -5,7 +5,7 @@ namespace HideAndInk.Core.Perception
     /// <summary>
     /// 의태 상태 변경 감지 및 SuspicionMeter 동기화 전담 순수 C# 서비스
     /// MonoBehaviour 의존성 없음 — 테스트 가능
-    /// 
+    ///
     /// 사용법:
     ///   var service = new CamouflageStateSyncService(
     ///       (isCamouflaging, isPerfect) => meter.SetCamouflageState(isCamouflaging, isPerfect)

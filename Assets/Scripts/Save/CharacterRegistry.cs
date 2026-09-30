@@ -4,15 +4,15 @@ namespace HideAndInk.Scripts.Save
 {
     /// <summary>
     /// Player/치치 Transform을 Find/태그 없이 참조할 수 있도록 등록하는 스태틱 레지스트리.
-    /// 
+    ///
     /// 등록 방식:
     /// - Player 오브젝트의 Awake()에서 CharacterRegistry.RegisterPlayer(this.transform) 호출
     /// - 치치 오브젝트도 동일한 방식으로 등록
-    /// 
+    ///
     /// 사용 방식:
     /// - ZoneSaveHandler / ContinueZoneHandler 에서 CharacterRegistry.Player 로 참조
     /// - Find/태그/이름 문자열 하드코딩 제로
-    /// 
+    ///
     /// 왜 이렇게 하는가?
     /// - GameObject.Find("Squid") → 이름 바뀌면 조용히 깨짐
     /// - GameObject.FindGameObjectWithTag("Player") → 태그 중복/변경 위험

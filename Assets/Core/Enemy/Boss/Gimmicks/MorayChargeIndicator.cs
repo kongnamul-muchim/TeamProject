@@ -136,7 +136,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             go.transform.SetParent(null);
             go.layer = gameObject.layer;
 
-            // ★ 오브젝트 위치 = charge 중심 (transform이 원점에서 멀어도 culling 안 되도록)
+            //  오브젝트 위치 = charge 중심 (transform이 원점에서 멀어도 culling 안 되도록)
             Vector3 center = (start + end) * 0.5f;
             go.transform.position = center;
 

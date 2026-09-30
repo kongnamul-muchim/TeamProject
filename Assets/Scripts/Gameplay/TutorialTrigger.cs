@@ -18,11 +18,11 @@ namespace HideAndInk.Gameplay
         public StoryTriggerType triggerType;
 
         [Tooltip("위에서 Tutorial을 선택했다면 여기서 종류를 고르세요")]
-        public TutorialType tutorialType; 
+        public TutorialType tutorialType;
 
         [Tooltip("위에서 Boss를 선택했다면 여기서 종류를 고르세요")]
         public BossType bossType;
-        
+
         private bool _isTriggered = false;
 
         private void OnTriggerEnter(Collider collision)
@@ -41,12 +41,12 @@ namespace HideAndInk.Gameplay
         {
             if (_isTriggered) return;
             _isTriggered = true;
-            
+
             // 코어 시스템(DI 컨테이너)에서 StoryManager를 불러옵니다.
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
             {
                 var storyManager = GameManager.Container.Resolve<IStoryManager>();
-                
+
                 // 인스펙터에서 설정한 타입에 따라 알맞은 대사를 출력합니다.
                 if (triggerType == StoryTriggerType.Tutorial)
                 {

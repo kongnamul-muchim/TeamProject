@@ -24,7 +24,7 @@ namespace HideAndInk.Gameplay
         [Header("크레딧 설정")]
         [SerializeField] private HideAndInk.UI.CreditsUIAdapter creditsUI;
         [TextArea(10, 20)]
-        [SerializeField] private string creditsContent; 
+        [SerializeField] private string creditsContent;
 
         private bool _isTriggered = false;
 
@@ -74,16 +74,16 @@ namespace HideAndInk.Gameplay
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
             {
                 var storyManager = GameManager.Container.Resolve<IStoryManager>();
-                storyManager.PlayEpilogue(); 
+                storyManager.PlayEpilogue();
             }
 
             // 3. 페이드 인 (화면 밝아지며 컷신과 대사창 등장)
             if (fadeImage != null)
             {
                 yield return StartCoroutine(FadeRoutine(1f, 0f));
-                
+
                 // 화면 터치(클릭)를 방해하지 않도록 페이드 이미지를 비활성화
-                fadeImage.gameObject.SetActive(false); 
+                fadeImage.gameObject.SetActive(false);
             }
 
             // 연출이 끝났으므로 대사 넘기기 입력 허용
@@ -113,7 +113,7 @@ namespace HideAndInk.Gameplay
             if (GameManager.Container != null && GameManager.Container.IsRegistered<IStoryManager>())
             {
                 var storyManager = GameManager.Container.Resolve<IStoryManager>();
-                storyManager.StopStory(); 
+                storyManager.StopStory();
             }
 
             // 3. 크레딧 재생
@@ -123,10 +123,10 @@ namespace HideAndInk.Gameplay
                 Time.timeScale = 0f;
 
                 bool creditsFinished = false;
-                
+
                 // 기본 크레딧 내용이 비어있다면 에셋에 미리 정의된 텍스트를 사용하거나 수동 입력 가능
                 string finalContent = string.IsNullOrEmpty(creditsContent) ? GetDefaultCreditsText() : creditsContent;
-                
+
                 creditsUI.StartCredits(finalContent, () => {
                     creditsFinished = true;
                 });
@@ -150,10 +150,10 @@ namespace HideAndInk.Gameplay
                 fadeImage.rectTransform.SetAsLastSibling();
                 fadeImage.gameObject.SetActive(true);
                 yield return StartCoroutine(FadeRoutine(0f, 1f));
-                
+
                 // [추가] 이제 화면이 완전히 까매졌으므로 안전하게 크레딧 UI를 끕니다.
                 if (creditsUI != null) creditsUI.gameObject.SetActive(false);
-                
+
                 yield return new WaitForSecondsRealtime(1f);
             }
 
@@ -168,7 +168,7 @@ namespace HideAndInk.Gameplay
         {
             // Credits_Draft.md의 최신 내용을 기반으로 한 텍스트
             // 시작과 끝에 여백(\n)을 추가하여 연출 개선
-            return "\n\n\n\n\n" + 
+            return "\n\n\n\n\n" +
                    "[ Hide & Ink : 문어의 먹물꿈질 ]\n\n\n" +
                    "--- STAFF ---\n\n" +
                    "Lead Programmer & System Architect\n김동열 (Dongyeol Kim)\n\n" +
@@ -207,16 +207,16 @@ namespace HideAndInk.Gameplay
         {
             float timer = 0f;
             Color color = fadeImage.color;
-            
+
             while (timer < fadeDuration)
             {
                 // Time.timeScale = 0 상태에서도 애니메이션이 작동하도록 unscaledDeltaTime 사용
-                timer += Time.unscaledDeltaTime; 
+                timer += Time.unscaledDeltaTime;
                 color.a = Mathf.Lerp(startAlpha, endAlpha, timer / fadeDuration);
                 fadeImage.color = color;
                 yield return null;
             }
-            
+
             color.a = endAlpha;
             fadeImage.color = color;
         }

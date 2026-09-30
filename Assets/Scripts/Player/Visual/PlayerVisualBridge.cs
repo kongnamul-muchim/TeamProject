@@ -56,7 +56,7 @@ namespace HideAndInk.Player.Visual
             {
                 _spriteRenderer = GetComponent<SpriteRenderer>();
             }
-            
+
             if (_spriteRenderer != null)
             {
                 _material = _spriteRenderer.material;

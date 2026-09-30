@@ -126,14 +126,14 @@ namespace HideAndInk.Scripts.UI
         private void DisableButtonTextRaycast(Button button)
         {
             if (button == null) return;
-            
+
             var texts = button.GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var text in texts)
             {
                 if (text.raycastTarget)
                     text.raycastTarget = false;
             }
-            
+
             // Image 컴포넌트도 확인 (버튼 자신의 Image는 제외)
             var images = button.GetComponentsInChildren<Image>(true);
             foreach (var img in images)
@@ -149,7 +149,7 @@ namespace HideAndInk.Scripts.UI
         private void FixButtonAlpha(Button button)
         {
             if (button == null) return;
-            
+
             var img = button.GetComponent<Image>();
             if (img != null)
             {
@@ -185,7 +185,7 @@ namespace HideAndInk.Scripts.UI
         {
             // 게임 오버 패널이 활성화된 상태에서만 마우스 클릭 감지
             if (gameOverPanel == null || !gameOverPanel.activeInHierarchy) return;
-            
+
             if (Input.GetMouseButtonDown(0))
             {
                 TryInvokeButtonClick(Input.mousePosition);
@@ -206,20 +206,20 @@ namespace HideAndInk.Scripts.UI
         private void TryInvokeButton(Button button, Vector2 screenPosition)
         {
             if (button == null || !button.interactable || !button.gameObject.activeInHierarchy) return;
-            
+
             var rectTransform = button.GetComponent<RectTransform>();
             if (rectTransform == null) return;
-            
+
             // Screen Space - Overlay Canvas 기준으로 RectTransform의 world bounds 계산
             Vector3[] corners = new Vector3[4];
             rectTransform.GetWorldCorners(corners);
-            
+
             // world corners를 screen space로 변환
             Vector2 min = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
             Vector2 max = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
-            
+
             Rect buttonRect = new Rect(min.x, min.y, max.x - min.x, max.y - min.y);
-            
+
             if (buttonRect.Contains(screenPosition))
             {
                 Debug.Log($"[GameOverUI] Direct click detected on: {button.name}");
@@ -343,13 +343,13 @@ namespace HideAndInk.Scripts.UI
             {
                 Debug.LogWarning($"[GameOverUI] Button {button.name} has NO Image component!");
             }
-            
+
             var rect = button.GetComponent<RectTransform>();
             if (rect != null)
             {
                 Debug.Log($"[GameOverUI] Button {button.name}: rect={rect.rect}, anchoredPosition={rect.anchoredPosition}, sizeDelta={rect.sizeDelta}");
             }
-            
+
             Debug.Log($"[GameOverUI] Button enabled: {button.name}, interactable={button.interactable}, active={button.gameObject.activeInHierarchy}");
         }
 
@@ -395,9 +395,9 @@ namespace HideAndInk.Scripts.UI
             }
         }
 
-        // =====================================================
+
         // Button Handlers
-        // =====================================================
+
 
         /// <summary>
         /// FadeInObj 페이드아웃 후 씬 전환 (기존 TitleController/SettingsPopup과 동일한 방식)
@@ -496,9 +496,9 @@ namespace HideAndInk.Scripts.UI
         {
             int maxZone = -1;
             var scene = SceneManager.GetActiveScene();
-            
+
             Debug.Log($"[GameOverUI] FindCurrentActiveZone - Scene: {scene.name}");
-            
+
             // 씬 내 모든 오브젝트를 검사 (비활성 포함)
             var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
             foreach (var go in allObjects)
@@ -508,7 +508,7 @@ namespace HideAndInk.Scripts.UI
                 if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
                 if (!go.name.StartsWith("Zone_")) continue;
                 if (!go.activeInHierarchy) continue;
-                
+
                 string[] parts = go.name.Split('_');
                 if (parts.Length >= 2 && int.TryParse(parts[1], out int zoneNum))
                 {
@@ -517,7 +517,7 @@ namespace HideAndInk.Scripts.UI
                         maxZone = zoneNum;
                 }
             }
-            
+
             Debug.Log($"[GameOverUI] FindCurrentActiveZone result: {maxZone}");
             return maxZone;
         }

@@ -48,14 +48,14 @@ public class PauseButtonFixer : MonoBehaviour
         }
 
         var btn = GetComponent<Button>();
-        
+
         // 기존 OnClick 모두 제거
         btn.onClick.RemoveAllListeners();
-        
+
         // PauseHandler 찾기
         _pauseHandler = FindObjectOfType<HideAndInk.Scripts.UI.PauseHandler>();
         _rectTransform = GetComponent<RectTransform>();
-        
+
         if (_pauseHandler != null)
         {
             btn.onClick.AddListener(_pauseHandler.TogglePause);
@@ -74,9 +74,9 @@ public class PauseButtonFixer : MonoBehaviour
         {
             Vector2 localMousePosition;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                _rectTransform, 
-                Input.mousePosition, 
-                null, 
+                _rectTransform,
+                Input.mousePosition,
+                null,
                 out localMousePosition);
 
             if (_rectTransform.rect.Contains(localMousePosition))

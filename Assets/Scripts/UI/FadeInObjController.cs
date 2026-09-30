@@ -8,12 +8,12 @@ namespace HideAndInk.Scripts.UI
 {
     /// <summary>
     /// FadeInObj 프리팹을 제어하는 컨트롤러.
-    /// 
+    ///
     /// [2페이즈 정방향 분할 재생]
     /// Phase 1 (타이틀 씬): Transition_Enter 정방향 재생 (coverFrameCount 프레임)
     ///   → DontDestroyOnLoad를 위해 독립 Canvas 생성 + 부모 분리
     /// Phase 2 (게임 씬):   Transition_Enter 정방향 이어재생 → 완료 후 비활성화
-    /// 
+    ///
     /// 사용법:
     /// 1. FadeInObj 프리팹 루트에 이 컴포넌트를 추가
     /// 2. Hierarchy에서 기본 비활성화 (타이틀 Canvas 자식)
@@ -58,9 +58,9 @@ namespace HideAndInk.Scripts.UI
             SceneManager.sceneLoaded -= OnSceneLoadedForReveal;
         }
 
-        // =====================================================
+
         // Phase 1 → Scene Load → Phase 2 (올인원)
-        // =====================================================
+
 
         /// <summary>
         /// 풀 시퀀스 실행:
@@ -119,9 +119,9 @@ namespace HideAndInk.Scripts.UI
             SceneManager.LoadScene(sceneIndex);
         }
 
-        // =====================================================
+
         // Phase 2: 이어재생 (새 씬에서 자동 실행)
-        // =====================================================
+
 
         private void OnSceneLoadedForReveal(Scene scene, LoadSceneMode mode)
         {
@@ -165,9 +165,9 @@ namespace HideAndInk.Scripts.UI
             Cleanup();
         }
 
-        // =====================================================
+
         // Helpers
-        // =====================================================
+
 
         /// <summary>
         /// 독립 Canvas를 생성하여 FadeInObj가 DontDestroyOnLoad 후에도

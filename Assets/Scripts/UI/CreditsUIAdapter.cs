@@ -69,7 +69,7 @@ namespace HideAndInk.UI
                 }
 
                 LayoutRebuilder.ForceRebuildLayoutImmediate(scrollContent);
-                
+
                 // [수정] X와 Z는 현재 설정(인스펙터 값)을 유지하고 Y만 0으로 초기화하여 튀는 현상 방지
                 Vector3 currentPos = scrollContent.localPosition;
                 scrollContent.localPosition = new Vector3(currentPos.x, 0, currentPos.z);
@@ -89,11 +89,11 @@ namespace HideAndInk.UI
             // 텍스트 컴포넌트가 계산한 실제 컨텐츠 높이
             float contentHeight = textCredits.preferredHeight;
             float screenHeight = Screen.height;
-            
+
             // targetY 정밀 계산 (피벗 0.5 기준)
             // 텍스트의 절반 + 화면의 절반이 이동하면 텍스트 하단이 화면 상단 끝에 닿음
             // 여기에 200픽셀 정도의 여백만 더해 즉시 종료되도록 설정
-            float targetY = (contentHeight * 0.5f) + (screenHeight * 0.5f) + 200f; 
+            float targetY = (contentHeight * 0.5f) + (screenHeight * 0.5f) + 200f;
             float currentY = scrollContent.anchoredPosition.y;
 
             Debug.Log($"[Credits] Scroll Start. Height: {contentHeight}, TargetY: {targetY}");
@@ -107,12 +107,12 @@ namespace HideAndInk.UI
                 float currentSpeed = scrollSpeed;
                 if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.Return))
                 {
-                    currentSpeed *= 10f; 
+                    currentSpeed *= 10f;
                 }
 
                 currentY += currentSpeed * Time.unscaledDeltaTime;
                 scrollContent.anchoredPosition = new Vector2(scrollContent.anchoredPosition.x, currentY);
-                
+
                 yield return null;
             }
 
@@ -124,10 +124,10 @@ namespace HideAndInk.UI
         private void FinishCredits()
         {
             _isCreditsPlaying = false;
-            
+
             // 크레딧 종료 시 일시정지 버튼 다시 보이게 설정
             SetPauseButtonVisible(true);
-            
+
             // [수정] 콜백을 실행하여 종료를 알리지만, 화면에서 즉시 사라지지는 않음 (페이드 아웃 연출을 위해)
             _onComplete?.Invoke();
             _onComplete = null;

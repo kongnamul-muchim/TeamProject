@@ -6,13 +6,13 @@ namespace HideAndInk.Core.Environment
     /// <summary>
     /// 2D 안개 오버레이 셰이더를 제어하는 컨트롤러.
     /// Canvas 아래 RawImage에 부착하여 사용합니다.
-    /// 
+    ///
     /// 사용 방법:
     /// 1. Canvas 아래에 RawImage 생성 (화면 전체 덮기)
     /// 2. RawImage에 Custom/FogOverlay 셰이더가 적용된 머티리얼 할당
     /// 3. 이 스크립트를 RawImage가 있는 GameObject에 부착
     /// 4. Noise Texture에 Perlin/Simplex 노이즈 텍스처 할당
-    /// 
+    ///
     /// 인스펙터 설정:
     ///   Density: 안개 밀도 (0=투명, 1=불투명)
     ///   Speed: 안개 이동 속도/방향 (X, Y)

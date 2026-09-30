@@ -133,7 +133,7 @@ namespace HideAndInk.Core.Player
 
             // 대각선 이동 시 벡터 정규화 (속도 유지)
             Vector2 normalizedDirection = _inputDirection.normalized;
-            
+
             // 수평/수직 속도 분리 적용 + 속도 배율 반영 + 속도 추가 보정 (대시)
             float effectiveHorizontal = _horizontalSpeed * _speedMultiplier + _speedBoost;
             float effectiveVertical = _verticalSpeed * _speedMultiplier + _speedBoost;

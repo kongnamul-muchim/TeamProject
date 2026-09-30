@@ -5,13 +5,13 @@ namespace HideAndInk.ParallaxSystem
 {
     /// <summary>
     /// 패럴랙스 중앙 제어기: 카메라 이동에 따라 배경 레이어들의 위치를 계산한다.
-    /// 
+    ///
     /// CameraAnchored 모드: 배경이 항상 화면에 유지되며 원근감 표현
     /// WorldAnchored 모드: 월드 좌표 기준 (전경 오브젝트용)
-    /// 
+    ///
     /// 각 레이어는 이 컨트롤러의 자식 오브젝트로 설정하고,
     /// Inspector에서 rate, anchorMode 등을 개별 조정한다.
-    /// 
+    ///
     /// SRP: 카메라 추적 및 레이어 위치 계산만 담당
     /// DI: [SerializeField]로 카메라 참조
     /// </summary>

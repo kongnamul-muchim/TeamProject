@@ -5,10 +5,10 @@ namespace HideAndInk.ParallaxSystem
 {
     /// <summary>
     /// Y축 깊이 패럴랙스 중앙 제어기.
-    /// 
+    ///
     /// 캐릭터의 Y축 위치를 읽고, 각 레이어의 깊이 비율에 따라
     /// 위치와 스케일을 조절하여 2D 게임에서 입체감을 표현한다.
-    /// 
+    ///
     /// SRP: 캐릭터 Y축 추적 및 깊이 오프셋 계산만 담당
     /// DI: [SerializeField]로 타겟 참조
     /// </summary>

@@ -11,7 +11,7 @@ namespace Player.Visual
         [Header("Settings")]
         [Tooltip("속도가 이 값보다 작으면 방향을 업데이트하지 않습니다.")]
         [SerializeField] private float threshold = 0.1f;
-        
+
         [Tooltip("반대 방향으로 회전할지 여부 (먹물의 경우 뒤로 뿜어야 하므로 true)")]
         [SerializeField] private bool flipDirection = true;
 
@@ -21,7 +21,7 @@ namespace Player.Visual
         {
             // 부모 또는 최상위 부모로부터 Rigidbody(3D)를 찾습니다.
             _parentRigidbody = GetComponentInParent<Rigidbody>();
-            
+
             if (_parentRigidbody == null)
             {
                 Debug.LogWarning($"[InkDirectionController] 부모 오브젝트에서 Rigidbody를 찾을 수 없습니다. {gameObject.name}");
@@ -42,7 +42,7 @@ namespace Player.Visual
             if (velocityXZ.sqrMagnitude > threshold * threshold)
             {
                 float multiplier = flipDirection ? -1f : 1f;
-                
+
                 // XZ 평면에서의 각도를 계산합니다. (Atan2의 인자 순서: Z, X)
                 float angle = Mathf.Atan2(velocityXZ.x * multiplier, velocityXZ.y * multiplier) * Mathf.Rad2Deg;
 

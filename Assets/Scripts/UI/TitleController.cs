@@ -13,29 +13,29 @@ namespace HideAndInk.Scripts.UI
     /// <summary>
     /// 타이틀 화면 전체를 제어하는 컨트롤러.
     /// Canvas 오브젝트에 부착하여 사용합니다.
-    /// 
+    ///
     /// 연결 가이드 (Inspector):
     /// - popupSetting: Popup_Setting 오브젝트
     /// - btnContinue: Btn_Continue (Button)
     /// - btnContinueText: Btn_Continue의 Text (TMP) — 저장 유무에 따라 색상 변경
     /// - fadeExit: FadeInObjController (FadeInObj 루트, 출구 전환용)
-    /// 
+    ///
     /// 버튼 OnClick 연결:
     /// - Btn_NewGame  → TitleController.OnNewGameClicked
     /// - Btn_Continue → TitleController.OnContinueClicked
     /// - Btn_ExitGame → TitleController.OnExitGameClicked
     /// - Btn_Setting  → TitleController.OnSettingClicked
     /// - Btn_ExitPopup → TitleController.OnExitPopupClicked
-    /// 
+    ///
     /// 진입 트랜지션:
     /// - useEntryTransition = true: PatternTransitionController.PlayOut() (셰이더)
-    /// 
+    ///
     /// 출구 트랜지션 (2페이즈 분할 재생):
     /// useFadeExit=true:
     ///   Phase 1 (타이틀 씬): PlayCover(30프레임 역재생) → 화면 덮는 중
     ///                          ↓ DontDestroyOnLoad + SceneManager.LoadScene
     ///   Phase 2 (게임 씬):   PlayReveal(30프레임 정재생) → 화면 열림 → 자동 Destroy
-    /// 
+    ///
     /// fallback: useSceneTransition=true → Shader PatternTransition
     /// </summary>
     public sealed class TitleController : MonoBehaviour
@@ -191,9 +191,9 @@ namespace HideAndInk.Scripts.UI
             // (useFadeExit + fadeExit 참조)
         }
 
-        // =====================================================
+
         // Button Callbacks (Inspector OnClick 연결)
-        // =====================================================
+
 
         /// <summary>
         /// Btn_NewGame → 인스펙터 OnClick 연결
@@ -247,7 +247,7 @@ namespace HideAndInk.Scripts.UI
 
         /// <summary>
         /// 출구 트랜지션 후 씬을 로드합니다.
-        /// 
+        ///
         /// 1순위: FadeInObjController.PlayCoverAndTransition()
         ///   → 내부에서 DontDestroyOnLoad + 씬 로드 + 자동 Phase2 Reveal 처리
         /// 2순위: Shader PatternTransition
@@ -313,9 +313,9 @@ namespace HideAndInk.Scripts.UI
                 popupSetting.SetActive(false);
         }
 
-        // =====================================================
+
         // Scene Transition Callbacks
-        // =====================================================
+
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {

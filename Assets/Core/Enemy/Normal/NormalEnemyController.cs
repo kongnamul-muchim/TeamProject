@@ -210,8 +210,8 @@ namespace HideAndInk.Core.Enemy.Normal
         {
             // 목표 도달 감지 (EnemyMovement 내부 distance < 0.5f 기준)
             // Velocity가 거의 0이고 목표가 설정되어 있으면 도달한 것으로 간주
-            bool hasReachedTarget = _movement != null && 
-                                    !_movement.IsMoving && 
+            bool hasReachedTarget = _movement != null &&
+                                    !_movement.IsMoving &&
                                     _movement.Velocity.sqrMagnitude < 0.01f;
 
             if (hasReachedTarget)
@@ -270,11 +270,11 @@ namespace HideAndInk.Core.Enemy.Normal
             // Player가 무적 상태면 공격 안 함
             if (_playerLives.IsInvincible) return;
 
-            // 🔴 데미지
+            //  데미지
             _playerLives.TakeDamage(DeathCause.CrabAttack, gameObject.name);
             _damageTimer = damageCooldown;
 
-            // 💥 넉백
+            //  넉백
             ApplyKnockback();
 
 #if UNITY_EDITOR

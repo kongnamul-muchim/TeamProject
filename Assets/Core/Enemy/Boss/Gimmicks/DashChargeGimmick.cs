@@ -6,7 +6,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 {
     /// <summary>
     /// 백상아리 (Great White Shark) 최종 보스 기믹 (ScriptableObject)
-    /// 
+    ///
     /// 설계 기준: Plans/GreatWhite_Design_v1.md
     /// 핵심: Patrol 의심도 단계별 가속 → 의태 시 오브젝트 타겟팅 돌진 → Chase 폭주 모드
     /// 기존 DashChargeGimmick을 전면 개편
@@ -640,7 +640,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             Vector3 dir = _playerTransform.position - _bossTransform.position;
             dir.y = 0f;
 
-            // ★ 방향 zero 방어: Player와 보스가 겹쳐있으면 fallback 방향 사용
+            //  방향 zero 방어: Player와 보스가 겹쳐있으면 fallback 방향 사용
             if (dir.sqrMagnitude < 0.01f)
             {
                 dir = _lastChargeDirection.sqrMagnitude > 0.01f
@@ -650,7 +650,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
                 _chargeDirection = dir.normalized;
                 _lastChargeDirection = _chargeDirection;
 
-                // ★ 근접 Hit-Scan: 겹친 Player 즉시 피격 (기존 OnTriggerEnter로는 감지 불가)
+                //  근접 Hit-Scan: 겹친 Player 즉시 피격 (기존 OnTriggerEnter로는 감지 불가)
                 PerformOverlapHitScan();
             }
             else
@@ -665,7 +665,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 
         private void UpdateChaseCharge(float deltaTime)
         {
-            // ★ 실제 이동 거리 기반 판정 (가상 누적 제거 — 겹침 시 허위 종료 방지)
+            //  실제 이동 거리 기반 판정 (가상 누적 제거 — 겹침 시 허위 종료 방지)
             float actualDistance = Vector3.Distance(_chargeStartPosition, _bossTransform.position);
             if (actualDistance >= maxDashDistance)
             {
@@ -679,7 +679,7 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
             Collider[] hits = Physics.OverlapSphere(endPos, chargeWidth / 2f);
             foreach (var hit in hits)
             {
-                // ★ Player도 경로상에 있으면 피격 (이동 중 재진입 대비)
+                //  Player도 경로상에 있으면 피격 (이동 중 재진입 대비)
                 if (hit.CompareTag("Player"))
                 {
                     OnPlayerHit?.Invoke();

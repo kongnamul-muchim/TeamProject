@@ -4,7 +4,7 @@ namespace HideAndInk.ParallaxSystem
 {
     /// <summary>
     /// 스프라이트의 Sorting Order를 Y축 위치에 따라 자동 계산한다.
-    /// 
+    ///
     /// ┌──────────────────────────────────────────────────────────┐
     /// │  2D 게임에서 깊이감 표현의 핵심                             │
     /// │                                                          │
@@ -29,7 +29,7 @@ namespace HideAndInk.ParallaxSystem
     /// │  팁: precision 값을 10~100으로 설정하면                    │
     /// │  같은 Y 위치에서도 미세한 차이를 표현할 수 있다.             │
     /// └──────────────────────────────────────────────────────────┘
-    /// 
+    ///
     /// SRP: Sorting Order 계산만 담당
     /// DI: [SerializeField]로 설정 참조
     /// </summary>

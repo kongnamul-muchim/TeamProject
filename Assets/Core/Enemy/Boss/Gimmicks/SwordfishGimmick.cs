@@ -5,10 +5,10 @@ namespace HideAndInk.Core.Enemy.Boss.Gimmicks
 {
     /// <summary>
     /// 청새치(Swordfish) Boss 기믹 (ScriptableObject)
-    /// 
+    ///
     /// 설계 기준: Swordfish_Design_v3.md
     /// 핵심 사이클: Idle → Aiming → Charging → Stunned → Idle
-    /// 
+    ///
     /// - 의심도 기반 난이도 스케일링 (예측/조준시간/돌진속도)
     /// - GroundBounds 기반 이탈 방지 + Wall Layer 충돌 감지
     /// - Player 놓치면 의심도 Safe 시 Patrol 직행, 아니면 Search

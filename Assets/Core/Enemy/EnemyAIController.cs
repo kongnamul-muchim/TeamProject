@@ -99,14 +99,14 @@ namespace HideAndInk.Core.Enemy
 
         protected virtual void Awake()
         {
-            // ★ Awake에서 초기 위치 저장 (Start보다 먼저 실행되며,
+            //  Awake에서 초기 위치 저장 (Start보다 먼저 실행되며,
             //    ContinueZoneHandler/GameManager가 ResetToInitialState()를 호출해도 안전)
             _initialPosition = transform.position;
             _initialRotation = transform.rotation;
             FindPlayer();
             InitializeMovement();
 
-            // ★ Enemy Sorting Layer = midground, 고정 sortingOrder = 0
+            //  Enemy Sorting Layer = midground, 고정 sortingOrder = 0
             //    TransparencySortMode = CustomAxis(Z축)이므로,
             //    같은 sorting order면 Z depth로 렌더링 우선순위 결정됨
             var sr = GetComponent<SpriteRenderer>();
@@ -116,7 +116,7 @@ namespace HideAndInk.Core.Enemy
                 sr.sortingOrder = 0;
             }
 
-            // ★ Enemy Material → Custom/Sprite-ZWrite (ZWrite On)
+            //  Enemy Material → Custom/Sprite-ZWrite (ZWrite On)
             //    OctopusCamouflage X-Ray 실루엣이 Enemy 뒷면에서도 동작하도록
             //    depth buffer에 Enemy를 기록함 (의태 오브젝트와 동일한 원리)
             if (sr != null)

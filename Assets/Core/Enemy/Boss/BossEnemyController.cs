@@ -137,7 +137,7 @@ namespace HideAndInk.Core.Enemy.Boss
             isDefaultFacingLeft = defaultFacingLeft;
             base.Start();
 
-            // ★ MorayEel 초기 Y 강제 고정 (씬 배치 Y와 무관)
+            //  MorayEel 초기 Y 강제 고정 (씬 배치 Y와 무관)
             if (_activeGimmick is RelentlessChaseGimmick)
             {
                 Vector3 initPos = transform.position;
@@ -156,7 +156,7 @@ namespace HideAndInk.Core.Enemy.Boss
             if (GameManager.Container != null && GameManager.Container.IsRegistered<ISfxService>())
                 _sfxService = GameManager.Container.Resolve<ISfxService>();
 
-            _animator = GetComponent<Animator>(); // ★ InitializeStateMachine보다 먼저 할당
+            _animator = GetComponent<Animator>(); //  InitializeStateMachine보다 먼저 할당
             CacheCamouflageAdapter();
             CacheBossPlayerComponents();
             SetupRigidbody();
@@ -178,7 +178,7 @@ namespace HideAndInk.Core.Enemy.Boss
             {
                 _patrolBehavior.SetGroundBounds(_groundBounds);
             }
-            // ★ MorayEel: Start 시 Y 강제 고정 (씬 배치 Y와 무관)
+            //  MorayEel: Start 시 Y 강제 고정 (씬 배치 Y와 무관)
             if (_activeGimmick is RelentlessChaseGimmick)
             {
                 Vector3 initPos = transform.position;
@@ -205,7 +205,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 return;
             }
 
-            // ★ base.Update() 호출 → EnemyAIController.UpdateAI/UpdateMovement/UpdateViewDirection 실행
+            //  base.Update() 호출 → EnemyAIController.UpdateAI/UpdateMovement/UpdateViewDirection 실행
             base.Update();
         }
 
@@ -901,7 +901,7 @@ namespace HideAndInk.Core.Enemy.Boss
 
         protected override void UpdateMovement(float deltaTime)
         {
-            // 💥 기절 중(Swordfish Stunned)에는 모든 이동 차단
+            //  기절 중(Swordfish Stunned)에는 모든 이동 차단
             if (_activeGimmick is SwordfishGimmick swordfish && swordfish.IsStunned)
             {
                 _movement?.Stop();
@@ -925,7 +925,7 @@ namespace HideAndInk.Core.Enemy.Boss
                         newPos.x += _movement.Velocity.x * deltaTime;
                         newPos.z += _movement.Velocity.z * deltaTime;
 
-                        // ★ Safety Net: GroundBounds 이탈 시 강제 정지
+                        //  Safety Net: GroundBounds 이탈 시 강제 정지
                         if (_isGroundBoundsScanned)
                         {
                             float clampedX = _groundBounds.ClampX(newPos.x);
@@ -941,12 +941,12 @@ namespace HideAndInk.Core.Enemy.Boss
                         transform.position = newPos;
                     }
 
-                    // ★ Y 강제 고정 (IsMoving과 무관하게 매 프레임 적용)
+                    //  Y 강제 고정 (IsMoving과 무관하게 매 프레임 적용)
                     Vector3 forceY = transform.position;
                     forceY.y = 0f;
                     transform.position = forceY;
 
-                    // ★ 디버그: Y가 0 이외의 값으로 변경된 경우 추적
+                    //  디버그: Y가 0 이외의 값으로 변경된 경우 추적
                     if (Mathf.Abs(yBefore - (0f)) > 0.01f && yBefore != 0f)
                     {
                         Debug.LogWarning($"[MorayY-DEBUG] Frame: pos.y was {yBefore:F5} before correction → forced to 0");
@@ -1311,7 +1311,7 @@ namespace HideAndInk.Core.Enemy.Boss
                 suspicionSystem?.ResetDetected(); // 재발각 가능
                 _isMorayCharging = false;         // 의심도 증가 재개
 
-                // ★ Y 보정 + GroundBounds 재진입 (Charge 후 땅에 박히거나 Ground 밖에 있는 경우 방지)
+                //  Y 보정 + GroundBounds 재진입 (Charge 후 땅에 박히거나 Ground 밖에 있는 경우 방지)
                 RestorePositionAfterCharge();
 
                 if (_stateMachine != null && _stateMachine.CurrentState != EnemyAIState.Patrol)

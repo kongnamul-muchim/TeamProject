@@ -12,27 +12,27 @@ namespace HideAndInk.Core.Interfaces
         /// 기본 상태, 의태 안 됨
         /// </summary>
         None,
-        
+
         /// <summary>
         /// 오브젝트에 달라붙은 상태 (위치 스냅, 0.2~0.3초 움직임 잠김)
         /// </summary>
         Attached,
-        
+
         /// <summary>
         /// Lock 시간 (키 입력 후 움직임 불가)
         /// </summary>
         Locked,
-        
+
         /// <summary>
         /// 의태 접근 중
         /// </summary>
         Approaching,
-        
+
         /// <summary>
         /// 의태 중 (색상 보간 중)
         /// </summary>
         Partial,
-        
+
         /// <summary>
         /// 완벽 의태 (완전히 동화됨)
         /// </summary>

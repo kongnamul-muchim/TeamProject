@@ -30,13 +30,13 @@ namespace HideAndInk.UI
 
         private IEnumerator FadeInRoutine()
         {
-            // 유니티 에디터에서 ▶ 버튼을 누를 때 첫 프레임의 렉(DeltaTime 폭주) 때문에 
+            // 유니티 에디터에서 ▶ 버튼을 누를 때 첫 프레임의 렉(DeltaTime 폭주) 때문에
             // 1.5초가 순식간에 지나가버리는 현상을 방지하기 위해 한 프레임 대기합니다.
-            yield return null; 
+            yield return null;
 
             fadeImage.gameObject.SetActive(true);
             fadeImage.color = new Color(0, 0, 0, 1); // 완전 까만색에서 시작
-            
+
             float timer = 0f;
             while (timer < fadeDuration)
             {
@@ -45,7 +45,7 @@ namespace HideAndInk.UI
                 fadeImage.color = new Color(0, 0, 0, alpha);
                 yield return null;
             }
-            
+
             fadeImage.color = new Color(0, 0, 0, 0); // 완전 투명
             fadeImage.gameObject.SetActive(false); // 버튼 클릭을 방해하지 않게 꺼줌
         }

@@ -374,7 +374,7 @@ namespace HideAndInk.Core.Perception
         /// VFX SpriteRenderer를 Player보다 무조건 앞에 렌더링.
         /// Player: ZTest Always + XRayMaterialDualizer(2개 머티리얼)
         /// VFX:   Sprite-Unlit-Default
-        /// 
+        ///
         /// → Sorting Layer를 "foreground"(가장 높은 레이어)로 변경.
         ///   Sorting Layer는 ZTest/Queue와 관계없이 렌더 순서를 결정함.
         /// </summary>

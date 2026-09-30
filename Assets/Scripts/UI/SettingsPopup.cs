@@ -42,7 +42,7 @@ namespace HideAndInk.Scripts.UI
                 var bgmManagerObj = GameObject.Find("BGM_Manager");
                 if (bgmManagerObj != null)
                     _bgmAudioSource = bgmManagerObj.GetComponent<AudioSource>();
-                
+
                 // 2. 못 찾으면 씬의 모든 AudioSource 중에서 loop=true이고 clip이 있는 것 찾기
                 if (_bgmAudioSource == null)
                 {
@@ -79,7 +79,7 @@ namespace HideAndInk.Scripts.UI
             // Slider/Toggle 초기값 동기화
             float bgmVol = _bgm != null ? _bgm.Volume : (_bgmAudioSource != null ? _bgmAudioSource.volume : 0.5f);
             bool bgmMuted = _bgm != null ? _bgm.Muted : (_bgmAudioSource != null ? _bgmAudioSource.mute : false);
-            
+
             if (bgmVolumeSlider != null)
                 bgmVolumeSlider.SetValueWithoutNotify(bgmVol);
             if (_sfx != null && sfxVolumeSlider != null)
@@ -104,7 +104,7 @@ namespace HideAndInk.Scripts.UI
         private void ConnectAudioEvents()
         {
             DisconnectAudioEvents(); // 중복 방지
-            
+
             if (bgmVolumeSlider != null)
                 bgmVolumeSlider.onValueChanged.AddListener(SetBgmVolume);
             if (sfxVolumeSlider != null)

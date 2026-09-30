@@ -10,13 +10,13 @@ namespace HideAndInk.Core.Events
     {
         /// <summary> 플레이어 발각 시 발생 </summary>
         public static event Action OnPlayerDetected;
-        
+
         /// <summary> 플레이어 사망 시 발생 </summary>
         public static event Action OnPlayerDeath;
-        
+
         /// <summary> 스테이지 클리어 시 발생 </summary>
         public static event Action OnStageClear;
-        
+
         // 내부 호출 메서드 (GameStateMachine 등에서 호출)
         internal static void InvokePlayerDetected() => OnPlayerDetected?.Invoke();
         internal static void InvokePlayerDeath() => OnPlayerDeath?.Invoke();

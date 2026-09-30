@@ -53,23 +53,23 @@ namespace HideAndInk.Scripts.UI
             // 초기 상태: 팝업 닫힘
             if (pausePopup != null)
                 pausePopup.SetActive(false);
-                
+
             // 팝업 버튼 자동 연결
             ConnectPopupButtons();
         }
-    
+
     /// <summary>
     /// Popup_Pause 안의 모든 Button을 찾아서 리스너 연결
     /// </summary>
     private void ConnectPopupButtons()
     {
         if (pausePopup == null) return;
-        
+
         var buttons = pausePopup.GetComponentsInChildren<UnityEngine.UI.Button>(true);
         foreach (var btn in buttons)
         {
             btn.onClick.RemoveAllListeners();
-            
+
             if (btn.gameObject.name == "Btn_Continue")
             {
                 btn.onClick.AddListener(ResumeGame);
@@ -82,7 +82,7 @@ namespace HideAndInk.Scripts.UI
             }
         }
     }
-    
+
     /// <summary>
     /// 타이틀 화면으로 돌아가기
     /// </summary>
@@ -222,21 +222,21 @@ namespace HideAndInk.Scripts.UI
 
             var canvas = pausePopup.GetComponentInParent<UnityEngine.Canvas>();
             if (canvas == null) return;
-            
+
             var raycaster = canvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
             if (raycaster == null) return;
-            
+
             var pointerEventData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
             pointerEventData.position = Input.mousePosition;
-            
+
             var results = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
             raycaster.Raycast(pointerEventData, results);
-            
+
             foreach (var result in results)
             {
                 var go = result.gameObject;
                 Debug.Log($"[PauseHandler] Raycast hit: {go.name}");
-                
+
                 if (go.name == "Btn_Continue")
                 {
                     ResumeGame();
@@ -252,7 +252,7 @@ namespace HideAndInk.Scripts.UI
                     ResumeGame();
                     return;
                 }
-                
+
                 // Toggle 먼저 체크 (자식 오브젝트 클릭 시에도 parent Toggle 찾기)
                 var toggle = go.GetComponentInParent<UnityEngine.UI.Toggle>();
                 if (toggle != null)
@@ -262,7 +262,7 @@ namespace HideAndInk.Scripts.UI
                     Debug.Log($"[PauseHandler] Toggle clicked: {toggle.gameObject.name}, isOn={toggle.isOn}");
                     return;
                 }
-                
+
                 // Slider 체크 (자식 오브젝트 클릭 시에도 parent Slider 찾기)
                 var slider = go.GetComponentInParent<UnityEngine.UI.Slider>();
                 if (slider != null)
@@ -289,7 +289,7 @@ namespace HideAndInk.Scripts.UI
 
             float normalizedValue = Mathf.InverseLerp(
                 rectTransform.rect.xMin, rectTransform.rect.xMax, localPoint.x);
-            
+
             float newValue = Mathf.Clamp01(normalizedValue);
             if (Mathf.Abs(slider.value - newValue) > 0.001f)
             {
@@ -326,21 +326,21 @@ namespace HideAndInk.Scripts.UI
             var popupTransform = pausePopup.transform;
             var images = popupTransform.GetComponentsInChildren<UnityEngine.UI.Image>(true);
             int blockedCount = 0;
-            
+
             foreach (var img in images)
             {
                 // 버튼과 연결된 Image는 제외
                 var parentButton = img.GetComponentInParent<UnityEngine.UI.Button>();
                 if (parentButton != null) continue;
-                
+
                 // Slider와 연결된 Image는 제외 (Handle, Fill, Background 등)
                 var parentSlider = img.GetComponentInParent<UnityEngine.UI.Slider>();
                 if (parentSlider != null) continue;
-                
+
                 // Toggle과 연결된 Image는 제외 (Background, Checkmark 등)
                 var parentToggle = img.GetComponentInParent<UnityEngine.UI.Toggle>();
                 if (parentToggle != null) continue;
-                
+
                 // RaycastTarget이 켜져 있으면 OFF
                 if (img.raycastTarget)
                 {
@@ -349,7 +349,7 @@ namespace HideAndInk.Scripts.UI
                     Debug.Log($"[PauseHandler] RaycastTarget OFF: {img.gameObject.name}");
                 }
             }
-            
+
             Debug.Log($"[PauseHandler] 총 {blockedCount}개 Image의 RaycastTarget을 OFF로 설정");
         }
     }

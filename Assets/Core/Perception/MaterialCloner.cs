@@ -61,7 +61,7 @@ namespace HideAndInk.Core.Perception
             {
                 _originalColor = Color.white;
             }
-            
+
             _currentColor = _originalColor;
 
             // 기본 Material 저장
@@ -287,14 +287,14 @@ namespace HideAndInk.Core.Perception
                 {
                     return _propertyBlock.GetColor(COLOR_PROPERTY);
                 }
-                
+
                 // 또는 material에서 직접 가져오기
-                if (_renderer.sharedMaterial != null && 
+                if (_renderer.sharedMaterial != null &&
                     _renderer.sharedMaterial.HasProperty(COLOR_PROPERTY))
                 {
                     return _renderer.sharedMaterial.GetColor(COLOR_PROPERTY);
                 }
-                
+
                 // SpriteRenderer면 color 프로퍼티 사용
                 if (_spriteRenderer != null)
                 {
@@ -326,7 +326,7 @@ namespace HideAndInk.Core.Perception
             {
                 // 인스턴스 생성 (공유 머티리얼 수정 방지)
                 Material zWriteMatInstance = new Material(zWriteMatTemplate);
-                
+
                 // 원본 텍스처 복사 (SpriteRenderer에서 직접 가져오기)
                 Texture tex = null;
                 if (targetRenderer is SpriteRenderer sr && sr.sprite != null)
@@ -346,7 +346,7 @@ namespace HideAndInk.Core.Perception
                 {
                     Debug.LogWarning($"[MaterialCloner] No texture found on {target.name}!");
                 }
-                
+
                 targetRenderer.material = zWriteMatInstance;
             }
             else

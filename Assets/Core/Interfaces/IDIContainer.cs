@@ -13,12 +13,12 @@ namespace HideAndInk.Core.Interfaces
         /// 매번 새로운 인스턴스 생성
         /// </summary>
         Transient,
-        
+
         /// <summary>
         /// 같은 스코프 내에서 하나의 인스턴스 공유
         /// </summary>
         Scoped,
-        
+
         /// <summary>
         /// 애플리케이션 전역에서 하나의 인스턴스 공유
         /// </summary>
@@ -36,8 +36,8 @@ namespace HideAndInk.Core.Interfaces
         /// <typeparam name="TInterface">인터페이스 타입</typeparam>
         /// <typeparam name="TImplementation">구현체 타입</typeparam>
         /// <param name="lifetime">생명주기</param>
-        void Register<TInterface, TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient) 
-            where TInterface : class 
+        void Register<TInterface, TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient)
+            where TInterface : class
             where TImplementation : class, TInterface;
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace HideAndInk.Core.Interfaces
         /// </summary>
         /// <typeparam name="TImplementation">구현체 타입</typeparam>
         /// <param name="lifetime">생명주기</param>
-        void Register<TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient) 
+        void Register<TImplementation>(ServiceLifetime lifetime = ServiceLifetime.Transient)
             where TImplementation : class;
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace HideAndInk.Core.Interfaces
         /// <typeparam name="TInterface">인터페이스 타입</typeparam>
         /// <param name="instance">인스턴스</param>
         /// <param name="lifetime">생명주기</param>
-        void RegisterInstance<TInterface>(TInterface instance, ServiceLifetime lifetime = ServiceLifetime.Singleton) 
+        void RegisterInstance<TInterface>(TInterface instance, ServiceLifetime lifetime = ServiceLifetime.Singleton)
             where TInterface : class;
 
         /// <summary>

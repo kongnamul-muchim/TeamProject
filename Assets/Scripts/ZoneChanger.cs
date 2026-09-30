@@ -14,24 +14,24 @@ using UnityEngine.Rendering.Universal;
 /// <summary>
 /// 구역 전환 트리거: 플레이어가 닿으면 현재 구역을 끄고 다음 구역을 켭니다.
 /// 패턴 트랜지션 효과와 함께 화면 전환이 진행됩니다.
-/// 
+///
 /// 사용 방법:
 /// 1. Inspector에서 직접 할당:
 ///    deactivateZones: 끌 구역 오브젝트들 (Zone_1_Images, Zone_1_Object 등)
 ///    activateZones: 켤 구역 오브젝트들 (Zone_2_Images, Zone_2_Object 등)
-/// 
+///
 /// 2. 자동 탐색 (Inspector 할당 없으면 번호로 자동 찾음):
 ///    fromZoneNumber = 1 → "Zone_1_*" 패턴의 오브젝트들을 자동 비활성화
 ///    toZoneNumber = 2   → "Zone_2_*" 패턴의 오브젝트들을 자동 활성화
-/// 
+///
 /// 3. 트랜지션 효과:
 ///    useTransition = true → 패턴 트랜지션 효과와 함께 구역 전환
 ///    useTransition = false → 즉시 구역 전환 (트랜지션 없음)
-/// 
+///
 /// 4. 카메라 이동:
 ///    moveCameraTo를 설정하면 트랜지션 중 화면이 덮인 사이에 카메라를 이동합니다.
 ///    CameraFollow가 있으면 추적을 잠시 멈추고 이동 후 재개합니다.
-/// 
+///
 /// 5. 투명 벽 (돌아갈 수 없게 차단):
 ///    createInvisibleWall = true → 트리거 위치에 자동으로 투명 벽 생성
 ///    invisibleWalls → 수동으로 만든 벽 오브젝트를 연결 (자동 생성 대신/추가로 사용)
@@ -794,11 +794,11 @@ public class ZoneChanger : MonoBehaviour
         // GameManager가 프롤로그를 실행할 예정이면(예약 또는 에디터 설정), 완료까지 대기
         var gm = GameManager.Instance;
         bool willPlayPrologue = (gm != null && (GameManager.IsProloguePending || gm.WillPlayPrologueOnStart));
-        
+
         if (willPlayPrologue)
         {
             Debug.Log("[ZoneChanger] 프롤로그 실행 예정 → 완료까지 대기");
-            
+
             // 프롤로그가 시작될 때까지 대기 (최대 3초)
             float waitTimer = 0f;
             while (!IsStoryPlaying() && waitTimer < 3f)
@@ -807,13 +807,13 @@ public class ZoneChanger : MonoBehaviour
                 yield return null;
             }
         }
-        
+
         // StoryManager가 대화 중이면(프롤로그 실행 중) 완료까지 대기
         while (IsStoryPlaying())
         {
             yield return null;
         }
-        
+
         Debug.Log("[ZoneChanger] 대화 완료 → 튜토리얼 실행");
         ExecuteTutorialTriggersInDeactivatedZones();
     }
@@ -825,7 +825,7 @@ public class ZoneChanger : MonoBehaviour
     {
         if (GameManager.Container == null) return false;
         if (!GameManager.Container.IsRegistered<IStoryManager>()) return false;
-        
+
         var story = GameManager.Container.Resolve<IStoryManager>();
         return story != null && story.IsDialoguePlaying;
     }
@@ -836,7 +836,7 @@ public class ZoneChanger : MonoBehaviour
     private IEnumerator TriggerEpilogueDelayed(float delaySeconds)
     {
         Debug.Log($"[ZoneChanger] Zone 6 에필로그 {delaySeconds}초 후 자동 실행 예약 (toZoneNumber={toZoneNumber})");
-        
+
         // 이미 예약된 에필로그가 있는지 확인
         if (_epilogueTriggered)
         {
@@ -844,7 +844,7 @@ public class ZoneChanger : MonoBehaviour
             yield break;
         }
         _epilogueTriggered = true;
-        
+
         // Time.timeScale 영향을 받지 않는 실제 시간 대기
         float timer = 0f;
         while (timer < delaySeconds)
