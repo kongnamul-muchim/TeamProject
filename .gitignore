@@ -82,3 +82,8 @@ Assets/Art/*.mp4.meta
 # Test/crap prefab (로컬 테스트 전용)
 Assets/Prefabs/Crap.prefab
 Assets/Prefabs/Crap.prefab.meta
+
+# 저장소 정리 (백업/복구/임시 파일)
+Backup_PreRefactor/
+Assets/_Recovery/
+Assets/_Recovery.meta
